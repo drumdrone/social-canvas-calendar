@@ -40,6 +40,7 @@ export const PostModal: React.FC<PostModalProps> = ({
   const [uploading, setUploading] = useState(false);
   const [existingPosts, setExistingPosts] = useState<any[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [currentEditingPost, setCurrentEditingPost] = useState<SocialPost | null>(editingPost || null);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -89,7 +90,7 @@ export const PostModal: React.FC<PostModalProps> = ({
       const [hours, minutes] = time.split(':').map(Number);
       scheduledDateTime.setHours(hours, minutes, 0, 0);
 
-      if (editingPost) {
+      if (editingPost || currentEditingPost) {
         // Update existing post
         const { error } = await supabase
           .from('social_media_posts')
@@ -101,7 +102,7 @@ export const PostModal: React.FC<PostModalProps> = ({
             image_url: imageUrl,
             scheduled_date: scheduledDateTime.toISOString(),
           })
-          .eq('id', editingPost.id);
+          .eq('id', (editingPost || currentEditingPost)!.id);
 
         if (error) {
           throw error;
@@ -222,24 +223,36 @@ export const PostModal: React.FC<PostModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            {editingPost ? 'Edit Post' : `Posts for ${format(selectedDate, 'MMMM d, yyyy')}`}
+            {(editingPost || currentEditingPost) ? 'Edit Post' : `Posts for ${format(selectedDate, 'MMMM d, yyyy')}`}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 max-h-96 overflow-y-auto">
           {/* Show existing posts only when not editing */}
-          {!editingPost && existingPosts.length > 0 && (
+          {!(editingPost || currentEditingPost) && existingPosts.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Existing Posts</h3>
               {existingPosts.map((post) => {
                 const Icon = platformIcons[post.platform as Platform];
                 return (
-                  <div key={post.id} className="flex items-center gap-2 p-2 border rounded-md">
+                  <div key={post.id} className="flex items-center gap-2 p-3 border rounded-md hover:bg-muted/50 transition-colors">
                     <Icon className="h-4 w-4" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{post.title}</p>
+                    <div 
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => {
+                        setCurrentEditingPost(post);
+                        // Pre-fill form immediately
+                        setTitle(post.title);
+                        setContent(post.content || '');
+                        setPlatform(post.platform);
+                        setStatus(post.status);
+                        const postDate = new Date(post.scheduled_date);
+                        setTime(format(postDate, 'HH:mm'));
+                      }}
+                    >
+                      <p className="font-medium text-sm truncate hover:text-primary">{post.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {post.platform} • {post.status} • {format(new Date(post.scheduled_date), 'HH:mm')}
+                        {post.platform} • {post.status} • {format(new Date(post.scheduled_date), 'HH:mm')} • Click to edit
                       </p>
                     </div>
                     {post.image_url && (
@@ -253,9 +266,13 @@ export const PostModal: React.FC<PostModalProps> = ({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeletePost(post.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeletePost(post.id);
+                      }}
                       disabled={deleting === post.id}
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                      title="Delete post"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -266,9 +283,27 @@ export const PostModal: React.FC<PostModalProps> = ({
           )}
 
           {/* Form Section */}
-          <div className={!editingPost && existingPosts.length > 0 ? "border-t pt-4" : ""}>
+          <div className={!(editingPost || currentEditingPost) && existingPosts.length > 0 ? "border-t pt-4" : ""}>
+            {(editingPost || currentEditingPost) && (
+              <div className="flex items-center gap-2 mb-4 p-2 bg-muted/50 rounded-md">
+                <Calendar className="h-4 w-4" />
+                <span className="text-sm font-medium">Editing: {(editingPost || currentEditingPost)?.title}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCurrentEditingPost(null);
+                    handleClose();
+                  }}
+                  className="ml-auto h-6 w-6 p-0"
+                >
+                  ×
+                </Button>
+              </div>
+            )}
             <h3 className="font-medium text-sm mb-4">
-              {editingPost ? 'Edit Post' : 'Create New Post'}
+              {(editingPost || currentEditingPost) ? 'Edit Post' : 'Create New Post'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -376,7 +411,7 @@ export const PostModal: React.FC<PostModalProps> = ({
                   Cancel
                 </Button>
                 <Button type="submit" disabled={uploading} className="flex-1">
-                  {uploading ? (editingPost ? 'Updating...' : 'Creating...') : (editingPost ? 'Update Post' : 'Create Post')}
+                  {uploading ? ((editingPost || currentEditingPost) ? 'Updating...' : 'Creating...') : ((editingPost || currentEditingPost) ? 'Update Post' : 'Create Post')}
                 </Button>
               </div>
             </form>
