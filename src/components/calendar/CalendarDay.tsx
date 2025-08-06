@@ -86,7 +86,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       {/* Description Section - 20% */}
       <div className="h-1/5 p-1 bg-background/95 backdrop-blur-sm border-t border-border/20">
         {posts.length > 0 ? (
-          <div className="text-xs truncate font-medium">
+          <div className="text-sm truncate font-medium">
             {posts[0].title}
           </div>
         ) : (
