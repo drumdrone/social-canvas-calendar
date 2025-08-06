@@ -90,8 +90,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       {/* Calendar grid */}
       <div className="flex-1 overflow-auto">
         <div className={cn(
-          "grid h-full",
-          viewMode === 'month' ? "grid-cols-7" : "grid-cols-7",
+          "grid",
+          viewMode === 'month' ? "grid-cols-7 auto-rows-fr" : "grid-cols-7",
           viewMode === 'month' ? `grid-rows-${Math.ceil(dates.length / 7)}` : "grid-rows-1"
         )}>
           {dates.map((date, index) => {

@@ -6,6 +6,7 @@ import { Facebook, Instagram, Twitter, Linkedin, Image } from 'lucide-react';
 interface PostPreviewProps {
   post: SocialPost;
   onClick?: () => void;
+  compact?: boolean;
 }
 
 const platformIcons = {
@@ -28,13 +29,14 @@ const statusColors = {
   scheduled: 'bg-status-scheduled/20 text-status-scheduled',
 };
 
-export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick }) => {
+export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact = false }) => {
   const Icon = platformIcons[post.platform];
   
   return (
     <div 
       className={cn(
-        "p-2 rounded-md border-l-2 text-xs cursor-pointer hover:bg-muted/50 transition-colors",
+        "rounded-md border-l-2 cursor-pointer hover:bg-muted/50 transition-colors backdrop-blur-sm",
+        compact ? "p-1 text-xs bg-background/80" : "p-2 text-xs bg-background/90",
         platformColors[post.platform]
       )}
       onClick={(e) => {
@@ -43,28 +45,29 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick }) => {
       }}
     >
       <div className="flex items-center gap-1 mb-1">
-        <Icon className="h-3 w-3" />
+        <Icon className={compact ? "h-2 w-2" : "h-3 w-3"} />
         <span className="font-medium truncate flex-1">{post.title}</span>
         <span className={cn(
-          "px-1 py-0.5 rounded text-xs font-medium",
+          "px-1 py-0.5 rounded font-medium",
+          compact ? "text-xs" : "text-xs",
           statusColors[post.status]
         )}>
           {post.status.charAt(0).toUpperCase()}
         </span>
       </div>
       
-      {post.image_url && (
+      {!compact && post.image_url && (
         <div className="flex items-center gap-1 mt-1">
           <img 
             src={post.image_url} 
             alt="Post thumbnail" 
-            className="w-8 h-8 rounded object-cover"
+            className="w-6 h-6 rounded object-cover"
           />
           <span className="text-muted-foreground text-xs">Image</span>
         </div>
       )}
       
-      {post.content && (
+      {!compact && post.content && (
         <p className="text-muted-foreground truncate mt-1">
           {post.content}
         </p>
