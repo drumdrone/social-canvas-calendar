@@ -85,6 +85,9 @@ export const PostModal: React.FC<PostModalProps> = ({
       
       if (image) {
         imageUrl = await uploadImage(image);
+      } else if (editingPost || currentEditingPost) {
+        // Keep existing image URL if no new image is uploaded
+        imageUrl = (editingPost || currentEditingPost)?.image_url;
       }
 
       const scheduledDateTime = new Date(selectedDate);
