@@ -308,6 +308,19 @@ export const PostModal: React.FC<PostModalProps> = ({
                 </Button>
               </div>
             )}
+            
+            {/* Show existing image thumbnail when editing */}
+            {(editingPost || currentEditingPost) && (editingPost || currentEditingPost)?.image_url && (
+              <div className="mb-4">
+                <img 
+                  src={(editingPost || currentEditingPost)?.image_url} 
+                  alt="Current post image" 
+                  className="w-full aspect-square rounded-md object-cover border"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Current image</p>
+              </div>
+            )}
+            
             <h3 className="font-medium text-sm mb-4">
               {(editingPost || currentEditingPost) ? 'Edit Post' : 'Create New Post'}
             </h3>
@@ -401,17 +414,6 @@ export const PostModal: React.FC<PostModalProps> = ({
 
               <div>
                 <Label htmlFor="image">Image</Label>
-                {/* Show existing image thumbnail when editing */}
-                {(editingPost || currentEditingPost) && (editingPost || currentEditingPost)?.image_url && (
-                  <div className="mb-3">
-                    <img 
-                      src={(editingPost || currentEditingPost)?.image_url} 
-                      alt="Current post image" 
-                      className="w-full aspect-square rounded-md object-cover border"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Current image</p>
-                  </div>
-                )}
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
