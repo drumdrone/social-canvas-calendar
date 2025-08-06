@@ -1,4 +1,5 @@
 import { SocialCalendar } from '@/components/SocialCalendar';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import Login from './Login';
 
@@ -9,7 +10,11 @@ const Index = () => {
     return <Login />;
   }
 
-  return <SocialCalendar />;
+  return (
+    <AppLayout>
+      <SocialCalendar />
+    </AppLayout>
+  );
 };
 
 export default Index;
