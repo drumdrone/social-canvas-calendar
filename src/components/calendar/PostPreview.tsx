@@ -47,9 +47,13 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post }) => {
       </div>
       
       {post.image_url && (
-        <div className="flex items-center gap-1 text-muted-foreground">
-          <Image className="h-3 w-3" />
-          <span>Image attached</span>
+        <div className="flex items-center gap-1 mt-1">
+          <img 
+            src={post.image_url} 
+            alt="Post thumbnail" 
+            className="w-8 h-8 rounded object-cover"
+          />
+          <span className="text-muted-foreground text-xs">Image</span>
         </div>
       )}
       
