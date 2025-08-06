@@ -52,6 +52,24 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				calendar: {
+					grid: 'hsl(var(--calendar-grid))',
+					today: 'hsl(var(--calendar-today))',
+					'today-foreground': 'hsl(var(--calendar-today-foreground))',
+					weekend: 'hsl(var(--calendar-weekend))',
+					hover: 'hsl(var(--calendar-hover))'
+				},
+				social: {
+					facebook: 'hsl(var(--facebook))',
+					instagram: 'hsl(var(--instagram))',
+					twitter: 'hsl(var(--twitter))',
+					linkedin: 'hsl(var(--linkedin))'
+				},
+				status: {
+					draft: 'hsl(var(--draft))',
+					published: 'hsl(var(--published))',
+					scheduled: 'hsl(var(--scheduled))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
