@@ -80,7 +80,7 @@ export const SocialCalendar: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background scale-[0.8] origin-top">
+    <div className="h-screen flex flex-col bg-background">
       <CalendarHeader 
         currentDate={currentDate}
         onDateChange={setCurrentDate}
