@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       social_media_posts: {
         Row: {
+          category: string
           content: string | null
           created_at: string
           id: string
@@ -28,6 +29,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          category?: string
           content?: string | null
           created_at?: string
           id?: string
@@ -40,6 +42,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          category?: string
           content?: string | null
           created_at?: string
           id?: string

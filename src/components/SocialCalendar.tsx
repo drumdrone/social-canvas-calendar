@@ -8,6 +8,7 @@ import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, f
 export type ViewMode = 'month' | 'week';
 export type Platform = 'facebook' | 'instagram' | 'twitter' | 'linkedin';
 export type PostStatus = 'draft' | 'published' | 'scheduled';
+export type Category = 'Video' | 'Image' | 'Carousel';
 
 export interface SocialPost {
   id: string;
@@ -17,6 +18,7 @@ export interface SocialPost {
   image_url?: string;
   scheduled_date: string;
   status: PostStatus;
+  category: Category;
   created_at: string;
   updated_at: string;
   user_id: string;

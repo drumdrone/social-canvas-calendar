@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Facebook, Instagram, Twitter, Linkedin, Upload, Calendar, Clock, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Platform, PostStatus, SocialPost } from '../SocialCalendar';
+import { Platform, PostStatus, SocialPost, Category } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -35,6 +35,7 @@ export const PostModal: React.FC<PostModalProps> = ({
   const [content, setContent] = useState('');
   const [platform, setPlatform] = useState<Platform>('facebook');
   const [status, setStatus] = useState<PostStatus>('draft');
+  const [category, setCategory] = useState<Category>('Image');
   const [time, setTime] = useState('12:00');
   const [image, setImage] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -99,6 +100,7 @@ export const PostModal: React.FC<PostModalProps> = ({
             content: content.trim() || null,
             platform,
             status,
+            category,
             image_url: imageUrl,
             scheduled_date: scheduledDateTime.toISOString(),
           })
@@ -119,6 +121,7 @@ export const PostModal: React.FC<PostModalProps> = ({
               content: content.trim() || null,
               platform,
               status,
+              category,
               image_url: imageUrl,
               scheduled_date: scheduledDateTime.toISOString(),
               user_id: '00000000-0000-0000-0000-000000000000',
@@ -199,6 +202,7 @@ export const PostModal: React.FC<PostModalProps> = ({
       setContent(editingPost.content || '');
       setPlatform(editingPost.platform);
       setStatus(editingPost.status);
+      setCategory(editingPost.category);
       
       const postDate = new Date(editingPost.scheduled_date);
       setTime(format(postDate, 'HH:mm'));
@@ -210,6 +214,7 @@ export const PostModal: React.FC<PostModalProps> = ({
     setContent('');
     setPlatform('facebook');
     setStatus('draft');
+    setCategory('Image');
     setTime('12:00');
     setImage(null);
     onClose();
@@ -246,13 +251,14 @@ export const PostModal: React.FC<PostModalProps> = ({
                         setContent(post.content || '');
                         setPlatform(post.platform);
                         setStatus(post.status);
+                        setCategory(post.category);
                         const postDate = new Date(post.scheduled_date);
                         setTime(format(postDate, 'HH:mm'));
                       }}
                     >
                       <p className="font-medium text-sm truncate hover:text-primary">{post.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {post.platform} • {post.status} • {format(new Date(post.scheduled_date), 'HH:mm')} • Click to edit
+                        {post.platform} • {post.category} • {post.status} • {format(new Date(post.scheduled_date), 'HH:mm')} • Click to edit
                       </p>
                     </div>
                     {post.image_url && (
@@ -364,6 +370,20 @@ export const PostModal: React.FC<PostModalProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Select value={category} onValueChange={(value: Category) => setCategory(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Video">Video</SelectItem>
+                    <SelectItem value="Image">Image</SelectItem>
+                    <SelectItem value="Carousel">Carousel</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
