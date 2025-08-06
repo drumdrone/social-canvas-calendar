@@ -29,23 +29,44 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   return (
     <div
       className={cn(
-        "aspect-square border-r border-b border-calendar-grid p-2 cursor-pointer transition-colors hover:bg-calendar-hover relative overflow-hidden",
+        "aspect-square border-r border-b border-calendar-grid cursor-pointer transition-colors hover:bg-calendar-hover relative overflow-hidden flex flex-col",
         !isCurrentMonth && "text-muted-foreground bg-muted/30",
         isWeekend && isCurrentMonth && "bg-calendar-weekend",
-        isToday && "bg-calendar-today/20 border-calendar-today border-2"
+        isToday && "border-calendar-today border-2"
       )}
       onClick={onClick}
     >
-      {/* Background Image */}
-      {hasImage && firstImagePost?.image_url && (
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{ backgroundImage: `url(${firstImagePost.image_url})` }}
-        />
-      )}
-      {/* Content overlay */}
-      <div className="relative z-10 h-full flex flex-col">
-        <div className="flex items-center justify-between mb-2">
+      {/* Image Section - 80% */}
+      {hasImage && firstImagePost?.image_url ? (
+        <div className="h-4/5 relative">
+          <img 
+            src={firstImagePost.image_url} 
+            alt="Post image" 
+            className="w-full h-full object-cover"
+          />
+          {/* Date overlay on image */}
+          <div className="absolute top-1 left-1">
+            <span
+              className={cn(
+                "text-xs font-bold text-white bg-black/50 rounded-full w-5 h-5 flex items-center justify-center",
+                isToday && "bg-calendar-today text-calendar-today-foreground"
+              )}
+            >
+              {format(date, 'd')}
+            </span>
+          </div>
+          {/* Posts count if multiple */}
+          {posts.length > 1 && (
+            <div className="absolute top-1 right-1">
+              <span className="text-xs font-bold text-white bg-black/50 rounded-full w-5 h-5 flex items-center justify-center">
+                {posts.length}
+              </span>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* No image - show date prominently */
+        <div className="h-4/5 p-2 flex items-start justify-between">
           <span
             className={cn(
               "text-sm font-medium",
@@ -54,19 +75,30 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
           >
             {format(date, 'd')}
           </span>
-        </div>
-        
-        <div className="space-y-1 flex-1 overflow-hidden">
-          {posts.slice(0, 2).map((post) => (
-            <PostPreview key={post.id} post={post} onClick={() => onPostClick(post)} compact />
-          ))}
-          
-          {posts.length > 2 && (
-            <div className="text-xs text-muted-foreground p-1 bg-background/80 rounded backdrop-blur-sm">
-              +{posts.length - 2} more
-            </div>
+          {posts.length > 0 && (
+            <span className="text-xs font-bold bg-muted rounded-full w-5 h-5 flex items-center justify-center">
+              {posts.length}
+            </span>
           )}
         </div>
+      )}
+
+      {/* Description Section - 20% */}
+      <div className="h-1/5 p-1 bg-background/95 backdrop-blur-sm border-t border-border/20">
+        {posts.length > 0 ? (
+          <div className="text-xs truncate font-medium">
+            {posts[0].title}
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground">
+            Click to add
+          </div>
+        )}
+        {posts.length > 1 && (
+          <div className="text-xs text-muted-foreground truncate">
+            +{posts.length - 1} more
+          </div>
+        )}
       </div>
     </div>
   );
