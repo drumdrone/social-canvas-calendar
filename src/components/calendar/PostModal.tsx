@@ -401,6 +401,17 @@ export const PostModal: React.FC<PostModalProps> = ({
 
               <div>
                 <Label htmlFor="image">Image</Label>
+                {/* Show existing image thumbnail when editing */}
+                {(editingPost || currentEditingPost) && (editingPost || currentEditingPost)?.image_url && (
+                  <div className="mb-3">
+                    <img 
+                      src={(editingPost || currentEditingPost)?.image_url} 
+                      alt="Current post image" 
+                      className="w-full h-32 rounded-md object-cover border"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Current image</p>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
@@ -409,7 +420,7 @@ export const PostModal: React.FC<PostModalProps> = ({
                     className="flex items-center gap-2"
                   >
                     <Upload className="h-4 w-4" />
-                    {image ? 'Change Image' : 'Upload Image'}
+                    {image ? 'Change Image' : (editingPost || currentEditingPost)?.image_url ? 'Replace Image' : 'Upload Image'}
                   </Button>
                   {image && (
                     <span className="text-sm text-muted-foreground truncate">
