@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { CalendarHeader } from './calendar/CalendarHeader';
 import { CalendarGrid } from './calendar/CalendarGrid';
+import { CalendarList } from './calendar/CalendarList';
 import { PostModal } from './calendar/PostModal';
 import { CalendarFilters } from './calendar/CalendarFilters';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, format, isToday, isWeekend } from 'date-fns';
 
-export type ViewMode = 'month' | 'week';
+export type ViewMode = 'month' | 'week' | 'list';
 export type Platform = 'facebook' | 'instagram' | 'twitter' | 'linkedin';
 export type PostStatus = 'draft' | 'published' | 'scheduled';
 export type Category = 'Video' | 'Image' | 'Carousel';
@@ -95,15 +96,25 @@ export const SocialCalendar: React.FC = () => {
         onStatusesChange={setSelectedStatuses}
       />
       
-      <CalendarGrid
-        dates={getDates()}
-        viewMode={viewMode}
-        currentDate={currentDate}
-        selectedPlatforms={selectedPlatforms}
-        selectedStatuses={selectedStatuses}
-        onDateClick={handleDateClick}
-        onPostClick={handlePostClick}
-      />
+      {viewMode === 'list' ? (
+        <CalendarList
+          currentDate={currentDate}
+          selectedPlatforms={selectedPlatforms}
+          selectedStatuses={selectedStatuses}
+          onDateClick={handleDateClick}
+          onPostClick={handlePostClick}
+        />
+      ) : (
+        <CalendarGrid
+          dates={getDates()}
+          viewMode={viewMode}
+          currentDate={currentDate}
+          selectedPlatforms={selectedPlatforms}
+          selectedStatuses={selectedStatuses}
+          onDateClick={handleDateClick}
+          onPostClick={handlePostClick}
+        />
+      )}
       
       <PostModal
         isOpen={isModalOpen}

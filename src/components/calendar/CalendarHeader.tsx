@@ -20,16 +20,20 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   const handlePrevious = () => {
     if (viewMode === 'month') {
       onDateChange(subMonths(currentDate, 1));
-    } else {
+    } else if (viewMode === 'week') {
       onDateChange(subWeeks(currentDate, 1));
+    } else {
+      onDateChange(subMonths(currentDate, 1));
     }
   };
 
   const handleNext = () => {
     if (viewMode === 'month') {
       onDateChange(addMonths(currentDate, 1));
-    } else {
+    } else if (viewMode === 'week') {
       onDateChange(addWeeks(currentDate, 1));
+    } else {
+      onDateChange(addMonths(currentDate, 1));
     }
   };
 
@@ -56,11 +60,13 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <ChevronLeft className="h-4 w-4" />
           </Button>
           
-          <h2 className="text-lg font-medium text-foreground min-w-[200px] text-center">
-            {viewMode === 'month' 
-              ? format(currentDate, 'MMMM yyyy')
-              : `${format(currentDate, 'MMM d')} - ${format(addWeeks(currentDate, 1), 'MMM d, yyyy')}`
-            }
+           <h2 className="text-lg font-medium text-foreground min-w-[200px] text-center">
+             {viewMode === 'month' 
+               ? format(currentDate, 'MMMM yyyy')
+               : viewMode === 'week' 
+               ? `${format(currentDate, 'MMM d')} - ${format(addWeeks(currentDate, 1), 'MMM d, yyyy')}`
+               : 'Posts by Month'
+             }
           </h2>
           
           <Button variant="ghost" size="sm" onClick={handleNext}>
@@ -81,9 +87,17 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             variant={viewMode === 'week' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewModeChange('week')}
-            className="rounded-l-none"
+            className="rounded-none border-r border-border"
           >
             Week
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => onViewModeChange('list')}
+            className="rounded-l-none"
+          >
+            List
           </Button>
         </div>
       </div>
