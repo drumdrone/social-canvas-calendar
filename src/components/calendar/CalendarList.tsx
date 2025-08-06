@@ -139,6 +139,18 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                       key={post.id} 
                       className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg hover:bg-muted/50 transition-colors"
                     >
+                      <div className="flex flex-col items-center justify-center min-w-[80px] text-center">
+                        <div className="text-lg font-bold text-foreground">
+                          {format(new Date(post.scheduled_date), 'd')}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(post.scheduled_date), 'MMM')}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(post.scheduled_date), 'HH:mm')}
+                        </div>
+                      </div>
+                      
                       {post.image_url && (
                         <img
                           src={post.image_url}
@@ -148,17 +160,12 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                       )}
                       
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium text-foreground truncate">
-                            {post.title}
-                          </h3>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(post.scheduled_date), 'MMM d, HH:mm')}
-                          </span>
-                        </div>
+                        <h3 className="font-medium text-foreground truncate mb-1">
+                          {post.title}
+                        </h3>
                         
                         {post.content && (
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="text-sm text-muted-foreground line-clamp-2">
                             {post.content}
                           </p>
                         )}
