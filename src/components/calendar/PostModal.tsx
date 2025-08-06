@@ -407,7 +407,7 @@ export const PostModal: React.FC<PostModalProps> = ({
                     <img 
                       src={(editingPost || currentEditingPost)?.image_url} 
                       alt="Current post image" 
-                      className="w-full h-32 rounded-md object-cover border"
+                      className="w-full aspect-square rounded-md object-cover border"
                     />
                     <p className="text-xs text-muted-foreground mt-1">Current image</p>
                   </div>
