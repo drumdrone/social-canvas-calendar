@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { SocialPost } from '../SocialCalendar';
 import { PostPreview } from './PostPreview';
+import { Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
 
 interface CalendarDayProps {
   date: Date;
@@ -26,6 +27,13 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   const hasImage = posts.some(post => post.image_url);
   const firstImagePost = posts.find(post => post.image_url);
   
+  const platformIcons = {
+    facebook: Facebook,
+    instagram: Instagram,
+    twitter: Twitter,
+    linkedin: Linkedin,
+  };
+  
   return (
     <div
       className={cn(
@@ -44,6 +52,17 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
             alt="Post image" 
             className="w-full h-full object-cover"
           />
+          {/* Platform icon */}
+          <div className="absolute bottom-1 left-1">
+            {(() => {
+              const Icon = platformIcons[firstImagePost.platform];
+              return (
+                <div className="bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm">
+                  <Icon className="w-3 h-3 text-gray-700" />
+                </div>
+              );
+            })()}
+          </div>
           {/* Date overlay on image */}
           <div className="absolute top-1 left-1">
             <span
