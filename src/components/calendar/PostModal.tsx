@@ -5,11 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Facebook, Instagram, Twitter, Linkedin, Upload, Calendar, Clock, Trash2 } from 'lucide-react';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Facebook, Instagram, Twitter, Linkedin, Upload, Calendar, Clock, Trash2, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { Platform, PostStatus, SocialPost, Category } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface PostModalProps {
   isOpen: boolean;
@@ -42,6 +45,7 @@ export const PostModal: React.FC<PostModalProps> = ({
   const [existingPosts, setExistingPosts] = useState<any[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [currentEditingPost, setCurrentEditingPost] = useState<SocialPost | null>(editingPost || null);
+  const [scheduledDate, setScheduledDate] = useState<Date>(selectedDate || new Date());
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -73,7 +77,7 @@ export const PostModal: React.FC<PostModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedDate || !title.trim()) {
+    if (!scheduledDate || !title.trim()) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -90,7 +94,7 @@ export const PostModal: React.FC<PostModalProps> = ({
         imageUrl = (editingPost || currentEditingPost)?.image_url;
       }
 
-      const scheduledDateTime = new Date(selectedDate);
+      const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
       scheduledDateTime.setHours(hours, minutes, 0, 0);
 
@@ -196,6 +200,7 @@ export const PostModal: React.FC<PostModalProps> = ({
 
   React.useEffect(() => {
     if (isOpen && selectedDate) {
+      setScheduledDate(selectedDate);
       fetchExistingPosts();
     }
     
@@ -208,6 +213,7 @@ export const PostModal: React.FC<PostModalProps> = ({
       setCategory(editingPost.category);
       
       const postDate = new Date(editingPost.scheduled_date);
+      setScheduledDate(postDate);
       setTime(format(postDate, 'HH:mm'));
     }
   }, [isOpen, selectedDate, editingPost]);
@@ -220,6 +226,7 @@ export const PostModal: React.FC<PostModalProps> = ({
     setCategory('Image');
     setTime('12:00');
     setImage(null);
+    setScheduledDate(selectedDate || new Date());
     onClose();
   };
 
@@ -231,7 +238,7 @@ export const PostModal: React.FC<PostModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            {(editingPost || currentEditingPost) ? 'Edit Post' : `Posts for ${format(selectedDate, 'MMMM d, yyyy')}`}
+            {(editingPost || currentEditingPost) ? 'Edit Post' : `Posts for ${format(scheduledDate, 'MMMM d, yyyy')}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -402,16 +409,45 @@ export const PostModal: React.FC<PostModalProps> = ({
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="time">Time</Label>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="time"
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="date">Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !scheduledDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {scheduledDate ? format(scheduledDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={scheduledDate}
+                        onSelect={(date) => date && setScheduledDate(date)}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div>
+                  <Label htmlFor="time">Time</Label>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="time"
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
