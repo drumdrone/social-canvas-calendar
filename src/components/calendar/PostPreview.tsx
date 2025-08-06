@@ -68,7 +68,7 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
       )}
       
       {!compact && post.content && (
-        <p className="text-muted-foreground truncate mt-1">
+        <p className="text-muted-foreground line-clamp-2 mt-1 text-xs leading-tight">
           {post.content}
         </p>
       )}

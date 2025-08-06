@@ -111,8 +111,15 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       {/* Description Section - 20% */}
       <div className="h-1/5 p-1 bg-background/95 backdrop-blur-sm border-t border-border/20">
         {posts.length > 0 ? (
-          <div className="text-sm truncate font-medium">
-            {posts[0].title}
+          <div className="space-y-1">
+            <div className="text-xs font-medium truncate">
+              {posts[0].title}
+            </div>
+            {posts[0].content && (
+              <div className="text-xs text-muted-foreground line-clamp-2 leading-tight">
+                {posts[0].content}
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-xs text-muted-foreground">
@@ -120,7 +127,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
           </div>
         )}
         {posts.length > 1 && (
-          <div className="text-xs text-muted-foreground truncate">
+          <div className="text-xs text-muted-foreground truncate mt-1">
             +{posts.length - 1} more
           </div>
         )}
