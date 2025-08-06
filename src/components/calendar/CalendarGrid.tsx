@@ -12,6 +12,7 @@ interface CalendarGridProps {
   selectedPlatforms: Platform[];
   selectedStatuses: PostStatus[];
   onDateClick: (date: Date) => void;
+  onPostClick: (post: SocialPost) => void;
 }
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -21,6 +22,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   selectedPlatforms,
   selectedStatuses,
   onDateClick,
+  onPostClick,
 }) => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,6 +106,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 isToday={isToday(date)}
                 isWeekend={isWeekend(date)}
                 onClick={() => onDateClick(date)}
+                onPostClick={onPostClick}
               />
             );
           })}

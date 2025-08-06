@@ -11,6 +11,7 @@ interface CalendarDayProps {
   isToday: boolean;
   isWeekend: boolean;
   onClick: () => void;
+  onPostClick: (post: SocialPost) => void;
 }
 
 export const CalendarDay: React.FC<CalendarDayProps> = ({
@@ -20,6 +21,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   isToday,
   isWeekend,
   onClick,
+  onPostClick,
 }) => {
   return (
     <div
@@ -44,7 +46,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       
       <div className="space-y-1">
         {posts.slice(0, 3).map((post) => (
-          <PostPreview key={post.id} post={post} />
+          <PostPreview key={post.id} post={post} onClick={() => onPostClick(post)} />
         ))}
         
         {posts.length > 3 && (

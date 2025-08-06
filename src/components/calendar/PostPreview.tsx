@@ -5,6 +5,7 @@ import { Facebook, Instagram, Twitter, Linkedin, Image } from 'lucide-react';
 
 interface PostPreviewProps {
   post: SocialPost;
+  onClick?: () => void;
 }
 
 const platformIcons = {
@@ -27,14 +28,20 @@ const statusColors = {
   scheduled: 'bg-status-scheduled/20 text-status-scheduled',
 };
 
-export const PostPreview: React.FC<PostPreviewProps> = ({ post }) => {
+export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick }) => {
   const Icon = platformIcons[post.platform];
   
   return (
-    <div className={cn(
-      "p-2 rounded-md border-l-2 text-xs",
-      platformColors[post.platform]
-    )}>
+    <div 
+      className={cn(
+        "p-2 rounded-md border-l-2 text-xs cursor-pointer hover:bg-muted/50 transition-colors",
+        platformColors[post.platform]
+      )}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+    >
       <div className="flex items-center gap-1 mb-1">
         <Icon className="h-3 w-3" />
         <span className="font-medium truncate flex-1">{post.title}</span>

@@ -27,6 +27,7 @@ export const SocialCalendar: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['facebook', 'instagram', 'twitter', 'linkedin']);
   const [selectedStatuses, setSelectedStatuses] = useState<PostStatus[]>(['draft', 'published', 'scheduled']);
 
@@ -60,12 +61,20 @@ export const SocialCalendar: React.FC = () => {
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
+    setEditingPost(null);
+    setIsModalOpen(true);
+  };
+
+  const handlePostClick = (post: SocialPost) => {
+    setSelectedDate(new Date(post.scheduled_date));
+    setEditingPost(post);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedDate(null);
+    setEditingPost(null);
   };
 
   return (
@@ -91,12 +100,14 @@ export const SocialCalendar: React.FC = () => {
         selectedPlatforms={selectedPlatforms}
         selectedStatuses={selectedStatuses}
         onDateClick={handleDateClick}
+        onPostClick={handlePostClick}
       />
       
       <PostModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         selectedDate={selectedDate}
+        editingPost={editingPost}
       />
     </div>
   );

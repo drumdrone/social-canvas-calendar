@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Facebook, Instagram, Twitter, Linkedin, Upload, Calendar, Clock, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Platform, PostStatus } from '../SocialCalendar';
+import { Platform, PostStatus, SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ interface PostModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedDate: Date | null;
+  editingPost?: SocialPost | null;
 }
 
 const platformIcons = {
@@ -28,6 +29,7 @@ export const PostModal: React.FC<PostModalProps> = ({
   isOpen,
   onClose,
   selectedDate,
+  editingPost,
 }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -87,25 +89,47 @@ export const PostModal: React.FC<PostModalProps> = ({
       const [hours, minutes] = time.split(':').map(Number);
       scheduledDateTime.setHours(hours, minutes, 0, 0);
 
-      const { error } = await supabase
-        .from('social_media_posts')
-        .insert([
-          {
+      if (editingPost) {
+        // Update existing post
+        const { error } = await supabase
+          .from('social_media_posts')
+          .update({
             title: title.trim(),
             content: content.trim() || null,
             platform,
             status,
             image_url: imageUrl,
             scheduled_date: scheduledDateTime.toISOString(),
-            user_id: '00000000-0000-0000-0000-000000000000', // Temporary until auth is implemented
-          },
-        ]);
+          })
+          .eq('id', editingPost.id);
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
+
+        toast.success('Post updated successfully!');
+      } else {
+        // Create new post
+        const { error } = await supabase
+          .from('social_media_posts')
+          .insert([
+            {
+              title: title.trim(),
+              content: content.trim() || null,
+              platform,
+              status,
+              image_url: imageUrl,
+              scheduled_date: scheduledDateTime.toISOString(),
+              user_id: '00000000-0000-0000-0000-000000000000',
+            },
+          ]);
+
+        if (error) {
+          throw error;
+        }
+
+        toast.success('Post created successfully!');
       }
-
-      toast.success('Post created successfully!');
       handleClose();
       
       // Refresh the page to show the new post
@@ -167,7 +191,18 @@ export const PostModal: React.FC<PostModalProps> = ({
     if (isOpen && selectedDate) {
       fetchExistingPosts();
     }
-  }, [isOpen, selectedDate]);
+    
+    // Pre-fill form when editing
+    if (editingPost) {
+      setTitle(editingPost.title);
+      setContent(editingPost.content || '');
+      setPlatform(editingPost.platform);
+      setStatus(editingPost.status);
+      
+      const postDate = new Date(editingPost.scheduled_date);
+      setTime(format(postDate, 'HH:mm'));
+    }
+  }, [isOpen, selectedDate, editingPost]);
 
   const handleClose = () => {
     setTitle('');
@@ -187,13 +222,13 @@ export const PostModal: React.FC<PostModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Posts for {format(selectedDate, 'MMMM d, yyyy')}
+            {editingPost ? 'Edit Post' : `Posts for ${format(selectedDate, 'MMMM d, yyyy')}`}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 max-h-96 overflow-y-auto">
-          {/* Existing Posts */}
-          {existingPosts.length > 0 && (
+          {/* Show existing posts only when not editing */}
+          {!editingPost && existingPosts.length > 0 && (
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Existing Posts</h3>
               {existingPosts.map((post) => {
@@ -230,9 +265,11 @@ export const PostModal: React.FC<PostModalProps> = ({
             </div>
           )}
 
-          {/* Create New Post Form */}
-          <div className="border-t pt-4">
-            <h3 className="font-medium text-sm mb-4">Create New Post</h3>
+          {/* Form Section */}
+          <div className={!editingPost && existingPosts.length > 0 ? "border-t pt-4" : ""}>
+            <h3 className="font-medium text-sm mb-4">
+              {editingPost ? 'Edit Post' : 'Create New Post'}
+            </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="title">Title *</Label>
@@ -339,7 +376,7 @@ export const PostModal: React.FC<PostModalProps> = ({
                   Cancel
                 </Button>
                 <Button type="submit" disabled={uploading} className="flex-1">
-                  {uploading ? 'Creating...' : 'Create Post'}
+                  {uploading ? (editingPost ? 'Updating...' : 'Creating...') : (editingPost ? 'Update Post' : 'Create Post')}
                 </Button>
               </div>
             </form>
