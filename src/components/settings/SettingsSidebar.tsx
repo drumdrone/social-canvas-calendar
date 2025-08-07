@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlatformManager } from './PlatformManager';
 import { StatusManager } from './StatusManager';
+import { CategoryManager } from './CategoryManager';
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses'>('platforms');
+  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses' | 'categories'>('platforms');
 
   if (!isOpen) return null;
 
@@ -36,12 +37,12 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         </div>
 
         <div className="p-4">
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-1 mb-4">
             <Button
               variant={activeTab === 'platforms' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveTab('platforms')}
-              className="flex-1"
+              className="flex-1 text-xs"
             >
               Platforms
             </Button>
@@ -49,15 +50,24 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
               variant={activeTab === 'statuses' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveTab('statuses')}
-              className="flex-1"
+              className="flex-1 text-xs"
             >
               Statuses
+            </Button>
+            <Button
+              variant={activeTab === 'categories' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('categories')}
+              className="flex-1 text-xs"
+            >
+              Categories
             </Button>
           </div>
 
           <ScrollArea className="h-[calc(100vh-140px)]">
             {activeTab === 'platforms' && <PlatformManager />}
             {activeTab === 'statuses' && <StatusManager />}
+            {activeTab === 'categories' && <CategoryManager />}
           </ScrollArea>
         </div>
       </div>
