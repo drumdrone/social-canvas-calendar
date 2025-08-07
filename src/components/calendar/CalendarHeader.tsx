@@ -97,9 +97,17 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             variant={viewMode === 'list' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewModeChange('list')}
-            className="rounded-l-none"
+            className="rounded-none border-r border-border"
           >
             List
+          </Button>
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => onViewModeChange('table')}
+            className="rounded-l-none"
+          >
+            Table
           </Button>
         </div>
         

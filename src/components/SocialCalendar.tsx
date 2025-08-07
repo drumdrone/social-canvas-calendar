@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { CalendarHeader } from './calendar/CalendarHeader';
 import { CalendarGrid } from './calendar/CalendarGrid';
 import { CalendarList } from './calendar/CalendarList';
+import { PostsTable } from './calendar/PostsTable';
 import { PostModal } from './calendar/PostModal';
 import { CalendarFilters } from './calendar/CalendarFilters';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, format, isToday, isWeekend, addMonths, addWeeks } from 'date-fns';
 
-export type ViewMode = 'month' | 'week' | 'list';
+export type ViewMode = 'month' | 'week' | 'list' | 'table';
 export type Platform = 'facebook' | 'instagram' | 'twitter' | 'linkedin';
 export type PostStatus = 'draft' | 'published' | 'scheduled';
 export type Category = 'Video' | 'Image' | 'Carousel';
@@ -135,6 +136,12 @@ export const SocialCalendar: React.FC = () => {
             onDateClick={handleDateClick}
             onPostClick={handlePostClick}
           />
+        ) : viewMode === 'table' ? (
+          <PostsTable
+            selectedPlatforms={selectedPlatforms}
+            selectedStatuses={selectedStatuses}
+            currentDate={currentDate}
+          />
         ) : (
           <CalendarGrid
             dates={getDates()}
@@ -148,12 +155,14 @@ export const SocialCalendar: React.FC = () => {
         )}
       </div>
       
-      <PostModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        selectedDate={selectedDate}
-        editingPost={editingPost}
-      />
+      {viewMode !== 'table' && (
+        <PostModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          selectedDate={selectedDate}
+          editingPost={editingPost}
+        />
+      )}
     </div>
   );
 };
