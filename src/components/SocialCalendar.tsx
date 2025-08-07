@@ -36,11 +36,13 @@ export const SocialCalendar: React.FC = () => {
   const [selectedStatuses, setSelectedStatuses] = useState<PostStatus[]>(['draft', 'published', 'scheduled']);
 
   const getDates = () => {
+    const weekStartOptions = { weekStartsOn: 1 as const }; // Monday = 1
+    
     if (viewMode === 'month') {
       const monthStart = startOfMonth(currentDate);
       const monthEnd = endOfMonth(currentDate);
-      const calendarStart = startOfWeek(monthStart);
-      const calendarEnd = endOfWeek(monthEnd);
+      const calendarStart = startOfWeek(monthStart, weekStartOptions);
+      const calendarEnd = endOfWeek(monthEnd, weekStartOptions);
       
       const dates = [];
       let day = calendarStart;
@@ -52,7 +54,7 @@ export const SocialCalendar: React.FC = () => {
       
       return dates;
     } else {
-      const weekStart = startOfWeek(currentDate);
+      const weekStart = startOfWeek(currentDate, weekStartOptions);
       const dates = [];
       
       for (let i = 0; i < 7; i++) {

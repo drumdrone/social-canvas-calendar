@@ -77,7 +77,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         "grid border-b border-calendar-grid bg-muted/50 flex-shrink-0",
         viewMode === 'month' ? "grid-cols-7" : "grid-cols-7"
       )}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
           <div
             key={day}
             className="p-3 text-center text-sm font-medium text-muted-foreground border-r border-calendar-grid last:border-r-0"
