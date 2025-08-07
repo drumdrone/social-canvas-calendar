@@ -44,7 +44,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   };
 
   return (
-    <div className="flex items-center justify-between p-4 border-b border-border bg-card">
+    <div className="flex items-center justify-between p-4 border-b border-border bg-card flex-shrink-0">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-6 w-6 text-primary" />

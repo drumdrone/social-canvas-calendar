@@ -71,10 +71,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background">
+    <div className="flex flex-col h-full bg-background">
       {/* Day headers */}
       <div className={cn(
-        "grid border-b border-calendar-grid bg-muted/50",
+        "grid border-b border-calendar-grid bg-muted/50 flex-shrink-0",
         viewMode === 'month' ? "grid-cols-7" : "grid-cols-7"
       )}>
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
@@ -88,7 +88,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       </div>
 
       {/* Calendar grid */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1">
         <div className={cn(
           "grid h-full",
           viewMode === 'month' ? "grid-cols-7" : "grid-cols-7",

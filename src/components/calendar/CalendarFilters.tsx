@@ -54,7 +54,7 @@ export const CalendarFilters: React.FC<CalendarFiltersProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-4 p-4 border-b border-border bg-card">
+    <div className="flex items-center gap-4 p-4 border-b border-border bg-card flex-shrink-0">
       <div className="flex items-center gap-2">
         <Filter className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm font-medium text-foreground">Filters:</span>
