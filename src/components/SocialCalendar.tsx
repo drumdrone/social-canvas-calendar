@@ -126,26 +126,27 @@ export const SocialCalendar: React.FC = () => {
         selectedStatuses={selectedStatuses}
         onStatusesChange={setSelectedStatuses}
       />
-      
-      {viewMode === 'list' ? (
-        <CalendarList
-          currentDate={currentDate}
-          selectedPlatforms={selectedPlatforms}
-          selectedStatuses={selectedStatuses}
-          onDateClick={handleDateClick}
-          onPostClick={handlePostClick}
-        />
-      ) : (
-        <CalendarGrid
-          dates={getDates()}
-          viewMode={viewMode}
-          currentDate={currentDate}
-          selectedPlatforms={selectedPlatforms}
-          selectedStatuses={selectedStatuses}
-          onDateClick={handleDateClick}
-          onPostClick={handlePostClick}
-        />
-      )}
+      <div className="flex-1 min-h-0">
+        {viewMode === 'list' ? (
+          <CalendarList
+            currentDate={currentDate}
+            selectedPlatforms={selectedPlatforms}
+            selectedStatuses={selectedStatuses}
+            onDateClick={handleDateClick}
+            onPostClick={handlePostClick}
+          />
+        ) : (
+          <CalendarGrid
+            dates={getDates()}
+            viewMode={viewMode}
+            currentDate={currentDate}
+            selectedPlatforms={selectedPlatforms}
+            selectedStatuses={selectedStatuses}
+            onDateClick={handleDateClick}
+            onPostClick={handlePostClick}
+          />
+        )}
+      </div>
       
       <PostModal
         isOpen={isModalOpen}
