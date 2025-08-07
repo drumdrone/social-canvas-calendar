@@ -21,6 +21,12 @@ interface EditingField {
   field: string;
 }
 
+interface HoverImageState {
+  isVisible: boolean;
+  imageUrl: string;
+  position: { x: number; y: number };
+}
+
 const platformIcons = {
   facebook: Facebook,
   instagram: Instagram,
@@ -38,6 +44,11 @@ export const PostsTable: React.FC<PostsTableProps> = ({
   const [editingField, setEditingField] = useState<EditingField | null>(null);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [hoverImage, setHoverImage] = useState<HoverImageState>({
+    isVisible: false,
+    imageUrl: '',
+    position: { x: 0, y: 0 }
+  });
   const [newPost, setNewPost] = useState({
     title: '',
     content: '',
@@ -249,6 +260,26 @@ export const PostsTable: React.FC<PostsTableProps> = ({
       console.error('Error creating post:', error);
       toast.error('Failed to create post');
     }
+  };
+
+  const handleImageHover = (e: React.MouseEvent, imageUrl: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoverImage({
+      isVisible: true,
+      imageUrl,
+      position: {
+        x: rect.right + 10,
+        y: rect.top
+      }
+    });
+  };
+
+  const handleImageLeave = () => {
+    setHoverImage({
+      isVisible: false,
+      imageUrl: '',
+      position: { x: 0, y: 0 }
+    });
   };
 
   const updatePost = (postId: string, field: string, value: any) => {
@@ -574,13 +605,15 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                         <TableRow key={post.id} className="hover:bg-muted/25">
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              {post.image_url ? (
-                                <img 
-                                  src={post.image_url} 
-                                  alt="Post image" 
-                                  className="w-10 h-10 rounded object-cover cursor-pointer hover:opacity-80"
-                                  onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
-                                />
+                               {post.image_url ? (
+                                 <img 
+                                   src={post.image_url} 
+                                   alt="Post image" 
+                                   className="w-10 h-10 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                   onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
+                                   onMouseEnter={(e) => handleImageHover(e, post.image_url!)}
+                                   onMouseLeave={handleImageLeave}
+                                 />
                               ) : (
                                 <div 
                                   className="w-10 h-10 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer hover:border-gray-400"
@@ -646,6 +679,26 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           </TableBody>
         </Table>
       </div>
+
+      {/* Hover Image Preview */}
+      {hoverImage.isVisible && (
+        <div 
+          className="fixed z-50 pointer-events-none"
+          style={{
+            left: `${hoverImage.position.x}px`,
+            top: `${hoverImage.position.y}px`,
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 max-w-sm">
+            <img 
+              src={hoverImage.imageUrl} 
+              alt="Image preview" 
+              className="max-w-80 max-h-80 rounded object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
