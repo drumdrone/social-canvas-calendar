@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CalendarHeader } from './calendar/CalendarHeader';
 import { CalendarGrid } from './calendar/CalendarGrid';
 import { CalendarList } from './calendar/CalendarList';
 import { PostModal } from './calendar/PostModal';
 import { CalendarFilters } from './calendar/CalendarFilters';
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, format, isToday, isWeekend } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, format, isToday, isWeekend, addMonths, addWeeks } from 'date-fns';
 
 export type ViewMode = 'month' | 'week' | 'list';
 export type Platform = 'facebook' | 'instagram' | 'twitter' | 'linkedin';
@@ -80,8 +80,39 @@ export const SocialCalendar: React.FC = () => {
     setEditingPost(null);
   };
 
+  const handleWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    
+    if (e.deltaY > 0) {
+      // Scroll down - go to next period
+      if (viewMode === 'month') {
+        setCurrentDate(prev => addMonths(prev, 1));
+      } else if (viewMode === 'week') {
+        setCurrentDate(prev => addWeeks(prev, 1));
+      }
+    } else {
+      // Scroll up - go to previous period
+      if (viewMode === 'month') {
+        setCurrentDate(prev => addMonths(prev, -1));
+      } else if (viewMode === 'week') {
+        setCurrentDate(prev => addWeeks(prev, -1));
+      }
+    }
+  };
+
+  useEffect(() => {
+    const calendarElement = document.querySelector('.calendar-container');
+    if (calendarElement) {
+      calendarElement.addEventListener('wheel', handleWheel, { passive: false });
+      
+      return () => {
+        calendarElement.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, [viewMode]);
+
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background calendar-container">
       <CalendarHeader 
         currentDate={currentDate}
         onDateChange={setCurrentDate}
