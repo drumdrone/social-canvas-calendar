@@ -8,12 +8,13 @@ import { CalendarFilters } from './calendar/CalendarFilters';
 import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
 import { Settings } from 'lucide-react';
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, format, isToday, isWeekend, addMonths, addWeeks } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, addWeeks } from 'date-fns';
 
 export type ViewMode = 'month' | 'week' | 'list' | 'table';
-export type Platform = 'facebook' | 'instagram' | 'twitter' | 'linkedin';
-export type PostStatus = 'draft' | 'published' | 'scheduled';
-export type Category = 'Video' | 'Image' | 'Carousel';
+export type Platform = string; // Changed to string to support dynamic platforms
+export type PostStatus = string; // Changed to string to support dynamic statuses
+export type Category = string; // Changed to string to support dynamic categories
 
 export interface SocialPost {
   id: string;
@@ -35,9 +36,32 @@ export const SocialCalendar: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['facebook', 'instagram', 'twitter', 'linkedin']);
-  const [selectedStatuses, setSelectedStatuses] = useState<PostStatus[]>(['draft', 'published', 'scheduled']);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<PostStatus[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Load initial platform and status selections from database
+  useEffect(() => {
+    const loadInitialSelections = async () => {
+      try {
+        const [platformsResult, statusesResult] = await Promise.all([
+          supabase.from('platforms').select('name').eq('is_active', true),
+          supabase.from('post_statuses').select('name').eq('is_active', true)
+        ]);
+        
+        if (platformsResult.data) {
+          setSelectedPlatforms(platformsResult.data.map(p => p.name));
+        }
+        if (statusesResult.data) {
+          setSelectedStatuses(statusesResult.data.map(s => s.name));
+        }
+      } catch (error) {
+        console.error('Error loading initial selections:', error);
+      }
+    };
+    
+    loadInitialSelections();
+  }, []);
 
   const getDates = () => {
     const weekStartOptions = { weekStartsOn: 1 as const }; // Monday = 1
@@ -119,20 +143,7 @@ export const SocialCalendar: React.FC = () => {
   }, [viewMode]);
 
   return (
-    <div className="h-screen flex flex-col bg-background calendar-container overflow-hidden max-h-screen relative">
-      {/* Settings Button */}
-      <div className="absolute top-4 left-4 z-40">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowSettings(true)}
-          className="flex items-center gap-2"
-        >
-          <Settings className="h-4 w-4" />
-          Settings
-        </Button>
-      </div>
-
+    <div className="h-screen flex flex-col bg-background calendar-container overflow-hidden max-h-screen">
       <CalendarHeader 
         currentDate={currentDate}
         onDateChange={setCurrentDate}
@@ -182,11 +193,6 @@ export const SocialCalendar: React.FC = () => {
           editingPost={editingPost}
         />
       )}
-
-      <SettingsSidebar
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
     </div>
   );
 };
