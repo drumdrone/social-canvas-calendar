@@ -370,9 +370,18 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                 const newDate = new Date(e.target.value);
                 const originalDate = new Date(value);
                 newDate.setHours(originalDate.getHours(), originalDate.getMinutes());
-                updatePost(post.id, field, newDate.toISOString());
+                const updatedValue = newDate.toISOString();
+                updatePost(post.id, field, updatedValue);
               }}
-              onBlur={() => handleSaveField(post.id, field, post.scheduled_date)}
+              onBlur={() => handleSaveField(post.id, field, posts.find(p => p.id === post.id)?.scheduled_date || value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveField(post.id, field, posts.find(p => p.id === post.id)?.scheduled_date || value);
+                }
+                if (e.key === 'Escape') {
+                  setEditingField(null);
+                }
+              }}
               autoFocus
               className="min-w-[140px]"
             />
@@ -386,9 +395,18 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                 const [hours, minutes] = e.target.value.split(':').map(Number);
                 const newDate = new Date(value);
                 newDate.setHours(hours, minutes);
-                updatePost(post.id, field, newDate.toISOString());
+                const updatedValue = newDate.toISOString();
+                updatePost(post.id, field, updatedValue);
               }}
-              onBlur={() => handleSaveField(post.id, field, post.scheduled_date)}
+              onBlur={() => handleSaveField(post.id, field, posts.find(p => p.id === post.id)?.scheduled_date || value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveField(post.id, field, posts.find(p => p.id === post.id)?.scheduled_date || value);
+                }
+                if (e.key === 'Escape') {
+                  setEditingField(null);
+                }
+              }}
               autoFocus
               className="min-w-[100px]"
             />
