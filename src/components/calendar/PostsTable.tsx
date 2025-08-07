@@ -669,12 +669,72 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                           <TableCell>
                             {renderEditableCell(post, 'status', post.status, 'select')}
                           </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              {renderEditableCell(post, 'scheduled_date', post.scheduled_date, 'date')}
-                              {renderEditableCell(post, 'scheduled_date', post.scheduled_date, 'time')}
-                            </div>
-                          </TableCell>
+          <TableCell>
+            <div className="space-y-1">
+              <div 
+                onClick={() => handleEdit(post.id, 'scheduled_date')}
+                className="cursor-pointer hover:bg-muted/50 p-1 rounded min-h-[32px] flex items-center"
+              >
+                {editingField?.postId === post.id && editingField?.field === 'scheduled_date' ? (
+                  <Input
+                    type="date"
+                    value={format(new Date(post.scheduled_date), 'yyyy-MM-dd')}
+                    onChange={(e) => {
+                      const newDate = new Date(e.target.value);
+                      const originalDate = new Date(post.scheduled_date);
+                      newDate.setHours(originalDate.getHours(), originalDate.getMinutes());
+                      const updatedValue = newDate.toISOString();
+                      updatePost(post.id, 'scheduled_date', updatedValue);
+                    }}
+                    onBlur={() => handleSaveField(post.id, 'scheduled_date', posts.find(p => p.id === post.id)?.scheduled_date || post.scheduled_date)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveField(post.id, 'scheduled_date', posts.find(p => p.id === post.id)?.scheduled_date || post.scheduled_date);
+                      }
+                      if (e.key === 'Escape') {
+                        setEditingField(null);
+                      }
+                    }}
+                    autoFocus
+                    className="min-w-[140px]"
+                  />
+                ) : (
+                  <div className="text-sm">{format(new Date(post.scheduled_date), 'MMM d, yyyy')}</div>
+                )}
+              </div>
+              <div 
+                onClick={() => handleEdit(post.id, 'scheduled_time')}
+                className="cursor-pointer hover:bg-muted/50 p-1 rounded min-h-[32px] flex items-center"
+              >
+                {editingField?.postId === post.id && editingField?.field === 'scheduled_time' ? (
+                  <Input
+                    type="time"
+                    value={format(new Date(post.scheduled_date), 'HH:mm')}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(':').map(Number);
+                      const newDate = new Date(post.scheduled_date);
+                      newDate.setHours(hours, minutes);
+                      const updatedValue = newDate.toISOString();
+                      updatePost(post.id, 'scheduled_date', updatedValue);
+                    }}
+                    onBlur={() => handleSaveField(post.id, 'scheduled_date', posts.find(p => p.id === post.id)?.scheduled_date || post.scheduled_date)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveField(post.id, 'scheduled_date', posts.find(p => p.id === post.id)?.scheduled_date || post.scheduled_date);
+                      }
+                      if (e.key === 'Escape') {
+                        setEditingField(null);
+                      }
+                    }}
+                    autoFocus
+                    className="min-w-[100px]"
+                  />
+                ) : (
+                  <div className="text-sm text-muted-foreground">{format(new Date(post.scheduled_date), 'HH:mm')}</div>
+                )}
+              </div>
+            </div>
+          </TableCell>
                           <TableCell>
                             <Button size="sm" variant="outline" onClick={() => handleDelete(post.id)}>
                               <Trash2 className="h-3 w-3" />
