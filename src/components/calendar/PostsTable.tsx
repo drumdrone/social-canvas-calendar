@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, startOfMonth, isSameMonth } from 'date-fns';
 import { Facebook, Instagram, Twitter, Linkedin, Calendar, Clock, Trash2, Plus, Save, X, Edit, Upload, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +78,19 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     const isStatusSelected = selectedStatuses.includes(post.status);
     return isPlatformSelected && isStatusSelected;
   });
+
+  // Group posts by month
+  const groupedPosts = filteredPosts.reduce((groups, post) => {
+    const monthKey = format(startOfMonth(new Date(post.scheduled_date)), 'yyyy-MM');
+    if (!groups[monthKey]) {
+      groups[monthKey] = [];
+    }
+    groups[monthKey].push(post);
+    return groups;
+  }, {} as Record<string, SocialPost[]>);
+
+  // Sort months in descending order (newest first)
+  const sortedMonths = Object.keys(groupedPosts).sort((a, b) => b.localeCompare(a));
 
   const handleEdit = (postId: string, field: string) => {
     setEditingField({ postId, field });
@@ -532,71 +545,104 @@ export const PostsTable: React.FC<PostsTableProps> = ({
               </TableRow>
             )}
             
-            {filteredPosts.map((post) => {
-              const postDate = new Date(post.scheduled_date);
+            {sortedMonths.map((monthKey) => {
+              const monthPosts = groupedPosts[monthKey];
+              const monthDate = new Date(monthKey + '-01');
               
               return (
-                <TableRow key={post.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {post.image_url ? (
-                        <img 
-                          src={post.image_url} 
-                          alt="Post image" 
-                          className="w-10 h-10 rounded object-cover cursor-pointer hover:opacity-80"
-                          onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
-                        />
-                      ) : (
-                        <div 
-                          className="w-10 h-10 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer hover:border-gray-400"
-                          onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
-                        >
-                          <ImageIcon className="h-4 w-4 text-gray-400" />
-                        </div>
-                      )}
-                      {uploadingImage === post.id && (
-                        <div className="text-xs text-muted-foreground">Uploading...</div>
-                      )}
-                      <input
-                        id={`image-upload-${post.id}`}
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleImageUpload(post.id, file);
-                          }
-                        }}
-                        className="hidden"
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {renderEditableCell(post, 'title', post.title, 'input')}
-                  </TableCell>
-                  <TableCell>
-                    {renderEditableCell(post, 'content', post.content, 'textarea')}
-                  </TableCell>
-                  <TableCell>
-                    {renderEditableCell(post, 'platform', post.platform, 'select')}
-                  </TableCell>
-                  <TableCell>
-                    {renderEditableCell(post, 'status', post.status, 'select')}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {renderEditableCell(post, 'scheduled_date', post.scheduled_date, 'date')}
-                      {renderEditableCell(post, 'scheduled_date', post.scheduled_date, 'time')}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="outline" onClick={() => handleDelete(post.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <React.Fragment key={monthKey}>
+                  {/* Month Header */}
+                  <TableRow>
+                    <TableCell colSpan={7} className="bg-muted/50 font-semibold text-foreground py-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        {format(monthDate, 'MMMM yyyy')}
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          ({monthPosts.length} post{monthPosts.length !== 1 ? 's' : ''})
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Posts for this month */}
+                  {monthPosts
+                    .sort((a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime())
+                    .map((post) => {
+                      const postDate = new Date(post.scheduled_date);
+                      
+                      return (
+                        <TableRow key={post.id} className="hover:bg-muted/25">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {post.image_url ? (
+                                <img 
+                                  src={post.image_url} 
+                                  alt="Post image" 
+                                  className="w-10 h-10 rounded object-cover cursor-pointer hover:opacity-80"
+                                  onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
+                                />
+                              ) : (
+                                <div 
+                                  className="w-10 h-10 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer hover:border-gray-400"
+                                  onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
+                                >
+                                  <ImageIcon className="h-4 w-4 text-gray-400" />
+                                </div>
+                              )}
+                              {uploadingImage === post.id && (
+                                <div className="text-xs text-muted-foreground">Uploading...</div>
+                              )}
+                              <input
+                                id={`image-upload-${post.id}`}
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleImageUpload(post.id, file);
+                                  }
+                                }}
+                                className="hidden"
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {renderEditableCell(post, 'title', post.title, 'input')}
+                          </TableCell>
+                          <TableCell>
+                            {renderEditableCell(post, 'content', post.content, 'textarea')}
+                          </TableCell>
+                          <TableCell>
+                            {renderEditableCell(post, 'platform', post.platform, 'select')}
+                          </TableCell>
+                          <TableCell>
+                            {renderEditableCell(post, 'status', post.status, 'select')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {renderEditableCell(post, 'scheduled_date', post.scheduled_date, 'date')}
+                              {renderEditableCell(post, 'scheduled_date', post.scheduled_date, 'time')}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline" onClick={() => handleDelete(post.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </React.Fragment>
               );
             })}
+            
+            {sortedMonths.length === 0 && !isCreating && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  No posts found. Create your first post!
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
