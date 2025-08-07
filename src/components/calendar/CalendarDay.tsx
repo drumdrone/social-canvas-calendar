@@ -37,7 +37,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   return (
     <div
       className={cn(
-        "aspect-square border-r border-b border-calendar-grid cursor-pointer transition-colors hover:bg-calendar-hover relative overflow-hidden flex flex-col",
+        "h-full border-r border-b border-calendar-grid cursor-pointer transition-colors hover:bg-calendar-hover relative overflow-hidden flex flex-col min-h-0",
         !isCurrentMonth && "text-muted-foreground bg-muted/30",
         isWeekend && isCurrentMonth && "bg-calendar-weekend",
         isToday && "border-calendar-today border-2"

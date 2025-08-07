@@ -113,7 +113,7 @@ export const SocialCalendar: React.FC = () => {
   }, [viewMode]);
 
   return (
-    <div className="h-screen flex flex-col bg-background calendar-container">
+    <div className="h-screen flex flex-col bg-background calendar-container overflow-hidden">
       <CalendarHeader 
         currentDate={currentDate}
         onDateChange={setCurrentDate}
@@ -127,7 +127,7 @@ export const SocialCalendar: React.FC = () => {
         selectedStatuses={selectedStatuses}
         onStatusesChange={setSelectedStatuses}
       />
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {viewMode === 'list' ? (
           <CalendarList
             currentDate={currentDate}

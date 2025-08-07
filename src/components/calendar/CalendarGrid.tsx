@@ -88,11 +88,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       </div>
 
       {/* Calendar grid */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <div className={cn(
           "grid h-full",
           viewMode === 'month' ? "grid-cols-7" : "grid-cols-7",
-          viewMode === 'month' ? `grid-rows-${Math.ceil(dates.length / 7)}` : "grid-rows-1"
+          viewMode === 'month' ? "grid-rows-6" : "grid-rows-1"
         )}>
           {dates.map((date, index) => {
             const dayPosts = getFilteredPostsForDate(date);
