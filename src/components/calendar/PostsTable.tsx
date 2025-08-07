@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Facebook, Instagram, Twitter, Linkedin, Calendar, Clock, Trash2, Plus, Save, X, Edit } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Linkedin, Calendar, Clock, Trash2, Plus, Save, X, Edit, Upload, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +14,11 @@ interface PostsTableProps {
   selectedPlatforms: Platform[];
   selectedStatuses: PostStatus[];
   currentDate: Date;
+}
+
+interface EditingField {
+  postId: string;
+  field: string;
 }
 
 const platformIcons = {
@@ -30,7 +35,8 @@ export const PostsTable: React.FC<PostsTableProps> = ({
 }) => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<EditingField | null>(null);
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newPost, setNewPost] = useState({
     title: '',
@@ -40,6 +46,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     category: 'Image' as Category,
     scheduled_date: format(new Date(), 'yyyy-MM-dd'),
     time: '12:00',
+    image: null as File | null,
   });
 
   const fetchPosts = async () => {
@@ -72,8 +79,58 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     return isPlatformSelected && isStatusSelected;
   });
 
-  const handleEdit = (post: SocialPost) => {
-    setEditingId(post.id);
+  const handleEdit = (postId: string, field: string) => {
+    setEditingField({ postId, field });
+  };
+
+  const handleImageUpload = async (postId: string, file: File) => {
+    setUploadingImage(postId);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `public/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('social-media-images')
+        .upload(filePath, file);
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('social-media-images')
+        .getPublicUrl(filePath);
+
+      await handleSaveField(postId, 'image_url', publicUrl);
+      toast.success('Image uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingImage(null);
+    }
+  };
+
+  const handleSaveField = async (postId: string, field: string, value: any) => {
+    try {
+      const updateData: any = { [field]: value };
+      
+      const { error } = await supabase
+        .from('social_media_posts')
+        .update(updateData)
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      // Update local state
+      setPosts(posts.map(post => 
+        post.id === postId ? { ...post, [field]: value } : post
+      ));
+      
+      setEditingField(null);
+    } catch (error) {
+      console.error('Error updating post:', error);
+      toast.error('Failed to update post');
+    }
   };
 
   const handleSave = async (post: SocialPost) => {
@@ -93,7 +150,6 @@ export const PostsTable: React.FC<PostsTableProps> = ({
       if (error) throw error;
 
       toast.success('Post updated successfully!');
-      setEditingId(null);
       fetchPosts();
     } catch (error) {
       console.error('Error updating post:', error);
@@ -129,6 +185,25 @@ export const PostsTable: React.FC<PostsTableProps> = ({
       const [hours, minutes] = newPost.time.split(':').map(Number);
       scheduledDateTime.setHours(hours, minutes, 0, 0);
 
+      let imageUrl = null;
+      if (newPost.image) {
+        const fileExt = newPost.image.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `public/${fileName}`;
+
+        const { data, error: uploadError } = await supabase.storage
+          .from('social-media-images')
+          .upload(filePath, newPost.image);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('social-media-images')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+      }
+
       const { error } = await supabase
         .from('social_media_posts')
         .insert([{
@@ -138,6 +213,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           status: newPost.status,
           category: newPost.category,
           scheduled_date: scheduledDateTime.toISOString(),
+          image_url: imageUrl,
           user_id: '00000000-0000-0000-0000-000000000000',
         }]);
 
@@ -153,6 +229,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         category: 'Image',
         scheduled_date: format(new Date(), 'yyyy-MM-dd'),
         time: '12:00',
+        image: null,
       });
       fetchPosts();
     } catch (error) {
@@ -165,6 +242,155 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     setPosts(posts.map(post => 
       post.id === postId ? { ...post, [field]: value } : post
     ));
+  };
+
+  const renderEditableCell = (post: SocialPost, field: string, value: any, type: 'input' | 'textarea' | 'select' | 'date' | 'time' = 'input') => {
+    const isEditing = editingField?.postId === post.id && editingField?.field === field;
+    
+    if (isEditing) {
+      switch (type) {
+        case 'textarea':
+          return (
+            <Textarea
+              value={value || ''}
+              onChange={(e) => updatePost(post.id, field, e.target.value)}
+              onBlur={() => handleSaveField(post.id, field, value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                  handleSaveField(post.id, field, value);
+                }
+                if (e.key === 'Escape') {
+                  setEditingField(null);
+                }
+              }}
+              autoFocus
+              rows={2}
+              className="min-w-[200px]"
+            />
+          );
+        case 'select':
+          if (field === 'platform') {
+            return (
+              <Select 
+                value={value} 
+                onValueChange={(newValue) => {
+                  updatePost(post.id, field, newValue);
+                  handleSaveField(post.id, field, newValue);
+                }}
+              >
+                <SelectTrigger className="min-w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(['facebook', 'instagram', 'twitter', 'linkedin'] as Platform[]).map((p) => {
+                    const Icon = platformIcons[p];
+                    return (
+                      <SelectItem key={p} value={p}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-4 w-4" />
+                          {p.charAt(0).toUpperCase() + p.slice(1)}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            );
+          } else if (field === 'status') {
+            return (
+              <Select 
+                value={value} 
+                onValueChange={(newValue) => {
+                  updatePost(post.id, field, newValue);
+                  handleSaveField(post.id, field, newValue);
+                }}
+              >
+                <SelectTrigger className="min-w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                </SelectContent>
+              </Select>
+            );
+          }
+          break;
+        case 'date':
+          return (
+            <Input
+              type="date"
+              value={format(new Date(value), 'yyyy-MM-dd')}
+              onChange={(e) => {
+                const newDate = new Date(e.target.value);
+                const originalDate = new Date(value);
+                newDate.setHours(originalDate.getHours(), originalDate.getMinutes());
+                updatePost(post.id, field, newDate.toISOString());
+              }}
+              onBlur={() => handleSaveField(post.id, field, post.scheduled_date)}
+              autoFocus
+              className="min-w-[140px]"
+            />
+          );
+        case 'time':
+          return (
+            <Input
+              type="time"
+              value={format(new Date(value), 'HH:mm')}
+              onChange={(e) => {
+                const [hours, minutes] = e.target.value.split(':').map(Number);
+                const newDate = new Date(value);
+                newDate.setHours(hours, minutes);
+                updatePost(post.id, field, newDate.toISOString());
+              }}
+              onBlur={() => handleSaveField(post.id, field, post.scheduled_date)}
+              autoFocus
+              className="min-w-[100px]"
+            />
+          );
+        default:
+          return (
+            <Input
+              value={value || ''}
+              onChange={(e) => updatePost(post.id, field, e.target.value)}
+              onBlur={() => handleSaveField(post.id, field, value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveField(post.id, field, value);
+                }
+                if (e.key === 'Escape') {
+                  setEditingField(null);
+                }
+              }}
+              autoFocus
+              className="min-w-[150px]"
+            />
+          );
+      }
+    }
+
+    return (
+      <div 
+        onClick={() => handleEdit(post.id, field)}
+        className="cursor-pointer hover:bg-muted/50 p-1 rounded min-h-[32px] flex items-center"
+      >
+        {type === 'textarea' ? (
+          <div className="text-sm max-w-[200px] truncate">{value || 'Click to edit'}</div>
+        ) : type === 'select' && field === 'platform' ? (
+          <div className="flex items-center gap-2">
+            {React.createElement(platformIcons[value as Platform], { className: "h-4 w-4" })}
+            <span className="capitalize">{value}</span>
+          </div>
+        ) : type === 'date' ? (
+          <div className="text-sm">{format(new Date(value), 'MMM d, yyyy')}</div>
+        ) : type === 'time' ? (
+          <div className="text-sm text-muted-foreground">{format(new Date(value), 'HH:mm')}</div>
+        ) : (
+          <div className="text-sm">{value || 'Click to edit'}</div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -189,6 +415,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[100px]">Image</TableHead>
               <TableHead className="w-[200px]">Title</TableHead>
               <TableHead className="w-[250px]">Content</TableHead>
               <TableHead className="w-[150px]">Platform</TableHead>
@@ -200,6 +427,37 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           <TableBody>
             {isCreating && (
               <TableRow>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('new-image-upload')?.click()}
+                      className="flex items-center gap-1"
+                    >
+                      <Upload className="h-3 w-3" />
+                      {newPost.image ? 'Change' : 'Upload'}
+                    </Button>
+                    {newPost.image && (
+                      <span className="text-xs text-muted-foreground truncate max-w-[60px]">
+                        {newPost.image.name}
+                      </span>
+                    )}
+                    <input
+                      id="new-image-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setNewPost({...newPost, image: file});
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Input
                     value={newPost.title}
@@ -275,130 +533,66 @@ export const PostsTable: React.FC<PostsTableProps> = ({
             )}
             
             {filteredPosts.map((post) => {
-              const Icon = platformIcons[post.platform];
-              const isEditing = editingId === post.id;
               const postDate = new Date(post.scheduled_date);
               
               return (
                 <TableRow key={post.id}>
                   <TableCell>
-                    {isEditing ? (
-                      <Input
-                        value={post.title}
-                        onChange={(e) => updatePost(post.id, 'title', e.target.value)}
-                      />
-                    ) : (
-                      <div className="font-medium">{post.title}</div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {isEditing ? (
-                      <Textarea
-                        value={post.content || ''}
-                        onChange={(e) => updatePost(post.id, 'content', e.target.value)}
-                        rows={2}
-                      />
-                    ) : (
-                      <div className="text-sm text-muted-foreground truncate max-w-[250px]">
-                        {post.content || 'No content'}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {isEditing ? (
-                      <Select value={post.platform} onValueChange={(value: Platform) => updatePost(post.id, 'platform', value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(['facebook', 'instagram', 'twitter', 'linkedin'] as Platform[]).map((p) => {
-                            const PlatformIcon = platformIcons[p];
-                            return (
-                              <SelectItem key={p} value={p}>
-                                <div className="flex items-center gap-2">
-                                  <PlatformIcon className="h-4 w-4" />
-                                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                                </div>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        <span className="capitalize">{post.platform}</span>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {isEditing ? (
-                      <Select value={post.status} onValueChange={(value: PostStatus) => updatePost(post.id, 'status', value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="scheduled">Scheduled</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="capitalize">{post.status}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <Input
-                          type="date"
-                          value={format(postDate, 'yyyy-MM-dd')}
-                          onChange={(e) => {
-                            const newDate = new Date(e.target.value);
-                            newDate.setHours(postDate.getHours(), postDate.getMinutes());
-                            updatePost(post.id, 'scheduled_date', newDate.toISOString());
-                          }}
+                    <div className="flex items-center gap-2">
+                      {post.image_url ? (
+                        <img 
+                          src={post.image_url} 
+                          alt="Post image" 
+                          className="w-10 h-10 rounded object-cover cursor-pointer hover:opacity-80"
+                          onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
                         />
-                        <Input
-                          type="time"
-                          value={format(postDate, 'HH:mm')}
-                          onChange={(e) => {
-                            const [hours, minutes] = e.target.value.split(':').map(Number);
-                            const newDate = new Date(postDate);
-                            newDate.setHours(hours, minutes);
-                            updatePost(post.id, 'scheduled_date', newDate.toISOString());
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="text-sm">
-                        <div>{format(postDate, 'MMM d, yyyy')}</div>
-                        <div className="text-muted-foreground">{format(postDate, 'HH:mm')}</div>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {isEditing ? (
-                        <>
-                          <Button size="sm" onClick={() => handleSave(post)}>
-                            <Save className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </>
                       ) : (
-                        <>
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(post)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDelete(post.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </>
+                        <div 
+                          className="w-10 h-10 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer hover:border-gray-400"
+                          onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
+                        >
+                          <ImageIcon className="h-4 w-4 text-gray-400" />
+                        </div>
                       )}
+                      {uploadingImage === post.id && (
+                        <div className="text-xs text-muted-foreground">Uploading...</div>
+                      )}
+                      <input
+                        id={`image-upload-${post.id}`}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(post.id, file);
+                          }
+                        }}
+                        className="hidden"
+                      />
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {renderEditableCell(post, 'title', post.title, 'input')}
+                  </TableCell>
+                  <TableCell>
+                    {renderEditableCell(post, 'content', post.content, 'textarea')}
+                  </TableCell>
+                  <TableCell>
+                    {renderEditableCell(post, 'platform', post.platform, 'select')}
+                  </TableCell>
+                  <TableCell>
+                    {renderEditableCell(post, 'status', post.status, 'select')}
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      {renderEditableCell(post, 'scheduled_date', post.scheduled_date, 'date')}
+                      {renderEditableCell(post, 'scheduled_date', post.scheduled_date, 'time')}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button size="sm" variant="outline" onClick={() => handleDelete(post.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               );
