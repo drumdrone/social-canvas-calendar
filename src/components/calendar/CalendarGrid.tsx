@@ -71,7 +71,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full min-h-0 bg-background">
       {/* Day headers */}
       <div className={cn(
         "grid border-b border-calendar-grid bg-muted/50 flex-shrink-0",
@@ -88,12 +88,16 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       </div>
 
       {/* Calendar grid */}
-      <div className="flex-1">
-        <div className={cn(
-          "grid h-full",
-          viewMode === 'month' ? "grid-cols-7" : "grid-cols-7",
-          viewMode === 'month' ? "grid-rows-6" : "grid-rows-1"
-        )}>
+      <div className="flex-1 min-h-0">
+        <div 
+          className={cn(
+            "grid h-full",
+            viewMode === 'month' ? "grid-cols-7" : "grid-cols-7"
+          )}
+          style={{
+            gridTemplateRows: viewMode === 'month' ? 'repeat(6, 1fr)' : '1fr'
+          }}
+        >
           {dates.map((date, index) => {
             const dayPosts = getFilteredPostsForDate(date);
             

@@ -113,7 +113,7 @@ export const SocialCalendar: React.FC = () => {
   }, [viewMode]);
 
   return (
-    <div className="h-screen flex flex-col bg-background calendar-container overflow-hidden">
+    <div className="h-screen flex flex-col bg-background calendar-container overflow-hidden max-h-screen">
       <CalendarHeader 
         currentDate={currentDate}
         onDateChange={setCurrentDate}
