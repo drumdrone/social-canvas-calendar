@@ -66,7 +66,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         isToday && "border-calendar-today border-2"
       )}
       onClick={onClick}
-      style={{ minHeight: 'calc((100vh - 200px) / 6)' }}
+      style={{ minHeight: 'calc((100vh - 160px) / 5)' }}
     >
       {/* Image Section - 80% */}
       {hasImage && firstImagePost?.image_url ? (
