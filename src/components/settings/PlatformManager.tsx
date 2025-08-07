@@ -75,6 +75,9 @@ export const PlatformManager: React.FC = () => {
       setIsCreating(false);
       setNewPlatform({ name: '', icon_name: 'Share2', color: '#1877F2' });
       fetchPlatforms();
+      
+      // Trigger refresh in other components
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating platform:', error);
       toast.error('Failed to create platform');
@@ -93,6 +96,9 @@ export const PlatformManager: React.FC = () => {
       toast.success('Platform updated successfully!');
       setEditingId(null);
       fetchPlatforms();
+      
+      // Trigger refresh in other components
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating platform:', error);
       toast.error('Failed to update platform');
@@ -114,6 +120,9 @@ export const PlatformManager: React.FC = () => {
 
       toast.success('Platform deleted successfully!');
       fetchPlatforms();
+      
+      // Trigger refresh in other components
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting platform:', error);
       toast.error('Failed to delete platform');

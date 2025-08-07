@@ -41,6 +41,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
 }) => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [availablePlatforms, setAvailablePlatforms] = useState<any[]>([]);
+  const [availableStatuses, setAvailableStatuses] = useState<any[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [editingField, setEditingField] = useState<EditingField | null>(null);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -80,8 +83,35 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     }
   };
 
+  const fetchDynamicData = async () => {
+    try {
+      const [platformsResult, statusesResult, categoriesResult] = await Promise.all([
+        supabase.from('platforms').select('*').eq('is_active', true).order('name'),
+        supabase.from('post_statuses').select('*').eq('is_active', true).order('name'),
+        supabase.from('categories').select('*').eq('is_active', true).order('name')
+      ]);
+      
+      if (platformsResult.data) setAvailablePlatforms(platformsResult.data);
+      if (statusesResult.data) setAvailableStatuses(statusesResult.data);
+      if (categoriesResult.data) setAvailableCategories(categoriesResult.data);
+    } catch (error) {
+      console.error('Error fetching dynamic data:', error);
+    }
+  };
+
+  // Listen for settings changes to refresh data
+  useEffect(() => {
+    const handleSettingsChange = () => {
+      fetchDynamicData();
+    };
+
+    window.addEventListener('settingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
+  }, []);
+
   useEffect(() => {
     fetchPosts();
+    fetchDynamicData();
   }, []);
 
   const filteredPosts = posts.filter(post => {
@@ -326,13 +356,13 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(['facebook', 'instagram', 'twitter', 'linkedin'] as Platform[]).map((p) => {
-                    const Icon = platformIcons[p];
+                  {availablePlatforms.map((p) => {
+                    const Icon = platformIcons[p.name as keyof typeof platformIcons];
                     return (
-                      <SelectItem key={p} value={p}>
+                      <SelectItem key={p.id} value={p.name}>
                         <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4" />
-                          {p.charAt(0).toUpperCase() + p.slice(1)}
+                          {Icon && <Icon className="h-4 w-4" />}
+                          {p.name.charAt(0).toUpperCase() + p.name.slice(1)}
                         </div>
                       </SelectItem>
                     );
@@ -353,9 +383,11 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="published">Published</SelectItem>
+                  {availableStatuses.map((s) => (
+                    <SelectItem key={s.id} value={s.name}>
+                      <span className="capitalize">{s.name}</span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             );
@@ -441,8 +473,16 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           <div className="text-sm max-w-[200px] truncate">{value || 'Click to edit'}</div>
         ) : type === 'select' && field === 'platform' ? (
           <div className="flex items-center gap-2">
-            {React.createElement(platformIcons[value as Platform], { className: "h-4 w-4" })}
-            <span className="capitalize">{value}</span>
+            {(() => {
+              const platform = availablePlatforms.find(p => p.name === value);
+              const Icon = platform ? platformIcons[platform.name as keyof typeof platformIcons] : null;
+              return (
+                <>
+                  {Icon && <Icon className="h-4 w-4" />}
+                  <span className="capitalize">{value}</span>
+                </>
+              );
+            })()}
           </div>
         ) : type === 'date' ? (
           <div className="text-sm">{format(new Date(value), 'MMM d, yyyy')}</div>
@@ -541,13 +581,13 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(['facebook', 'instagram', 'twitter', 'linkedin'] as Platform[]).map((p) => {
-                        const Icon = platformIcons[p];
+                      {availablePlatforms.map((platform) => {
+                        const Icon = platformIcons[platform.name as keyof typeof platformIcons];
                         return (
-                          <SelectItem key={p} value={p}>
+                          <SelectItem key={platform.id} value={platform.name}>
                             <div className="flex items-center gap-2">
-                              <Icon className="h-4 w-4" />
-                              {p.charAt(0).toUpperCase() + p.slice(1)}
+                              {Icon && <Icon className="h-4 w-4" />}
+                              {platform.name.charAt(0).toUpperCase() + platform.name.slice(1)}
                             </div>
                           </SelectItem>
                         );
@@ -560,10 +600,12 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="scheduled">Scheduled</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
+                <SelectContent>
+                  {availableStatuses.map((status) => (
+                    <SelectItem key={status.id} value={status.name}>
+                      <span className="capitalize">{status.name}</span>
+                    </SelectItem>
+                  ))}
                     </SelectContent>
                   </Select>
                 </TableCell>

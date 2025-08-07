@@ -63,6 +63,30 @@ export const SocialCalendar: React.FC = () => {
     loadInitialSelections();
   }, []);
 
+  // Listen for settings changes to refresh selections
+  useEffect(() => {
+    const handleSettingsChange = async () => {
+      try {
+        const [platformsResult, statusesResult] = await Promise.all([
+          supabase.from('platforms').select('name').eq('is_active', true),
+          supabase.from('post_statuses').select('name').eq('is_active', true)
+        ]);
+        
+        if (platformsResult.data) {
+          setSelectedPlatforms(platformsResult.data.map(p => p.name));
+        }
+        if (statusesResult.data) {
+          setSelectedStatuses(statusesResult.data.map(s => s.name));
+        }
+      } catch (error) {
+        console.error('Error refreshing selections:', error);
+      }
+    };
+
+    window.addEventListener('settingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
+  }, []);
+
   const getDates = () => {
     const weekStartOptions = { weekStartsOn: 1 as const }; // Monday = 1
     

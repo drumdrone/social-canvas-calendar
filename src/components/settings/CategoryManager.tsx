@@ -65,6 +65,9 @@ export const CategoryManager: React.FC = () => {
       setIsCreating(false);
       setNewCategory({ name: '', color: '#3B82F6' });
       fetchCategories();
+      
+      // Trigger refresh in other components
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating category:', error);
       toast.error('Failed to create category');
@@ -83,6 +86,9 @@ export const CategoryManager: React.FC = () => {
       toast.success('Category updated successfully!');
       setEditingId(null);
       fetchCategories();
+      
+      // Trigger refresh in other components
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating category:', error);
       toast.error('Failed to update category');
@@ -104,6 +110,9 @@ export const CategoryManager: React.FC = () => {
 
       toast.success('Category deleted successfully!');
       fetchCategories();
+      
+      // Trigger refresh in other components
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error('Failed to delete category');

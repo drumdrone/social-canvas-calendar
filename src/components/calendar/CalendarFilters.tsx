@@ -61,6 +61,34 @@ export const CalendarFilters: React.FC<CalendarFiltersProps> = ({
     fetchData();
   }, []);
 
+  // Listen for settings changes to refresh data
+  useEffect(() => {
+    const handleSettingsChange = () => {
+      const fetchData = async () => {
+        try {
+          const [platformsResult, statusesResult] = await Promise.all([
+            supabase.from('platforms').select('*').eq('is_active', true).order('name'),
+            supabase.from('post_statuses').select('*').eq('is_active', true).order('name')
+          ]);
+          
+          if (platformsResult.data) {
+            setAvailablePlatforms(platformsResult.data);
+          }
+          if (statusesResult.data) {
+            setAvailableStatuses(statusesResult.data);
+          }
+        } catch (error) {
+          console.error('Error fetching filter data:', error);
+        }
+      };
+      
+      fetchData();
+    };
+
+    window.addEventListener('settingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
+  }, []);
+
   const platformIcons = {
     facebook: Facebook,
     instagram: Instagram,

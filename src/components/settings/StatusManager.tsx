@@ -65,6 +65,9 @@ export const StatusManager: React.FC = () => {
       setIsCreating(false);
       setNewStatus({ name: '', color: '#6B7280' });
       fetchStatuses();
+      
+      // Trigger refresh in other components
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating status:', error);
       toast.error('Failed to create status');
@@ -83,6 +86,9 @@ export const StatusManager: React.FC = () => {
       toast.success('Status updated successfully!');
       setEditingId(null);
       fetchStatuses();
+      
+      // Trigger refresh in other components
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
@@ -104,6 +110,9 @@ export const StatusManager: React.FC = () => {
 
       toast.success('Status deleted successfully!');
       fetchStatuses();
+      
+      // Trigger refresh in other components
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting status:', error);
       toast.error('Failed to delete status');
