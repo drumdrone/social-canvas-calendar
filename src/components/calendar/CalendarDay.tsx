@@ -33,13 +33,36 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
     twitter: Twitter,
     linkedin: Linkedin,
   };
+
+  // Get background color based on month
+  const getMonthBackground = (date: Date) => {
+    const month = date.getMonth();
+    const monthColors = [
+      'bg-blue-50/80', // January
+      'bg-purple-50/80', // February
+      'bg-green-50/80', // March
+      'bg-yellow-50/80', // April
+      'bg-pink-50/80', // May
+      'bg-cyan-50/80', // June
+      'bg-orange-50/80', // July
+      'bg-red-50/80', // August
+      'bg-indigo-50/80', // September
+      'bg-teal-50/80', // October
+      'bg-amber-50/80', // November
+      'bg-slate-50/80', // December
+    ];
+    return monthColors[month];
+  };
+  
+  const monthBg = getMonthBackground(date);
   
   return (
     <div
       className={cn(
         "h-full border-r border-b border-calendar-grid cursor-pointer transition-colors hover:bg-calendar-hover relative overflow-hidden flex flex-col",
         !isCurrentMonth && "text-muted-foreground bg-muted/30",
-        isWeekend && isCurrentMonth && "bg-calendar-weekend",
+        isCurrentMonth && monthBg,
+        isWeekend && isCurrentMonth && "bg-opacity-60",
         isToday && "border-calendar-today border-2"
       )}
       onClick={onClick}
@@ -110,7 +133,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       )}
 
       {/* Description Section - 20% */}
-      <div className="h-1/5 p-1 bg-background/95 backdrop-blur-sm border-t border-border/20">
+      <div className="h-1/5 p-1 bg-white/90 backdrop-blur-sm border-t border-border/20">
         {posts.length > 0 ? (
           <div className="space-y-1">
             <div className="text-xs font-medium truncate">
