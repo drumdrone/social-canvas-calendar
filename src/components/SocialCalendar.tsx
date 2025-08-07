@@ -5,6 +5,9 @@ import { CalendarList } from './calendar/CalendarList';
 import { PostsTable } from './calendar/PostsTable';
 import { PostModal } from './calendar/PostModal';
 import { CalendarFilters } from './calendar/CalendarFilters';
+import { SettingsSidebar } from './settings/SettingsSidebar';
+import { Button } from './ui/button';
+import { Settings } from 'lucide-react';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, format, isToday, isWeekend, addMonths, addWeeks } from 'date-fns';
 
 export type ViewMode = 'month' | 'week' | 'list' | 'table';
@@ -34,6 +37,7 @@ export const SocialCalendar: React.FC = () => {
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['facebook', 'instagram', 'twitter', 'linkedin']);
   const [selectedStatuses, setSelectedStatuses] = useState<PostStatus[]>(['draft', 'published', 'scheduled']);
+  const [showSettings, setShowSettings] = useState(false);
 
   const getDates = () => {
     const weekStartOptions = { weekStartsOn: 1 as const }; // Monday = 1
@@ -115,7 +119,20 @@ export const SocialCalendar: React.FC = () => {
   }, [viewMode]);
 
   return (
-    <div className="h-screen flex flex-col bg-background calendar-container overflow-hidden max-h-screen">
+    <div className="h-screen flex flex-col bg-background calendar-container overflow-hidden max-h-screen relative">
+      {/* Settings Button */}
+      <div className="absolute top-4 left-4 z-40">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowSettings(true)}
+          className="flex items-center gap-2"
+        >
+          <Settings className="h-4 w-4" />
+          Settings
+        </Button>
+      </div>
+
       <CalendarHeader 
         currentDate={currentDate}
         onDateChange={setCurrentDate}
@@ -165,6 +182,11 @@ export const SocialCalendar: React.FC = () => {
           editingPost={editingPost}
         />
       )}
+
+      <SettingsSidebar
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </div>
   );
 };

@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      platforms: {
+        Row: {
+          color: string
+          created_at: string
+          icon_name: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          icon_name: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      post_statuses: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       social_media_posts: {
         Row: {
           category: string
@@ -53,6 +110,230 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      woocommerce_order_items: {
+        Row: {
+          created_at: string
+          id: number
+          image_url: string | null
+          name: string
+          order_id: number
+          price: number | null
+          product_id: number | null
+          quantity: number
+          sku: string | null
+          subtotal: number
+          subtotal_tax: number | null
+          tax_class: string | null
+          total: number
+          total_tax: number | null
+          updated_at: string
+          variation_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          image_url?: string | null
+          name: string
+          order_id: number
+          price?: number | null
+          product_id?: number | null
+          quantity?: number
+          sku?: string | null
+          subtotal?: number
+          subtotal_tax?: number | null
+          tax_class?: string | null
+          total?: number
+          total_tax?: number | null
+          updated_at?: string
+          variation_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          image_url?: string | null
+          name?: string
+          order_id?: number
+          price?: number | null
+          product_id?: number | null
+          quantity?: number
+          sku?: string | null
+          subtotal?: number
+          subtotal_tax?: number | null
+          tax_class?: string | null
+          total?: number
+          total_tax?: number | null
+          updated_at?: string
+          variation_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "woocommerce_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "woocommerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      woocommerce_orders: {
+        Row: {
+          billing_address_1: string | null
+          billing_address_2: string | null
+          billing_city: string | null
+          billing_company: string | null
+          billing_country: string | null
+          billing_email: string | null
+          billing_first_name: string | null
+          billing_last_name: string | null
+          billing_phone: string | null
+          billing_postcode: string | null
+          billing_state: string | null
+          cart_hash: string | null
+          cart_tax: number | null
+          created_at: string
+          created_via: string | null
+          currency: string
+          customer_id: number | null
+          customer_ip_address: string | null
+          customer_note: string | null
+          customer_user_agent: string | null
+          date_completed: string | null
+          date_created: string
+          date_modified: string | null
+          date_paid: string | null
+          discount_tax: number | null
+          discount_total: number | null
+          fulfillment_status: string
+          id: number
+          number: string
+          order_key: string | null
+          payment_method: string | null
+          payment_method_title: string | null
+          prices_include_tax: boolean | null
+          shipping_address_1: string | null
+          shipping_address_2: string | null
+          shipping_city: string | null
+          shipping_company: string | null
+          shipping_country: string | null
+          shipping_first_name: string | null
+          shipping_last_name: string | null
+          shipping_postcode: string | null
+          shipping_state: string | null
+          shipping_tax: number | null
+          shipping_total: number | null
+          status: string
+          total: number
+          total_tax: number | null
+          transaction_id: string | null
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          billing_address_1?: string | null
+          billing_address_2?: string | null
+          billing_city?: string | null
+          billing_company?: string | null
+          billing_country?: string | null
+          billing_email?: string | null
+          billing_first_name?: string | null
+          billing_last_name?: string | null
+          billing_phone?: string | null
+          billing_postcode?: string | null
+          billing_state?: string | null
+          cart_hash?: string | null
+          cart_tax?: number | null
+          created_at?: string
+          created_via?: string | null
+          currency?: string
+          customer_id?: number | null
+          customer_ip_address?: string | null
+          customer_note?: string | null
+          customer_user_agent?: string | null
+          date_completed?: string | null
+          date_created: string
+          date_modified?: string | null
+          date_paid?: string | null
+          discount_tax?: number | null
+          discount_total?: number | null
+          fulfillment_status?: string
+          id: number
+          number: string
+          order_key?: string | null
+          payment_method?: string | null
+          payment_method_title?: string | null
+          prices_include_tax?: boolean | null
+          shipping_address_1?: string | null
+          shipping_address_2?: string | null
+          shipping_city?: string | null
+          shipping_company?: string | null
+          shipping_country?: string | null
+          shipping_first_name?: string | null
+          shipping_last_name?: string | null
+          shipping_postcode?: string | null
+          shipping_state?: string | null
+          shipping_tax?: number | null
+          shipping_total?: number | null
+          status?: string
+          total: number
+          total_tax?: number | null
+          transaction_id?: string | null
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          billing_address_1?: string | null
+          billing_address_2?: string | null
+          billing_city?: string | null
+          billing_company?: string | null
+          billing_country?: string | null
+          billing_email?: string | null
+          billing_first_name?: string | null
+          billing_last_name?: string | null
+          billing_phone?: string | null
+          billing_postcode?: string | null
+          billing_state?: string | null
+          cart_hash?: string | null
+          cart_tax?: number | null
+          created_at?: string
+          created_via?: string | null
+          currency?: string
+          customer_id?: number | null
+          customer_ip_address?: string | null
+          customer_note?: string | null
+          customer_user_agent?: string | null
+          date_completed?: string | null
+          date_created?: string
+          date_modified?: string | null
+          date_paid?: string | null
+          discount_tax?: number | null
+          discount_total?: number | null
+          fulfillment_status?: string
+          id?: number
+          number?: string
+          order_key?: string | null
+          payment_method?: string | null
+          payment_method_title?: string | null
+          prices_include_tax?: boolean | null
+          shipping_address_1?: string | null
+          shipping_address_2?: string | null
+          shipping_city?: string | null
+          shipping_company?: string | null
+          shipping_country?: string | null
+          shipping_first_name?: string | null
+          shipping_last_name?: string | null
+          shipping_postcode?: string | null
+          shipping_state?: string | null
+          shipping_tax?: number | null
+          shipping_total?: number | null
+          status?: string
+          total?: number
+          total_tax?: number | null
+          transaction_id?: string | null
+          updated_at?: string
+          version?: string | null
         }
         Relationships: []
       }
