@@ -32,11 +32,21 @@ const createDefaultSection = (): Section => {
     Array.from({ length: 4 }, (_, colIndex) => {
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       if (rowIndex === 0 && colIndex === 0) {
-        // A1: Title cell (H1-like), spans across all columns visually
+        // A1: Title cell (H1-like), editable with background color
         return {
           id,
           content: '',
           fontSize: 'large',
+          backgroundColor: 'transparent',
+        };
+      }
+      if (rowIndex === 0 && colIndex > 0) {
+        // B1-D1: Header labels (not editable)
+        const labels = ['Popis', 'Creativa', 'Pilíř'] as const;
+        return {
+          id,
+          content: labels[colIndex - 1],
+          fontSize: 'small',
           backgroundColor: 'transparent',
         };
       }
@@ -167,10 +177,10 @@ export const EditableTable = () => {
             {/* Table for this section */}
             <table className="w-full">
               <tbody>
-                {/* Row 0: Title spanning across A-D */}
+                {/* Row 0: Header with 4 columns (A1 editable title, B1-D1 labels) */}
                 <tr>
+                  {/* A1 - Editable Title */}
                   <td
-                    colSpan={4}
                     className={`border border-border p-4 cursor-pointer ${
                       section.cells[0][0].backgroundColor !== 'transparent' ? section.cells[0][0].backgroundColor : ''
                     } ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 0 ? 'ring-2 ring-primary ring-inset' : ''}`}
@@ -184,6 +194,27 @@ export const EditableTable = () => {
                       placeholder="Title"
                       aria-label={`Plan title for section ${sectionIdx + 1}`}
                     />
+                  </td>
+                  {/* B1 - Popis */}
+                  <td
+                    className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 1 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
+                    onClick={() => handleCellClick(sectionIdx, 0, 1)}
+                  >
+                    <div className="text-sm text-muted-foreground font-medium">{section.cells[0][1].content}</div>
+                  </td>
+                  {/* C1 - Creativa */}
+                  <td
+                    className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 2 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
+                    onClick={() => handleCellClick(sectionIdx, 0, 2)}
+                  >
+                    <div className="text-sm text-muted-foreground font-medium">{section.cells[0][2].content}</div>
+                  </td>
+                  {/* D1 - Pilíř */}
+                  <td
+                    className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 3 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
+                    onClick={() => handleCellClick(sectionIdx, 0, 3)}
+                  >
+                    <div className="text-sm text-muted-foreground font-medium">{section.cells[0][3].content}</div>
                   </td>
                 </tr>
 
