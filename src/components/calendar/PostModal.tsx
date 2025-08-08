@@ -46,6 +46,8 @@ export const PostModal: React.FC<PostModalProps> = ({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [currentEditingPost, setCurrentEditingPost] = useState<SocialPost | null>(editingPost || null);
   const [scheduledDate, setScheduledDate] = useState<Date>(selectedDate || new Date());
+  const [platformOptions, setPlatformOptions] = useState<string[]>([]);
+  const [statusOptions, setStatusOptions] = useState<string[]>([]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -198,6 +200,75 @@ export const PostModal: React.FC<PostModalProps> = ({
     }
   };
 
+  // Load dynamic platform and status options from Supabase and sync defaults
+  React.useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const [platformsResult, statusesResult] = await Promise.all([
+          supabase.from('platforms').select('name').eq('is_active', true).order('name', { ascending: true }),
+          supabase.from('post_statuses').select('name').eq('is_active', true).order('name', { ascending: true }),
+        ]);
+        const platforms = platformsResult.data?.map(p => p.name) || [];
+        const statuses = statusesResult.data?.map(s => s.name) || [];
+        setPlatformOptions(platforms);
+        setStatusOptions(statuses);
+        if (!(editingPost || currentEditingPost)) {
+          if (platforms.length && !platforms.includes(platform)) setPlatform(platforms[0]);
+          if (statuses.length && !statuses.includes(status)) setStatus(statuses[0]);
+        }
+      } catch (e) {
+        console.error('Failed to load platform/status options', e);
+      }
+    };
+
+    if (isOpen) {
+      loadOptions();
+    }
+  }, [isOpen, editingPost, currentEditingPost, platform, status]);
+
+  // Refresh options when settings change elsewhere
+  React.useEffect(() => {
+    const handler = () => {
+      if (isOpen) {
+        (async () => {
+          try {
+            const [platformsResult, statusesResult] = await Promise.all([
+              supabase.from('platforms').select('name').eq('is_active', true).order('name', { ascending: true }),
+              supabase.from('post_statuses').select('name').eq('is_active', true).order('name', { ascending: true }),
+            ]);
+            setPlatformOptions(platformsResult.data?.map(p => p.name) || []);
+            setStatusOptions(statusesResult.data?.map(s => s.name) || []);
+          } catch (e) {
+            console.error('Failed to refresh options after settings change', e);
+          }
+        })();
+      }
+    };
+    window.addEventListener('settingsChanged', handler);
+    return () => window.removeEventListener('settingsChanged', handler);
+  }, [isOpen]);
+
+  // Allow pasting image from clipboard when modal is open
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const onPaste = (e: any) => {
+      const items = e.clipboardData?.items || [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item && item.type && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            setImage(file);
+            toast.success('Image pasted from clipboard');
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [isOpen]);
+
   React.useEffect(() => {
     if (isOpen && selectedDate) {
       setScheduledDate(selectedDate);
@@ -248,7 +319,7 @@ export const PostModal: React.FC<PostModalProps> = ({
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Existing Posts</h3>
               {existingPosts.map((post) => {
-                const Icon = platformIcons[post.platform as Platform];
+                const Icon = platformIcons[post.platform as Platform] || Calendar;
                 return (
                   <div key={post.id} className="flex items-center gap-2 p-3 border rounded-md hover:bg-muted/50 transition-colors">
                     <Icon className="h-4 w-4" />
@@ -365,13 +436,13 @@ export const PostModal: React.FC<PostModalProps> = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(['facebook', 'instagram', 'twitter', 'linkedin'] as Platform[]).map((p) => {
-                        const Icon = platformIcons[p];
+                      {platformOptions.map((p) => {
+                        const Icon = platformIcons[p as Platform];
                         return (
                           <SelectItem key={p} value={p}>
                             <div className="flex items-center gap-2">
-                              <Icon className="h-4 w-4" />
-                              {p.charAt(0).toUpperCase() + p.slice(1)}
+                              {Icon ? <Icon className="h-4 w-4" /> : null}
+                              {p}
                             </div>
                           </SelectItem>
                         );
@@ -387,9 +458,9 @@ export const PostModal: React.FC<PostModalProps> = ({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="scheduled">Scheduled</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
+                      {statusOptions.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
