@@ -102,12 +102,14 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
                 <h3 className="font-semibold text-sm">{post.title}</h3>
               )}
               {post.content && (
-                <p className="text-sm text-foreground leading-relaxed">
-                  {post.content.length > 100 ? `${post.content.substring(0, 100)}...` : post.content}
-                  {post.content.length > 100 && (
+                <div className="text-sm text-foreground leading-relaxed">
+                  <p className="line-clamp-8">
+                    {post.content}
+                  </p>
+                  {post.content.length > 200 && (
                     <span className="text-primary ml-1 cursor-pointer"> Zobrazit víc</span>
                   )}
-                </p>
+                </div>
               )}
             </div>
           </div>
