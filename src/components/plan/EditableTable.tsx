@@ -83,6 +83,51 @@ const createDefaultSection = (): Section => {
   return { id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` , cells };
 };
 
+// Migration function to ensure sections have 6 columns
+const migrateSection = (section: Section): Section => {
+  if (!section.cells || section.cells.length === 0) {
+    return createDefaultSection();
+  }
+  
+  // Check if we need to migrate from 5 to 6 columns
+  const needsMigration = section.cells.some(row => row.length < 6);
+  
+  if (!needsMigration) {
+    return section;
+  }
+
+  // Migrate each row to have 6 columns
+  const migratedCells = section.cells.map((row, rowIndex) => {
+    // Ensure we have at least 6 columns
+    const newRow = [...row];
+    while (newRow.length < 6) {
+      const colIndex = newRow.length;
+      const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
+      
+      if (rowIndex === 0 && colIndex === 5) {
+        // F1: NEW button header
+        newRow.push({
+          id,
+          content: 'NEW',
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        });
+      } else {
+        // Regular empty cell
+        newRow.push({
+          id,
+          content: '',
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        });
+      }
+    }
+    return newRow;
+  });
+
+  return { ...section, cells: migratedCells };
+};
+
 export const EditableTable = () => {
   const [sections, setSections] = useState<Section[]>([createDefaultSection()]);
   const [selectedCell, setSelectedCell] = useState<{ section: number; row: number; col: number } | null>(null);
@@ -111,7 +156,10 @@ export const EditableTable = () => {
         }
 
         if (planData && planData.length > 0) {
-          const loadedSections = planData.map(item => JSON.parse(JSON.stringify(item.section_data)) as Section);
+          const loadedSections = planData.map(item => {
+            const section = JSON.parse(JSON.stringify(item.section_data)) as Section;
+            return migrateSection(section);
+          });
           setSections(loadedSections);
         }
       } catch (error) {
@@ -365,7 +413,9 @@ export const EditableTable = () => {
                   <td
                     className="border border-border p-4 cursor-pointer hover:bg-muted/50"
                   >
-                    <div className="text-sm text-muted-foreground font-medium">{section.cells[0][5].content}</div>
+                    <div className="text-sm text-muted-foreground font-medium">
+                      {section.cells[0] && section.cells[0][5] ? section.cells[0][5].content : 'NEW'}
+                    </div>
                   </td>
                 </tr>
 
