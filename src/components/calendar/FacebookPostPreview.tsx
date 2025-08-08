@@ -48,8 +48,8 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
     return isPlatformSelected && isStatusSelected;
   });
 
-  // Get the first post with content or fallback to first post
-  const featuredPost = filteredPosts.find(post => post.title && post.content) || filteredPosts[0];
+  // Get up to 3 posts for weekly view
+  const weeklyPosts = filteredPosts.slice(0, 3);
 
   if (loading) {
     return (
@@ -59,7 +59,7 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
     );
   }
 
-  if (!featuredPost) {
+  if (!weeklyPosts.length) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-muted-foreground">No posts available for preview</div>
@@ -67,18 +67,18 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
     );
   }
 
-  // Sample data for Facebook UI elements
-  const sampleData = {
-    companyName: "Green Apotheke",
-    timestamp: "31. červenec v 19:01",
-    likes: Math.floor(Math.random() * 50) + 1,
-    comments: Math.floor(Math.random() * 10) + 1,
-    shares: Math.floor(Math.random() * 5),
-  };
+  const renderPost = (post: SocialPost, index: number) => {
+    // Sample data for Facebook UI elements
+    const sampleData = {
+      companyName: "Green Apotheke",
+      timestamp: `${31 - index}. červenec v ${19 + index}:0${index + 1}`,
+      likes: Math.floor(Math.random() * 50) + 1,
+      comments: Math.floor(Math.random() * 10) + 1,
+      shares: Math.floor(Math.random() * 5),
+    };
 
-  return (
-    <div className="flex-1 flex items-center justify-center p-6 bg-muted/50">
-      <Card className="w-full max-w-lg shadow-lg">
+    return (
+      <Card key={post.id} className="w-full shadow-lg">
         <CardContent className="p-0">
           {/* Facebook Post Header */}
           <div className="flex items-center gap-3 p-4 border-b">
@@ -98,14 +98,14 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
           {/* Post Content */}
           <div className="p-4">
             <div className="space-y-3">
-              {featuredPost.title && (
-                <h3 className="font-semibold text-sm">{featuredPost.title}</h3>
+              {post.title && (
+                <h3 className="font-semibold text-sm">{post.title}</h3>
               )}
-              {featuredPost.content && (
+              {post.content && (
                 <p className="text-sm text-foreground leading-relaxed">
-                  {featuredPost.content}
-                  {featuredPost.content.length > 150 && (
-                    <span className="text-primary ml-1 cursor-pointer">... Zobrazit víc</span>
+                  {post.content.length > 100 ? `${post.content.substring(0, 100)}...` : post.content}
+                  {post.content.length > 100 && (
+                    <span className="text-primary ml-1 cursor-pointer"> Zobrazit víc</span>
                   )}
                 </p>
               )}
@@ -113,12 +113,12 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
           </div>
 
           {/* Post Image */}
-          {featuredPost.image_url && (
+          {post.image_url && (
             <div className="relative">
               <img
-                src={featuredPost.image_url}
-                alt={featuredPost.title || "Post image"}
-                className="w-full h-64 object-cover"
+                src={post.image_url}
+                alt={post.title || "Post image"}
+                className="w-full h-48 object-cover"
               />
             </div>
           )}
@@ -158,6 +158,14 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
           </div>
         </CardContent>
       </Card>
+    );
+  };
+
+  return (
+    <div className="flex-1 flex items-center justify-center p-6 bg-muted/50">
+      <div className="flex gap-6 w-full max-w-6xl overflow-x-auto">
+        {weeklyPosts.map((post, index) => renderPost(post, index))}
+      </div>
     </div>
   );
 };
