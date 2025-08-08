@@ -5,6 +5,7 @@ import { CalendarList } from './calendar/CalendarList';
 import { PostsTable } from './calendar/PostsTable';
 import { PostModal } from './calendar/PostModal';
 import { CalendarFilters } from './calendar/CalendarFilters';
+import { FacebookPostPreview } from './calendar/FacebookPostPreview';
 import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
 import { Settings } from 'lucide-react';
@@ -196,6 +197,11 @@ export const SocialCalendar: React.FC = () => {
             selectedStatuses={selectedStatuses}
             currentDate={currentDate}
           />
+        ) : viewMode === 'week' ? (
+          <FacebookPostPreview
+            selectedPlatforms={selectedPlatforms}
+            selectedStatuses={selectedStatuses}
+          />
         ) : (
           <CalendarGrid
             dates={getDates()}
@@ -209,7 +215,7 @@ export const SocialCalendar: React.FC = () => {
         )}
       </div>
       
-      {viewMode !== 'table' && (
+      {viewMode !== 'table' && viewMode !== 'week' && (
         <PostModal
           isOpen={isModalOpen}
           onClose={handleCloseModal}
