@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlatformManager } from './PlatformManager';
 import { StatusManager } from './StatusManager';
 import { CategoryManager } from './CategoryManager';
+import { ProductLineManager } from './ProductLineManager';
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -19,7 +20,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses' | 'categories'>('platforms');
+  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses' | 'categories' | 'productlines'>('platforms');
 
   if (!isOpen) return null;
 
@@ -37,12 +38,12 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         </div>
 
         <div className="p-4">
-          <div className="flex gap-1 mb-4">
+          <div className="grid grid-cols-2 gap-1 mb-4">
             <Button
               variant={activeTab === 'platforms' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveTab('platforms')}
-              className="flex-1 text-xs"
+              className="text-xs"
             >
               Platforms
             </Button>
@@ -50,7 +51,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
               variant={activeTab === 'statuses' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveTab('statuses')}
-              className="flex-1 text-xs"
+              className="text-xs"
             >
               Statuses
             </Button>
@@ -58,9 +59,17 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
               variant={activeTab === 'categories' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveTab('categories')}
-              className="flex-1 text-xs"
+              className="text-xs"
             >
               Categories
+            </Button>
+            <Button
+              variant={activeTab === 'productlines' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('productlines')}
+              className="text-xs"
+            >
+              Product Lines
             </Button>
           </div>
 
@@ -68,6 +77,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             {activeTab === 'platforms' && <PlatformManager />}
             {activeTab === 'statuses' && <StatusManager />}
             {activeTab === 'categories' && <CategoryManager />}
+            {activeTab === 'productlines' && <ProductLineManager />}
           </ScrollArea>
         </div>
       </div>
