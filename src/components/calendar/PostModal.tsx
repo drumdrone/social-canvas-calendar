@@ -48,6 +48,10 @@ export const PostModal: React.FC<PostModalProps> = ({
   const [scheduledDate, setScheduledDate] = useState<Date>(selectedDate || new Date());
   const [platformOptions, setPlatformOptions] = useState<string[]>([]);
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  const [pillar, setPillar] = useState<string>('');
+  const [productLine, setProductLine] = useState<string>('');
+  const [pillarOptions, setPillarOptions] = useState<Array<{name: string, color: string}>>([]);
+  const [productLineOptions, setProductLineOptions] = useState<Array<{name: string, color: string}>>([]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -113,6 +117,8 @@ export const PostModal: React.FC<PostModalProps> = ({
             category,
             image_url: imageUrl,
             scheduled_date: scheduledDateTime.toISOString(),
+            pillar: pillar || null,
+            product_line: productLine || null,
           })
           .eq('id', (editingPost || currentEditingPost)!.id);
 
@@ -135,6 +141,8 @@ export const PostModal: React.FC<PostModalProps> = ({
               image_url: imageUrl,
               scheduled_date: scheduledDateTime.toISOString(),
               user_id: '00000000-0000-0000-0000-000000000000',
+              pillar: pillar || null,
+              product_line: productLine || null,
             },
           ]);
 
@@ -205,14 +213,22 @@ export const PostModal: React.FC<PostModalProps> = ({
   React.useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [platformsResult, statusesResult] = await Promise.all([
+        const [platformsResult, statusesResult, pillarsResult, productLinesResult] = await Promise.all([
           supabase.from('platforms').select('name').eq('is_active', true).order('name', { ascending: true }),
           supabase.from('post_statuses').select('name').eq('is_active', true).order('name', { ascending: true }),
+          supabase.from('pillars').select('name, color').eq('is_active', true).order('name', { ascending: true }),
+          supabase.from('product_lines').select('name, color').eq('is_active', true).order('name', { ascending: true }),
         ]);
         const platforms = platformsResult.data?.map(p => p.name) || [];
         const statuses = statusesResult.data?.map(s => s.name) || [];
+        const pillars = pillarsResult.data || [];
+        const productLines = productLinesResult.data || [];
+        
         setPlatformOptions(platforms);
         setStatusOptions(statuses);
+        setPillarOptions(pillars);
+        setProductLineOptions(productLines);
+        
         if (!(editingPost || currentEditingPost)) {
           if (platforms.length && !platforms.includes(platform)) setPlatform(platforms[0]);
           if (statuses.length && !statuses.includes(status)) setStatus(statuses[0]);
@@ -233,12 +249,16 @@ export const PostModal: React.FC<PostModalProps> = ({
       if (isOpen) {
         (async () => {
           try {
-            const [platformsResult, statusesResult] = await Promise.all([
+            const [platformsResult, statusesResult, pillarsResult, productLinesResult] = await Promise.all([
               supabase.from('platforms').select('name').eq('is_active', true).order('name', { ascending: true }),
               supabase.from('post_statuses').select('name').eq('is_active', true).order('name', { ascending: true }),
+              supabase.from('pillars').select('name, color').eq('is_active', true).order('name', { ascending: true }),
+              supabase.from('product_lines').select('name, color').eq('is_active', true).order('name', { ascending: true }),
             ]);
             setPlatformOptions(platformsResult.data?.map(p => p.name) || []);
             setStatusOptions(statusesResult.data?.map(s => s.name) || []);
+            setPillarOptions(pillarsResult.data || []);
+            setProductLineOptions(productLinesResult.data || []);
           } catch (e) {
             console.error('Failed to refresh options after settings change', e);
           }
@@ -289,6 +309,8 @@ export const PostModal: React.FC<PostModalProps> = ({
       setPlatform(editingPost.platform);
       setStatus(editingPost.status);
       setCategory(editingPost.category);
+      setPillar((editingPost as any).pillar || '');
+      setProductLine((editingPost as any).product_line || '');
       
       const postDate = new Date(editingPost.scheduled_date);
       setScheduledDate(postDate);
@@ -305,6 +327,8 @@ export const PostModal: React.FC<PostModalProps> = ({
     setTime('12:00');
     setImage(null);
     setCurrentEditingPost(null);
+    setPillar('');
+    setProductLine('');
     setScheduledDate(selectedDate || new Date());
     onClose();
   };
@@ -344,13 +368,15 @@ export const PostModal: React.FC<PostModalProps> = ({
                         setPlatform(post.platform);
                         setStatus(post.status);
                         setCategory(post.category);
+                        setPillar(post.pillar || '');
+                        setProductLine(post.product_line || '');
                         const postDate = new Date(post.scheduled_date);
                         setTime(format(postDate, 'HH:mm'));
                       }}
                     >
                       <p className="font-medium text-sm truncate hover:text-primary">{post.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {post.platform} • {post.category} • {post.status} • {format(new Date(post.scheduled_date), 'HH:mm')} • Click to edit
+                        {post.platform} • {post.category} • {post.status} • {format(new Date(post.scheduled_date), 'HH:mm')} • {post.pillar && `${post.pillar} •`} {post.product_line && `${post.product_line} •`} Click to edit
                       </p>
                     </div>
                     {post.image_url && (
@@ -489,6 +515,56 @@ export const PostModal: React.FC<PostModalProps> = ({
                     <SelectItem value="Carousel">Carousel</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="pillar">Pillar</Label>
+                  <Select value={pillar} onValueChange={(value: string) => setPillar(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select pillar" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-popover">
+                      <SelectItem value="">None</SelectItem>
+                      {pillarOptions.map((p) => (
+                        <SelectItem key={p.name} value={p.name}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full border border-border"
+                              style={{ backgroundColor: p.color }}
+                              aria-hidden
+                            />
+                            {p.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="product-line">Product Line</Label>
+                  <Select value={productLine} onValueChange={(value: string) => setProductLine(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select product line" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-popover">
+                      <SelectItem value="">None</SelectItem>
+                      {productLineOptions.map((pl) => (
+                        <SelectItem key={pl.name} value={pl.name}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full border border-border"
+                              style={{ backgroundColor: pl.color }}
+                              aria-hidden
+                            />
+                            {pl.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

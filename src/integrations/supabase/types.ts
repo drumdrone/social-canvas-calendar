@@ -159,7 +159,9 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          pillar: string | null
           platform: string
+          product_line: string | null
           scheduled_date: string
           status: string
           title: string
@@ -172,7 +174,9 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          pillar?: string | null
           platform: string
+          product_line?: string | null
           scheduled_date: string
           status?: string
           title: string
@@ -185,7 +189,9 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          pillar?: string | null
           platform?: string
+          product_line?: string | null
           scheduled_date?: string
           status?: string
           title?: string
