@@ -77,6 +77,37 @@ export const EditableTable = () => {
   const [selectedCell, setSelectedCell] = useState<{ section: number; row: number; col: number } | null>(null);
   const [productLines, setProductLines] = useState<Array<{name: string, color: string}>>([]);
   const [pillars, setPillars] = useState<Array<{name: string, color: string}>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load plan data from database
+  useEffect(() => {
+    const loadPlanData = async () => {
+      try {
+        setIsLoading(true);
+        const { data: planData, error } = await supabase
+          .from('plan_sections')
+          .select('*')
+          .order('section_order');
+
+        if (error) {
+          console.error('Failed to load plan data:', error);
+          return;
+        }
+
+        if (planData && planData.length > 0) {
+          const loadedSections = planData.map(item => JSON.parse(JSON.stringify(item.section_data)) as Section);
+          setSections(loadedSections);
+        }
+      } catch (error) {
+        console.error('Failed to load plan data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPlanData();
+  }, []);
 
   // Fetch product lines and pillars from database
   useEffect(() => {
@@ -94,6 +125,42 @@ export const EditableTable = () => {
     };
     fetchOptions();
   }, []);
+
+  // Auto-save sections to database when they change
+  useEffect(() => {
+    if (isLoading) return; // Don't save during initial load
+    
+    const savePlanData = async () => {
+      try {
+        setIsSaving(true);
+        
+        // Delete existing sections
+        await supabase.from('plan_sections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        
+        // Insert new sections
+        const sectionsToSave = sections.map((section, index) => ({
+          section_data: JSON.parse(JSON.stringify(section)),
+          section_order: index,
+          user_id: '00000000-0000-0000-0000-000000000000'
+        }));
+
+        const { error } = await supabase
+          .from('plan_sections')
+          .insert(sectionsToSave);
+
+        if (error) {
+          console.error('Failed to save plan data:', error);
+        }
+      } catch (error) {
+        console.error('Failed to save plan data:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    const timeoutId = setTimeout(savePlanData, 500); // Debounce saves
+    return () => clearTimeout(timeoutId);
+  }, [sections, isLoading]);
 
   const updateCell = (sectionIdx: number, row: number, col: number, updates: Partial<Cell>) => {
     setSections(prev => prev.map((sec, si) => {
@@ -135,8 +202,26 @@ export const EditableTable = () => {
 
   const currentCell = selectedCell ? sections[selectedCell.section].cells[selectedCell.row][selectedCell.col] : null;
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading plan data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Save indicator */}
+      {isSaving && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-lg">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+          <span className="text-sm text-primary">Saving changes...</span>
+        </div>
+      )}
       {/* Toolbar: only when editing the title background (A1 of a section) */}
       {selectedCell && currentCell && selectedCell.row === 0 && selectedCell.col === 0 && (
         <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg">
