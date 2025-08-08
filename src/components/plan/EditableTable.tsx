@@ -443,109 +443,103 @@ export const EditableTable = () => {
                             placeholder="Write here"
                           />
                         ) : colIndex === 2 ? (
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full border border-border"
-                              style={{
-                                backgroundColor: `hsl(var(${cell.content === 'Carousel' ? '--accent' : cell.content === 'Video' ? '--secondary' : '--primary'}))`,
-                              }}
-                              aria-hidden
-                            />
-                            <Select
-                              value={cell.content}
-                              onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
+                          <Select
+                            value={cell.content}
+                            onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
+                          >
+                            <SelectTrigger 
+                              className={`w-full ${
+                                cell.content === 'Carousel' ? 'bg-accent/20 border-accent' : 
+                                cell.content === 'Video' ? 'bg-secondary/20 border-secondary' : 
+                                cell.content === 'Image' ? 'bg-primary/20 border-primary' : 
+                                'bg-muted'
+                              }`}
                             >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                              <SelectContent className="z-50 bg-popover">
-                                {contentTypes.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className="w-2.5 h-2.5 rounded-full border border-border"
-                                        style={{
-                                          backgroundColor: `hsl(var(${opt === 'Carousel' ? '--accent' : opt === 'Video' ? '--secondary' : '--primary'}))`,
-                                        }}
-                                        aria-hidden
-                                      />
-                                      {opt}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent className="z-50 bg-popover">
+                              {contentTypes.map((opt) => (
+                                <SelectItem key={opt} value={opt}>
+                                  <div 
+                                    className={`px-2 py-1 rounded text-sm w-full ${
+                                      opt === 'Carousel' ? 'bg-accent/20 text-accent-foreground' : 
+                                      opt === 'Video' ? 'bg-secondary/20 text-secondary-foreground' : 
+                                      opt === 'Image' ? 'bg-primary/20 text-primary-foreground' : 
+                                      'bg-muted'
+                                    }`}
+                                  >
+                                    {opt}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         ) : colIndex === 3 ? (
                           // Product Line select
-                          <div className="flex items-center gap-2">
-                            {productLines.find(pl => pl.name === cell.content) && (
-                              <span
-                                className="w-2.5 h-2.5 rounded-full border border-border"
-                                style={{
-                                  backgroundColor: productLines.find(pl => pl.name === cell.content)?.color || '#3B82F6',
-                                }}
-                                aria-hidden
-                              />
-                            )}
-                            <Select
-                              value={cell.content}
-                              onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
+                          <Select
+                            value={cell.content}
+                            onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
+                          >
+                            <SelectTrigger 
+                              className="w-full"
+                              style={{
+                                backgroundColor: productLines.find(pl => pl.name === cell.content)?.color ? 
+                                  `${productLines.find(pl => pl.name === cell.content)?.color}20` : 
+                                  'transparent',
+                                borderColor: productLines.find(pl => pl.name === cell.content)?.color || 'hsl(var(--border))'
+                              }}
                             >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select product line" />
-                              </SelectTrigger>
-                              <SelectContent className="z-50 bg-popover">
-                                {productLines.map((pl) => (
-                                  <SelectItem key={pl.name} value={pl.name}>
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className="w-2.5 h-2.5 rounded-full border border-border"
-                                        style={{ backgroundColor: pl.color }}
-                                        aria-hidden
-                                      />
-                                      {pl.name}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                              <SelectValue placeholder="Select product line" />
+                            </SelectTrigger>
+                            <SelectContent className="z-50 bg-popover">
+                              {productLines.map((pl) => (
+                                <SelectItem key={pl.name} value={pl.name}>
+                                  <div 
+                                    className="px-2 py-1 rounded text-sm w-full"
+                                    style={{
+                                      backgroundColor: `${pl.color}20`,
+                                      color: pl.color
+                                    }}
+                                  >
+                                    {pl.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         ) : (
                           // colIndex === 4 - Pillars
-                          <div className="flex items-center gap-2">
-                            {pillars.find(p => p.name === cell.content) && (
-                              <span
-                                className="w-2.5 h-2.5 rounded-full border border-border"
-                                style={{
-                                  backgroundColor: pillars.find(p => p.name === cell.content)?.color || '#3B82F6',
-                                }}
-                                aria-hidden
-                              />
-                            )}
-                            <Select
-                              value={cell.content}
-                              onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
+                          <Select
+                            value={cell.content}
+                            onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
+                          >
+                            <SelectTrigger 
+                              className="w-full"
+                              style={{
+                                backgroundColor: pillars.find(p => p.name === cell.content)?.color ? 
+                                  `${pillars.find(p => p.name === cell.content)?.color}20` : 
+                                  'transparent',
+                                borderColor: pillars.find(p => p.name === cell.content)?.color || 'hsl(var(--border))'
+                              }}
                             >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select pillar" />
-                              </SelectTrigger>
-                              <SelectContent className="z-50 bg-popover">
-                                {pillars.map((pillar) => (
-                                  <SelectItem key={pillar.name} value={pillar.name}>
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className="w-2.5 h-2.5 rounded-full border border-border"
-                                        style={{ backgroundColor: pillar.color }}
-                                        aria-hidden
-                                      />
-                                      {pillar.name}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                              <SelectValue placeholder="Select pillar" />
+                            </SelectTrigger>
+                            <SelectContent className="z-50 bg-popover">
+                              {pillars.map((pillar) => (
+                                <SelectItem key={pillar.name} value={pillar.name}>
+                                  <div 
+                                    className="px-2 py-1 rounded text-sm w-full"
+                                    style={{
+                                      backgroundColor: `${pillar.color}20`,
+                                      color: pillar.color
+                                    }}
+                                  >
+                                    {pillar.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         )}
                       </td>
                     ))}

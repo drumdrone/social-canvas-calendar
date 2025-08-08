@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Heart, MessageCircle, Share } from 'lucide-react';
+import { Heart, MessageCircle, Share, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { SocialPost, Platform, PostStatus } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
+import { PostModal } from './PostModal';
 
 interface FacebookPostPreviewProps {
   selectedPlatforms: Platform[];
@@ -19,6 +20,8 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
 }) => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -54,6 +57,16 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
 
     fetchPosts();
   }, [currentDate]);
+
+  const handleEditPost = (post: SocialPost) => {
+    setEditingPost(post);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingPost(null);
+  };
 
   const filteredPosts = posts.filter(post => {
     const isPlatformSelected = selectedPlatforms.includes(post.platform);
@@ -103,8 +116,13 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
               <div className="font-semibold text-sm">{sampleData.companyName}</div>
               <div className="text-xs text-muted-foreground">{sampleData.timestamp}</div>
             </div>
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              •••
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => handleEditPost(post)}
+            >
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </div>
 
@@ -181,6 +199,14 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
       <div className="flex gap-6 w-full max-w-6xl overflow-x-auto">
         {weeklyPosts.map((post, index) => renderPost(post, index))}
       </div>
+      
+      {/* PostModal for editing */}
+      <PostModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        selectedDate={editingPost ? new Date(editingPost.scheduled_date) : null}
+        editingPost={editingPost}
+      />
     </div>
   );
 };
