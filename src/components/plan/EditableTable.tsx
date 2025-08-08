@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Palette, Copy, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Palette, Copy, Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { PostModal } from '@/components/calendar/PostModal';
 
 interface Cell {
   id: string;
@@ -12,7 +14,7 @@ interface Cell {
 
 interface Section {
   id: string;
-  cells: Cell[][]; // 5 rows x 5 cols (A-E)
+  cells: Cell[][]; // 5 rows x 6 cols (A-F)
 }
 
 const backgroundColors = [
@@ -30,7 +32,7 @@ const categories = ['Novinky', 'Veda'] as const;
 
 const createDefaultSection = (): Section => {
   const cells: Cell[][] = Array.from({ length: 5 }, (_, rowIndex) =>
-    Array.from({ length: 5 }, (_, colIndex) => {
+    Array.from({ length: 6 }, (_, colIndex) => {
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       if (rowIndex === 0 && colIndex === 0) {
         // A1: Title cell (H1-like), editable with background color
@@ -41,12 +43,21 @@ const createDefaultSection = (): Section => {
           backgroundColor: 'transparent',
         };
       }
-      if (rowIndex === 0 && colIndex > 0) {
+      if (rowIndex === 0 && colIndex > 0 && colIndex < 5) {
         // B1-E1: Header labels (not editable)
         const labels = ['Popis', 'Creativa', 'Product Line', 'Pilíř'] as const;
         return {
           id,
           content: labels[colIndex - 1],
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        };
+      }
+      if (rowIndex === 0 && colIndex === 5) {
+        // F1: NEW button header
+        return {
+          id,
+          content: 'NEW',
           fontSize: 'small',
           backgroundColor: 'transparent',
         };
@@ -79,6 +90,10 @@ export const EditableTable = () => {
   const [pillars, setPillars] = useState<Array<{name: string, color: string}>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // PostModal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Load plan data from database
   useEffect(() => {
@@ -200,6 +215,16 @@ export const EditableTable = () => {
     });
   };
 
+  const handleNewPostClick = () => {
+    setSelectedDate(new Date());
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedDate(null);
+  };
+
   const currentCell = selectedCell ? sections[selectedCell.section].cells[selectedCell.row][selectedCell.col] : null;
 
   if (isLoading) {
@@ -282,11 +307,12 @@ export const EditableTable = () => {
             {/* Table for this section */}
             <table className="w-full">
               <colgroup>
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '40%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '10%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '35%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '8%' }} />
               </colgroup>
               <tbody>
                 {/* Row 0: Header with 5 columns (A1 editable title, B1-E1 labels) */}
@@ -334,6 +360,12 @@ export const EditableTable = () => {
                     onClick={() => handleCellClick(sectionIdx, 0, 4)}
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][4].content}</div>
+                  </td>
+                  {/* F1 - NEW header */}
+                  <td
+                    className="border border-border p-4 cursor-pointer hover:bg-muted/50"
+                  >
+                    <div className="text-sm text-muted-foreground font-medium">{section.cells[0][5].content}</div>
                   </td>
                 </tr>
 
@@ -467,6 +499,18 @@ export const EditableTable = () => {
                         )}
                       </td>
                     ))}
+                    {/* F2-F5 - NEW buttons for each week */}
+                    <td className="border border-border p-2 min-w-[80px] h-16">
+                      <Button
+                        onClick={handleNewPostClick}
+                        size="sm"
+                        className="w-full h-full"
+                        variant="outline"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        NEW
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -474,6 +518,13 @@ export const EditableTable = () => {
           </div>
         ))}
       </div>
+      
+      {/* PostModal */}
+      <PostModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 };
