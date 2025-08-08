@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Palette, Type } from 'lucide-react';
+import { Palette } from 'lucide-react';
+
 
 interface Cell {
   id: string;
@@ -19,16 +19,42 @@ const backgroundColors = [
   { name: 'Light Purple', value: 'bg-purple-50' },
 ];
 
+const weeks = ['1. týden', '2. týden', '3. týden', '4. týden'] as const;
+const contentTypes = ['Image', 'Carousel', 'Video'] as const;
+const categories = ['Novinky', 'Veda'] as const;
+
 export const EditableTable = () => {
   const [cells, setCells] = useState<Cell[][]>(() => {
-    // Initialize 5x5 grid
+    // Initialize 5 rows x 4 columns (A-D)
     return Array.from({ length: 5 }, (_, rowIndex) =>
-      Array.from({ length: 5 }, (_, colIndex) => ({
-        id: `${rowIndex}-${colIndex}`,
-        content: '',
-        fontSize: 'small' as const,
-        backgroundColor: 'transparent',
-      }))
+      Array.from({ length: 4 }, (_, colIndex) => {
+        const id = `${rowIndex}-${colIndex}`;
+        if (rowIndex === 0 && colIndex === 0) {
+          // A1: Title cell (H1-like)
+          return {
+            id,
+            content: '',
+            fontSize: 'large' as const,
+            backgroundColor: 'transparent',
+          };
+        }
+        if (colIndex === 0 && rowIndex > 0) {
+          // A2-A5: Week labels
+          return {
+            id,
+            content: weeks[rowIndex - 1],
+            fontSize: 'small' as const,
+            backgroundColor: 'transparent',
+          };
+        }
+        // Other cells start empty
+        return {
+          id,
+          content: '',
+          fontSize: 'small' as const,
+          backgroundColor: 'transparent',
+        };
+      })
     );
   });
 
@@ -55,26 +81,8 @@ export const EditableTable = () => {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      {selectedCell && currentCell && (
+      {selectedCell && currentCell && selectedCell.row === 0 && selectedCell.col === 0 && (
         <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg">
-          <div className="flex items-center gap-2">
-            <Type className="h-4 w-4" />
-            <Select 
-              value={currentCell.fontSize} 
-              onValueChange={(value: 'small' | 'large') => 
-                updateCell(selectedCell.row, selectedCell.col, { fontSize: value })
-              }
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="small">Small</SelectItem>
-                <SelectItem value="large">Large</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
             <Select 
@@ -83,10 +91,10 @@ export const EditableTable = () => {
                 updateCell(selectedCell.row, selectedCell.col, { backgroundColor: value })
               }
             >
-              <SelectTrigger className="w-40">
-                <SelectValue />
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Background color" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50">
                 {backgroundColors.map(color => (
                   <SelectItem key={color.value} value={color.value}>
                     <div className="flex items-center gap-2">
@@ -100,7 +108,7 @@ export const EditableTable = () => {
           </div>
 
           <div className="text-sm text-muted-foreground">
-            Selected: Row {selectedCell.row + 1}, Column {selectedCell.col + 1}
+            Editing title background (A1)
           </div>
         </div>
       )}
