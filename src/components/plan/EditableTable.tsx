@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Palette, Copy, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Cell {
   id: string;
@@ -11,7 +12,7 @@ interface Cell {
 
 interface Section {
   id: string;
-  cells: Cell[][]; // 5 rows x 4 cols (A-D)
+  cells: Cell[][]; // 5 rows x 5 cols (A-E)
 }
 
 const backgroundColors = [
@@ -29,7 +30,7 @@ const categories = ['Novinky', 'Veda'] as const;
 
 const createDefaultSection = (): Section => {
   const cells: Cell[][] = Array.from({ length: 5 }, (_, rowIndex) =>
-    Array.from({ length: 4 }, (_, colIndex) => {
+    Array.from({ length: 5 }, (_, colIndex) => {
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       if (rowIndex === 0 && colIndex === 0) {
         // A1: Title cell (H1-like), editable with background color
@@ -41,8 +42,8 @@ const createDefaultSection = (): Section => {
         };
       }
       if (rowIndex === 0 && colIndex > 0) {
-        // B1-D1: Header labels (not editable)
-        const labels = ['Popis', 'Creativa', 'Pilíř'] as const;
+        // B1-E1: Header labels (not editable)
+        const labels = ['Popis', 'Creativa', 'Product Line', 'Pilíř'] as const;
         return {
           id,
           content: labels[colIndex - 1],
@@ -74,6 +75,25 @@ const createDefaultSection = (): Section => {
 export const EditableTable = () => {
   const [sections, setSections] = useState<Section[]>([createDefaultSection()]);
   const [selectedCell, setSelectedCell] = useState<{ section: number; row: number; col: number } | null>(null);
+  const [productLines, setProductLines] = useState<Array<{name: string, color: string}>>([]);
+  const [pillars, setPillars] = useState<Array<{name: string, color: string}>>([]);
+
+  // Fetch product lines and pillars from database
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [productLinesResult, pillarsResult] = await Promise.all([
+          supabase.from('product_lines').select('name, color').eq('is_active', true).order('name'),
+          supabase.from('pillars').select('name, color').eq('is_active', true).order('name'),
+        ]);
+        setProductLines(productLinesResult.data || []);
+        setPillars(pillarsResult.data || []);
+      } catch (error) {
+        console.error('Failed to load options:', error);
+      }
+    };
+    fetchOptions();
+  }, []);
 
   const updateCell = (sectionIdx: number, row: number, col: number, updates: Partial<Cell>) => {
     setSections(prev => prev.map((sec, si) => {
@@ -178,12 +198,13 @@ export const EditableTable = () => {
             <table className="w-full">
               <colgroup>
                 <col style={{ width: '20%' }} />
-                <col style={{ width: '50%' }} />
+                <col style={{ width: '40%' }} />
                 <col style={{ width: '15%' }} />
                 <col style={{ width: '15%' }} />
+                <col style={{ width: '10%' }} />
               </colgroup>
               <tbody>
-                {/* Row 0: Header with 4 columns (A1 editable title, B1-D1 labels) */}
+                {/* Row 0: Header with 5 columns (A1 editable title, B1-E1 labels) */}
                 <tr>
                   {/* A1 - Editable Title */}
                   <td
@@ -215,12 +236,19 @@ export const EditableTable = () => {
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][2].content}</div>
                   </td>
-                  {/* D1 - Pilíř */}
+                  {/* D1 - Product Line */}
                   <td
                     className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 3 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
                     onClick={() => handleCellClick(sectionIdx, 0, 3)}
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][3].content}</div>
+                  </td>
+                  {/* E1 - Pilíř */}
+                  <td
+                    className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 4 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
+                    onClick={() => handleCellClick(sectionIdx, 0, 4)}
+                  >
+                    <div className="text-sm text-muted-foreground font-medium">{section.cells[0][4].content}</div>
                   </td>
                 </tr>
 
@@ -281,35 +309,70 @@ export const EditableTable = () => {
                               </SelectContent>
                             </Select>
                           </div>
-                        ) : (
-                          // colIndex === 3
+                        ) : colIndex === 3 ? (
+                          // Product Line select
                           <div className="flex items-center gap-2">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full border border-border"
-                              style={{
-                                backgroundColor: `hsl(var(${cell.content === 'Veda' ? '--accent' : '--primary'}))`,
-                              }}
-                              aria-hidden
-                            />
+                            {productLines.find(pl => pl.name === cell.content) && (
+                              <span
+                                className="w-2.5 h-2.5 rounded-full border border-border"
+                                style={{
+                                  backgroundColor: productLines.find(pl => pl.name === cell.content)?.color || '#3B82F6',
+                                }}
+                                aria-hidden
+                              />
+                            )}
                             <Select
                               value={cell.content}
                               onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
                             >
                               <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select category" />
+                                <SelectValue placeholder="Select product line" />
                               </SelectTrigger>
                               <SelectContent className="z-50 bg-popover">
-                                {categories.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>
+                                {productLines.map((pl) => (
+                                  <SelectItem key={pl.name} value={pl.name}>
                                     <div className="flex items-center gap-2">
                                       <span
                                         className="w-2.5 h-2.5 rounded-full border border-border"
-                                        style={{
-                                          backgroundColor: `hsl(var(${opt === 'Veda' ? '--accent' : '--primary'}))`,
-                                        }}
+                                        style={{ backgroundColor: pl.color }}
                                         aria-hidden
                                       />
-                                      {opt}
+                                      {pl.name}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          // colIndex === 4 - Pillars
+                          <div className="flex items-center gap-2">
+                            {pillars.find(p => p.name === cell.content) && (
+                              <span
+                                className="w-2.5 h-2.5 rounded-full border border-border"
+                                style={{
+                                  backgroundColor: pillars.find(p => p.name === cell.content)?.color || '#3B82F6',
+                                }}
+                                aria-hidden
+                              />
+                            )}
+                            <Select
+                              value={cell.content}
+                              onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select pillar" />
+                              </SelectTrigger>
+                              <SelectContent className="z-50 bg-popover">
+                                {pillars.map((pillar) => (
+                                  <SelectItem key={pillar.name} value={pillar.name}>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="w-2.5 h-2.5 rounded-full border border-border"
+                                        style={{ backgroundColor: pillar.color }}
+                                        aria-hidden
+                                      />
+                                      {pillar.name}
                                     </div>
                                   </SelectItem>
                                 ))}
