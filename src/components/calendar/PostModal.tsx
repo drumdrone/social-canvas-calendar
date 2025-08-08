@@ -57,8 +57,9 @@ export const PostModal: React.FC<PostModalProps> = ({
   };
 
   const uploadImage = async (file: File) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
+    const inferredExt = (file.name && file.name.includes('.')) ? file.name.split('.').pop() : (file.type ? file.type.split('/').pop() : 'png');
+    const fileExt = inferredExt || 'png';
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
     const filePath = `public/${fileName}`;
 
     const { data, error } = await supabase.storage

@@ -114,6 +114,27 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     fetchDynamicData();
   }, []);
 
+  // Allow pasting image into the "New Post" row
+  useEffect(() => {
+    if (!isCreating) return;
+    const onPaste = (e: any) => {
+      const items = e.clipboardData?.items || [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item && item.type && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            setNewPost(prev => ({ ...prev, image: file }));
+            toast.success('Image pasted from clipboard');
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [isCreating]);
+
   const filteredPosts = posts.filter(post => {
     const isPlatformSelected = selectedPlatforms.includes(post.platform);
     const isStatusSelected = selectedStatuses.includes(post.status);

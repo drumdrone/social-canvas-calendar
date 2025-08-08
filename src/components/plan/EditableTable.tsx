@@ -176,6 +176,12 @@ export const EditableTable = () => {
 
             {/* Table for this section */}
             <table className="w-full">
+              <colgroup>
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '50%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '15%' }} />
+              </colgroup>
               <tbody>
                 {/* Row 0: Header with 4 columns (A1 editable title, B1-D1 labels) */}
                 <tr>
@@ -242,34 +248,74 @@ export const EditableTable = () => {
                             placeholder="Write here"
                           />
                         ) : colIndex === 2 ? (
-                          <Select
-                            value={cell.content}
-                            onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent className="z-50">
-                              {contentTypes.map((opt) => (
-                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full border border-border"
+                              style={{
+                                backgroundColor: `hsl(var(${cell.content === 'Carousel' ? '--accent' : cell.content === 'Video' ? '--secondary' : '--primary'}))`,
+                              }}
+                              aria-hidden
+                            />
+                            <Select
+                              value={cell.content}
+                              onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent className="z-50 bg-popover">
+                                {contentTypes.map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="w-2.5 h-2.5 rounded-full border border-border"
+                                        style={{
+                                          backgroundColor: `hsl(var(${opt === 'Carousel' ? '--accent' : opt === 'Video' ? '--secondary' : '--primary'}))`,
+                                        }}
+                                        aria-hidden
+                                      />
+                                      {opt}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         ) : (
                           // colIndex === 3
-                          <Select
-                            value={cell.content}
-                            onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent className="z-50">
-                              {categories.map((opt) => (
-                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full border border-border"
+                              style={{
+                                backgroundColor: `hsl(var(${cell.content === 'Veda' ? '--accent' : '--primary'}))`,
+                              }}
+                              aria-hidden
+                            />
+                            <Select
+                              value={cell.content}
+                              onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent className="z-50 bg-popover">
+                                {categories.map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="w-2.5 h-2.5 rounded-full border border-border"
+                                        style={{
+                                          backgroundColor: `hsl(var(${opt === 'Veda' ? '--accent' : '--primary'}))`,
+                                        }}
+                                        aria-hidden
+                                      />
+                                      {opt}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         )}
                       </td>
                     ))}
