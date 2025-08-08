@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Palette, Copy, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Palette, Copy, Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-
-// Force cache refresh - removed 6th column completely
+import { PostModal } from '@/components/calendar/PostModal';
 
 interface Cell {
   id: string;
@@ -14,7 +14,7 @@ interface Cell {
 
 interface Section {
   id: string;
-  cells: Cell[][]; // 5 rows x 5 cols (A-E)
+  cells: Cell[][]; // 5 rows x 6 cols (A-F)
 }
 
 const backgroundColors = [
@@ -32,7 +32,7 @@ const categories = ['Novinky', 'Veda'] as const;
 
 const createDefaultSection = (): Section => {
   const cells: Cell[][] = Array.from({ length: 5 }, (_, rowIndex) =>
-    Array.from({ length: 5 }, (_, colIndex) => {
+    Array.from({ length: 6 }, (_, colIndex) => {
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       if (rowIndex === 0 && colIndex === 0) {
         // A1: Title cell (H1-like), editable with background color
@@ -43,12 +43,21 @@ const createDefaultSection = (): Section => {
           backgroundColor: 'transparent',
         };
       }
-      if (rowIndex === 0 && colIndex > 0) {
+      if (rowIndex === 0 && colIndex > 0 && colIndex < 5) {
         // B1-E1: Header labels (not editable)
         const labels = ['Popis', 'Creativa', 'Product Line', 'Pilíř'] as const;
         return {
           id,
           content: labels[colIndex - 1],
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        };
+      }
+      if (rowIndex === 0 && colIndex === 5) {
+        // F1: Create New header
+        return {
+          id,
+          content: 'Create New',
           fontSize: 'small',
           backgroundColor: 'transparent',
         };
@@ -74,23 +83,46 @@ const createDefaultSection = (): Section => {
   return { id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` , cells };
 };
 
-// Migration function to ensure sections have 5 columns
+// Migration function to ensure sections have 6 columns
 const migrateSection = (section: Section): Section => {
   if (!section.cells || section.cells.length === 0) {
     return createDefaultSection();
   }
   
-  // Check if we need to migrate from 6 to 5 columns (removing the 6th column)
-  const needsMigration = section.cells.some(row => row.length > 5);
+  // Check if we need to migrate from 5 to 6 columns
+  const needsMigration = section.cells.some(row => row.length < 6);
   
   if (!needsMigration) {
     return section;
   }
 
-  // Migrate each row to have exactly 5 columns
-  const migratedCells = section.cells.map((row) => {
-    // Keep only the first 5 columns
-    return row.slice(0, 5);
+  // Migrate each row to have 6 columns
+  const migratedCells = section.cells.map((row, rowIndex) => {
+    // Ensure we have at least 6 columns
+    const newRow = [...row];
+    while (newRow.length < 6) {
+      const colIndex = newRow.length;
+      const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
+      
+      if (rowIndex === 0 && colIndex === 5) {
+        // F1: Create New header
+        newRow.push({
+          id,
+          content: 'Create New',
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        });
+      } else {
+        // Regular empty cell
+        newRow.push({
+          id,
+          content: '',
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        });
+      }
+    }
+    return newRow;
   });
 
   return { ...section, cells: migratedCells };
@@ -103,6 +135,10 @@ export const EditableTable = () => {
   const [pillars, setPillars] = useState<Array<{name: string, color: string}>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // PostModal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Load plan data from database
   useEffect(() => {
@@ -227,6 +263,16 @@ export const EditableTable = () => {
     });
   };
 
+  const handleNewPostClick = () => {
+    setSelectedDate(new Date());
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedDate(null);
+  };
+
   const currentCell = selectedCell ? sections[selectedCell.section].cells[selectedCell.row][selectedCell.col] : null;
 
   if (isLoading) {
@@ -309,11 +355,12 @@ export const EditableTable = () => {
             {/* Table for this section */}
             <table className="w-full">
               <colgroup>
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '40%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '10%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '35%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '8%' }} />
               </colgroup>
               <tbody>
                 {/* Row 0: Header with 5 columns (A1 editable title, B1-E1 labels) */}
@@ -361,6 +408,14 @@ export const EditableTable = () => {
                     onClick={() => handleCellClick(sectionIdx, 0, 4)}
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][4].content}</div>
+                  </td>
+                  {/* F1 - Create New header */}
+                  <td
+                    className="border border-border p-4 cursor-pointer hover:bg-muted/50"
+                  >
+                    <div className="text-sm text-muted-foreground font-medium text-center">
+                      {section.cells[0] && section.cells[0][5] ? section.cells[0][5].content : 'Create New'}
+                    </div>
                   </td>
                 </tr>
 
@@ -488,6 +543,17 @@ export const EditableTable = () => {
                         )}
                       </td>
                     ))}
+                    {/* F2-F5 - Create New buttons for each week */}
+                    <td className="border border-border p-2 min-w-[80px] h-16">
+                      <Button
+                        onClick={handleNewPostClick}
+                        size="sm"
+                        className="w-full h-full flex items-center justify-center"
+                        variant="outline"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -495,6 +561,13 @@ export const EditableTable = () => {
           </div>
         ))}
       </div>
+      
+      {/* PostModal */}
+      <PostModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 };
