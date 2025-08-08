@@ -9,11 +9,13 @@ import { supabase } from '@/integrations/supabase/client';
 interface FacebookPostPreviewProps {
   selectedPlatforms: Platform[];
   selectedStatuses: PostStatus[];
+  currentDate: Date;
 }
 
 export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
   selectedPlatforms,
   selectedStatuses,
+  currentDate,
 }) => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,9 +24,20 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
     const fetchPosts = async () => {
       setLoading(true);
       try {
+        // Calculate week range from currentDate
+        const startOfWeek = new Date(currentDate);
+        startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
         const { data, error } = await supabase
           .from('social_media_posts')
           .select('*')
+          .gte('scheduled_date', startOfWeek.toISOString())
+          .lte('scheduled_date', endOfWeek.toISOString())
           .order('scheduled_date', { ascending: true });
 
         if (error) {
@@ -40,7 +53,7 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
     };
 
     fetchPosts();
-  }, []);
+  }, [currentDate]);
 
   const filteredPosts = posts.filter(post => {
     const isPlatformSelected = selectedPlatforms.includes(post.platform);

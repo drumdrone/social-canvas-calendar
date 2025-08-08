@@ -201,6 +201,7 @@ export const SocialCalendar: React.FC = () => {
           <FacebookPostPreview
             selectedPlatforms={selectedPlatforms}
             selectedStatuses={selectedStatuses}
+            currentDate={currentDate}
           />
         ) : (
           <CalendarGrid
