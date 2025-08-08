@@ -54,10 +54,10 @@ const createDefaultSection = (): Section => {
         };
       }
       if (rowIndex === 0 && colIndex === 5) {
-        // F1: NEW button header
+        // F1: Green + icon header
         return {
           id,
-          content: 'NEW',
+          content: '+',
           fontSize: 'small',
           backgroundColor: 'transparent',
         };
@@ -105,10 +105,10 @@ const migrateSection = (section: Section): Section => {
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       
       if (rowIndex === 0 && colIndex === 5) {
-        // F1: NEW button header
+        // F1: Green + icon header
         newRow.push({
           id,
-          content: 'NEW',
+          content: '+',
           fontSize: 'small',
           backgroundColor: 'transparent',
         });
@@ -409,12 +409,12 @@ export const EditableTable = () => {
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][4].content}</div>
                   </td>
-                  {/* F1 - NEW header */}
+                  {/* F1 - Green + icon header */}
                   <td
                     className="border border-border p-4 cursor-pointer hover:bg-muted/50"
                   >
-                    <div className="text-sm text-muted-foreground font-medium">
-                      {section.cells[0] && section.cells[0][5] ? section.cells[0][5].content : 'NEW'}
+                    <div className="flex items-center justify-center">
+                      <Plus className="h-5 w-5 text-green-600" />
                     </div>
                   </td>
                 </tr>
@@ -549,16 +549,15 @@ export const EditableTable = () => {
                         )}
                       </td>
                     ))}
-                    {/* F2-F5 - NEW buttons for each week */}
+                    {/* F2-F5 - Green + buttons for each week */}
                     <td className="border border-border p-2 min-w-[80px] h-16">
                       <Button
                         onClick={handleNewPostClick}
                         size="sm"
-                        className="w-full h-full"
-                        variant="outline"
+                        className="w-full h-full flex items-center justify-center"
+                        variant="ghost"
                       >
-                        <Plus className="h-4 w-4 mr-1" />
-                        NEW
+                        <Plus className="h-5 w-5 text-green-600" />
                       </Button>
                     </td>
                   </tr>
