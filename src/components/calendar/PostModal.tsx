@@ -48,8 +48,8 @@ export const PostModal: React.FC<PostModalProps> = ({
   const [scheduledDate, setScheduledDate] = useState<Date>(selectedDate || new Date());
   const [platformOptions, setPlatformOptions] = useState<string[]>([]);
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
-  const [pillar, setPillar] = useState<string>('');
-  const [productLine, setProductLine] = useState<string>('');
+  const [pillar, setPillar] = useState<string>('none');
+  const [productLine, setProductLine] = useState<string>('none');
   const [pillarOptions, setPillarOptions] = useState<Array<{name: string, color: string}>>([]);
   const [productLineOptions, setProductLineOptions] = useState<Array<{name: string, color: string}>>([]);
 
@@ -117,8 +117,8 @@ export const PostModal: React.FC<PostModalProps> = ({
             category,
             image_url: imageUrl,
             scheduled_date: scheduledDateTime.toISOString(),
-            pillar: pillar || null,
-            product_line: productLine || null,
+            pillar: pillar && pillar !== 'none' ? pillar : null,
+            product_line: productLine && productLine !== 'none' ? productLine : null,
           })
           .eq('id', (editingPost || currentEditingPost)!.id);
 
@@ -141,8 +141,8 @@ export const PostModal: React.FC<PostModalProps> = ({
               image_url: imageUrl,
               scheduled_date: scheduledDateTime.toISOString(),
               user_id: '00000000-0000-0000-0000-000000000000',
-              pillar: pillar || null,
-              product_line: productLine || null,
+              pillar: pillar && pillar !== 'none' ? pillar : null,
+              product_line: productLine && productLine !== 'none' ? productLine : null,
             },
           ]);
 
@@ -309,8 +309,8 @@ export const PostModal: React.FC<PostModalProps> = ({
       setPlatform(editingPost.platform);
       setStatus(editingPost.status);
       setCategory(editingPost.category);
-      setPillar((editingPost as any).pillar || '');
-      setProductLine((editingPost as any).product_line || '');
+      setPillar((editingPost as any).pillar || 'none');
+      setProductLine((editingPost as any).product_line || 'none');
       
       const postDate = new Date(editingPost.scheduled_date);
       setScheduledDate(postDate);
@@ -327,8 +327,8 @@ export const PostModal: React.FC<PostModalProps> = ({
     setTime('12:00');
     setImage(null);
     setCurrentEditingPost(null);
-    setPillar('');
-    setProductLine('');
+    setPillar('none');
+    setProductLine('none');
     setScheduledDate(selectedDate || new Date());
     onClose();
   };
@@ -368,8 +368,8 @@ export const PostModal: React.FC<PostModalProps> = ({
                         setPlatform(post.platform);
                         setStatus(post.status);
                         setCategory(post.category);
-                        setPillar(post.pillar || '');
-                        setProductLine(post.product_line || '');
+                        setPillar(post.pillar || 'none');
+                        setProductLine(post.product_line || 'none');
                         const postDate = new Date(post.scheduled_date);
                         setTime(format(postDate, 'HH:mm'));
                       }}
@@ -525,7 +525,7 @@ export const PostModal: React.FC<PostModalProps> = ({
                       <SelectValue placeholder="Select pillar" />
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-popover">
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {pillarOptions.map((p) => (
                         <SelectItem key={p.name} value={p.name}>
                           <div className="flex items-center gap-2">
@@ -549,7 +549,7 @@ export const PostModal: React.FC<PostModalProps> = ({
                       <SelectValue placeholder="Select product line" />
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-popover">
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {productLineOptions.map((pl) => (
                         <SelectItem key={pl.name} value={pl.name}>
                           <div className="flex items-center gap-2">
