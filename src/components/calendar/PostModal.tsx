@@ -274,10 +274,16 @@ export const PostModal: React.FC<PostModalProps> = ({
     if (isOpen && selectedDate) {
       setScheduledDate(selectedDate);
       fetchExistingPosts();
+      
+      // Clear currentEditingPost when opening modal for new posts
+      if (!editingPost) {
+        setCurrentEditingPost(null);
+      }
     }
     
     // Pre-fill form when editing
     if (editingPost) {
+      setCurrentEditingPost(editingPost);
       setTitle(editingPost.title);
       setContent(editingPost.content || '');
       setPlatform(editingPost.platform);
@@ -298,6 +304,7 @@ export const PostModal: React.FC<PostModalProps> = ({
     setCategory('Image');
     setTime('12:00');
     setImage(null);
+    setCurrentEditingPost(null);
     setScheduledDate(selectedDate || new Date());
     onClose();
   };
@@ -312,6 +319,9 @@ export const PostModal: React.FC<PostModalProps> = ({
             <Calendar className="h-5 w-5" />
             {(editingPost || currentEditingPost) ? 'Edit Post' : `Posts for ${format(scheduledDate, 'MMMM d, yyyy')}`}
           </DialogTitle>
+          <DialogDescription>
+            {(editingPost || currentEditingPost) ? 'Modify your existing post details' : 'Create new posts or edit existing ones for this date'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 max-h-96 overflow-y-auto">
