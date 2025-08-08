@@ -107,6 +107,10 @@ export const PostModal: React.FC<PostModalProps> = ({
 
       if (editingPost || currentEditingPost) {
         // Update existing post
+        console.log('Updating post with pillar:', pillar, 'productLine:', productLine);
+        console.log('Pillar processed:', pillar && pillar !== 'none' ? pillar : null);
+        console.log('ProductLine processed:', productLine && productLine !== 'none' ? productLine : null);
+        
         const { error } = await supabase
           .from('social_media_posts')
           .update({
@@ -319,6 +323,7 @@ export const PostModal: React.FC<PostModalProps> = ({
   }, [isOpen, selectedDate, editingPost]);
 
   const handleClose = () => {
+    // Reset all form fields to default values
     setTitle('');
     setContent('');
     setPlatform('facebook');
@@ -330,6 +335,7 @@ export const PostModal: React.FC<PostModalProps> = ({
     setPillar('none');
     setProductLine('none');
     setScheduledDate(selectedDate || new Date());
+    console.log('Form reset - pillar:', 'none', 'productLine:', 'none');
     onClose();
   };
 
