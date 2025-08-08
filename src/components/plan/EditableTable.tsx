@@ -3,6 +3,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Palette, Copy, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+// Force cache refresh - removed 6th column completely
+
 interface Cell {
   id: string;
   content: string;
