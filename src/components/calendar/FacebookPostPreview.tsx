@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SocialPost, Platform, PostStatus } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { PostModal } from './PostModal';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface FacebookPostPreviewProps {
   selectedPlatforms: Platform[];
@@ -195,14 +196,18 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
   };
 
   return (
-    <div className="flex-1 p-6 bg-muted/50">
-      <div className="flex flex-wrap gap-8 max-w-6xl mx-auto">
+    <div className="flex-1 bg-muted/50">
+      <ScrollArea className="h-full">
+        <div className="p-6">
+          <div className="flex flex-wrap gap-8 max-w-6xl mx-auto">
         {weeklyPosts.map((post, index) => (
           <div key={post.id} style={{ width: '500px' }}>
             {renderPost(post, index)}
           </div>
-        ))}
-      </div>
+          ))}
+          </div>
+        </div>
+      </ScrollArea>
       
       {/* PostModal for editing */}
       <PostModal

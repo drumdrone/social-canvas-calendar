@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Platform, PostStatus, SocialPost, Category } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -525,7 +526,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
   }
 
   return (
-    <div className="flex-1 p-4 overflow-auto">
+    <div className="flex-1 p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Social Media Posts</h2>
         <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
@@ -534,8 +535,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         </Button>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
+      <div className="bg-card rounded-lg border border-border">
+        <ScrollArea className="h-[calc(100vh-200px)]">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-[100px]">Image</TableHead>
@@ -818,7 +820,8 @@ export const PostsTable: React.FC<PostsTableProps> = ({
               </TableRow>
             )}
           </TableBody>
-        </Table>
+          </Table>
+        </ScrollArea>
       </div>
 
       {/* Hover Image Preview */}
