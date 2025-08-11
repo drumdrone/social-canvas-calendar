@@ -198,7 +198,7 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
     <div className="flex-1 p-6 bg-muted/50">
       <div className="flex flex-wrap gap-8 max-w-6xl mx-auto">
         {weeklyPosts.map((post, index) => (
-          <div key={post.id} className="w-full md:w-80 lg:w-96">
+          <div key={post.id} style={{ width: '500px' }}>
             {renderPost(post, index)}
           </div>
         ))}
