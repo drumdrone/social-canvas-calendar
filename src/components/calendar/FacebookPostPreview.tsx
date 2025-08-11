@@ -131,7 +131,12 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
           <div className="p-4">
             <div className="space-y-3">
               {post.title && (
-                <h3 className="font-semibold text-sm">{post.title}</h3>
+                <h3 
+                  className="font-semibold text-sm cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleEditPost(post)}
+                >
+                  {post.title}
+                </h3>
               )}
               {post.content && (
                 <div className="text-sm text-foreground leading-relaxed">

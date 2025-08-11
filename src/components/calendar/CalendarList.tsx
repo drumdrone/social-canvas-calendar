@@ -162,10 +162,13 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                         />
                       )}
                       
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-foreground truncate mb-1">
-                          {post.title}
-                        </h3>
+                       <div className="flex-1 min-w-0">
+                         <h3 
+                           className="font-medium text-foreground truncate mb-1 cursor-pointer hover:text-primary transition-colors"
+                           onClick={() => onPostClick(post)}
+                         >
+                           {post.title}
+                         </h3>
                         
                         {post.content && (
                           <p className="text-sm text-muted-foreground line-clamp-2">
