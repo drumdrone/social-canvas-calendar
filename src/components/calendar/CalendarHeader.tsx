@@ -91,7 +91,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             onClick={() => onViewModeChange('week')}
             className="rounded-none border-r border-border"
           >
-            Week
+            Social
           </Button>
           <Button
             variant={viewMode === 'list' ? 'default' : 'ghost'}
