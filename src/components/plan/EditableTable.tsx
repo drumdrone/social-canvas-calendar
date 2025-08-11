@@ -14,7 +14,7 @@ interface Cell {
 
 interface Section {
   id: string;
-  cells: Cell[][]; // 5 rows x 5 cols (A-E)
+  cells: Cell[][]; // 5 rows x 6 cols (A-F)
 }
 
 const backgroundColors = [
@@ -32,7 +32,7 @@ const categories = ['Novinky', 'Veda'] as const;
 
 const createDefaultSection = (): Section => {
   const cells: Cell[][] = Array.from({ length: 5 }, (_, rowIndex) =>
-    Array.from({ length: 5 }, (_, colIndex) => {
+    Array.from({ length: 6 }, (_, colIndex) => {
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       if (rowIndex === 0 && colIndex === 0) {
         // A1: Title cell (H1-like), editable with background color
@@ -43,12 +43,21 @@ const createDefaultSection = (): Section => {
           backgroundColor: 'transparent',
         };
       }
-      if (rowIndex === 0 && colIndex > 0) {
+      if (rowIndex === 0 && colIndex > 0 && colIndex < 5) {
         // B1-E1: Header labels (not editable)
         const labels = ['Popis', 'Creativa', 'Product Line', 'Pilíř'] as const;
         return {
           id,
           content: labels[colIndex - 1],
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        };
+      }
+      if (rowIndex === 0 && colIndex === 5) {
+        // F1: Create New header
+        return {
+          id,
+          content: 'Create New',
           fontSize: 'small',
           backgroundColor: 'transparent',
         };
@@ -74,23 +83,46 @@ const createDefaultSection = (): Section => {
   return { id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` , cells };
 };
 
-// Migration function to ensure sections have 5 columns
+// Migration function to ensure sections have 6 columns
 const migrateSection = (section: Section): Section => {
   if (!section.cells || section.cells.length === 0) {
     return createDefaultSection();
   }
   
-  // Check if we need to migrate from 6 to 5 columns
-  const needsMigration = section.cells.some(row => row.length !== 5);
+  // Check if we need to migrate from 5 to 6 columns
+  const needsMigration = section.cells.some(row => row.length < 6);
   
   if (!needsMigration) {
     return section;
   }
 
-  // Migrate each row to have exactly 5 columns
+  // Migrate each row to have 6 columns
   const migratedCells = section.cells.map((row, rowIndex) => {
-    // Take only first 5 columns
-    return row.slice(0, 5);
+    // Ensure we have at least 6 columns
+    const newRow = [...row];
+    while (newRow.length < 6) {
+      const colIndex = newRow.length;
+      const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
+      
+      if (rowIndex === 0 && colIndex === 5) {
+        // F1: Create New header
+        newRow.push({
+          id,
+          content: 'Create New',
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        });
+      } else {
+        // Regular empty cell
+        newRow.push({
+          id,
+          content: '',
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        });
+      }
+    }
+    return newRow;
   });
 
   return { ...section, cells: migratedCells };
@@ -325,14 +357,15 @@ export const EditableTable = () => {
             {/* Table for this section */}
             <table className="w-full">
               <colgroup>
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '40%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '10%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '35%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '8%' }} />
               </colgroup>
               <tbody>
-                {/* Row 0: Header with 5 columns (A1 editable title, B1-E1 labels) */}
+                {/* Row 0: Header with 6 columns (A1 editable title, B1-E1 labels, F1 Create New) */}
                 <tr>
                   {/* A1 - Editable Title */}
                   <td
@@ -377,6 +410,14 @@ export const EditableTable = () => {
                     onClick={() => handleCellClick(sectionIdx, 0, 4)}
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][4].content}</div>
+                  </td>
+                  {/* F1 - Create New header */}
+                  <td
+                    className="border border-border p-4 cursor-pointer hover:bg-muted/50"
+                  >
+                    <div className="text-sm text-muted-foreground font-medium text-center">
+                      {section.cells[0] && section.cells[0][5] ? section.cells[0][5].content : 'Create New'}
+                    </div>
                   </td>
                 </tr>
 
@@ -469,33 +510,34 @@ export const EditableTable = () => {
                             </SelectContent>
                           </Select>
                         ) : colIndex === 4 ? (
-                          <div className="flex items-center gap-2">
-                            <Select
-                              value={cell.content || ""}
-                              onValueChange={(value) => handleContentChange(sectionIdx, rIdx + 1, colIndex, value)}
-                            >
-                              <SelectTrigger className="border-none shadow-none focus:ring-0 h-full flex-1">
-                                <SelectValue placeholder="Pillar" />
-                              </SelectTrigger>
-                              <SelectContent className="z-50">
-                                {pillars.map(pillar => (
-                                  <SelectItem key={pillar.name} value={pillar.name}>
-                                    <div className="flex items-center gap-2">
-                                      <div 
-                                        className="w-3 h-3 rounded-full"
-                                        style={{ backgroundColor: pillar.color }}
-                                      />
-                                      {pillar.name}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <Select
+                            value={cell.content || ""}
+                            onValueChange={(value) => handleContentChange(sectionIdx, rIdx + 1, colIndex, value)}
+                          >
+                            <SelectTrigger className="border-none shadow-none focus:ring-0 h-full">
+                              <SelectValue placeholder="Pillar" />
+                            </SelectTrigger>
+                            <SelectContent className="z-50">
+                              {pillars.map(pillar => (
+                                <SelectItem key={pillar.name} value={pillar.name}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-3 h-3 rounded-full"
+                                      style={{ backgroundColor: pillar.color }}
+                                    />
+                                    {pillar.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : colIndex === 5 ? (
+                          <div className="flex justify-center">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={handleNewPostClick}
-                              className="p-2 shrink-0"
+                              className="p-2"
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
