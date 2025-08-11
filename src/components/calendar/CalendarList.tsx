@@ -97,9 +97,10 @@ export const CalendarList: React.FC<CalendarListProps> = ({
   }
 
   return (
-    <div className="flex-1 p-6">
-      <ScrollArea className="h-full">
-        <div className="max-w-4xl mx-auto space-y-8">
+    <div className="flex-1 flex flex-col">
+      <ScrollArea className="flex-1">
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto space-y-8">
         {monthlyPosts.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-muted-foreground mb-4">No posts found for this period</div>
@@ -187,6 +188,7 @@ export const CalendarList: React.FC<CalendarListProps> = ({
             );
           })
         )}
+          </div>
         </div>
       </ScrollArea>
     </div>
