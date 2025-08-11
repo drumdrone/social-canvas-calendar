@@ -196,8 +196,12 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
 
   return (
     <div className="flex-1 p-6 bg-muted/50">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-        {weeklyPosts.map((post, index) => renderPost(post, index))}
+      <div className="flex flex-wrap gap-8 max-w-6xl mx-auto">
+        {weeklyPosts.map((post, index) => (
+          <div key={post.id} className="w-full md:w-80 lg:w-96">
+            {renderPost(post, index)}
+          </div>
+        ))}
       </div>
       
       {/* PostModal for editing */}
