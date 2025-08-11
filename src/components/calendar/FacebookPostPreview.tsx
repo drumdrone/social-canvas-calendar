@@ -201,7 +201,7 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
   };
 
   return (
-    <div className="flex-1 bg-muted/50">
+    <div className="h-[calc(100vh-120px)] bg-muted/50">
       <ScrollArea className="h-full">
         <div className="p-6">
           <div className="flex flex-wrap gap-8 max-w-6xl mx-auto">
