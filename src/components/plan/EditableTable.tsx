@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Palette, Copy, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Palette, Copy, Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { PostModal } from '@/components/calendar/PostModal';
 
 interface Cell {
   id: string;
@@ -101,6 +103,10 @@ export const EditableTable = () => {
   const [pillars, setPillars] = useState<Array<{name: string, color: string}>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // PostModal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
 
   // Load plan data from database
@@ -224,6 +230,16 @@ export const EditableTable = () => {
       const next = prev.filter((_, i) => i !== sectionIdx);
       return next.length > 0 ? next : [createDefaultSection()];
     });
+  };
+
+  const handleNewPostClick = () => {
+    setSelectedDate(new Date());
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedDate(null);
   };
 
 
@@ -452,40 +468,39 @@ export const EditableTable = () => {
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : (
-                          // colIndex === 4 - Pillars
-                          <Select
-                            value={cell.content}
-                            onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
-                          >
-                            <SelectTrigger 
-                              className="w-full"
-                              style={{
-                                backgroundColor: pillars.find(p => p.name === cell.content)?.color ? 
-                                  `${pillars.find(p => p.name === cell.content)?.color}20` : 
-                                  'transparent',
-                                borderColor: pillars.find(p => p.name === cell.content)?.color || 'hsl(var(--border))'
-                              }}
+                        ) : colIndex === 4 ? (
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={cell.content || ""}
+                              onValueChange={(value) => handleContentChange(sectionIdx, rIdx + 1, colIndex, value)}
                             >
-                              <SelectValue placeholder="Select pillar" />
-                            </SelectTrigger>
-                            <SelectContent className="z-50 bg-popover">
-                              {pillars.map((pillar) => (
-                                <SelectItem key={pillar.name} value={pillar.name}>
-                                  <div 
-                                    className="px-2 py-1 rounded text-sm w-full"
-                                    style={{
-                                      backgroundColor: `${pillar.color}20`,
-                                      color: pillar.color
-                                    }}
-                                  >
-                                    {pillar.name}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                              <SelectTrigger className="border-none shadow-none focus:ring-0 h-full flex-1">
+                                <SelectValue placeholder="Pillar" />
+                              </SelectTrigger>
+                              <SelectContent className="z-50">
+                                {pillars.map(pillar => (
+                                  <SelectItem key={pillar.name} value={pillar.name}>
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-3 h-3 rounded-full"
+                                        style={{ backgroundColor: pillar.color }}
+                                      />
+                                      {pillar.name}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleNewPostClick}
+                              className="p-2 shrink-0"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : null}
                       </td>
                     ))}
                   </tr>
@@ -496,6 +511,12 @@ export const EditableTable = () => {
         ))}
       </div>
       
+      {/* PostModal */}
+      <PostModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 };
