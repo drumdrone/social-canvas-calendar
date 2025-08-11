@@ -11,6 +11,7 @@ import { StatusManager } from './StatusManager';
 import { CategoryManager } from './CategoryManager';
 import { ProductLineManager } from './ProductLineManager';
 import { PillarManager } from './PillarManager';
+import { FormatManager } from './FormatManager';
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses' | 'categories' | 'productlines' | 'pillars'>('platforms');
+  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses' | 'categories' | 'productlines' | 'pillars' | 'formats'>('platforms');
 
   if (!isOpen) return null;
 
@@ -39,7 +40,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         </div>
 
         <div className="p-4">
-          <div className="grid grid-cols-2 gap-1 mb-4">
+          <div className="grid grid-cols-3 gap-1 mb-4">
             <Button
               variant={activeTab === 'platforms' ? 'default' : 'outline'}
               size="sm"
@@ -80,6 +81,14 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             >
               Pillars
             </Button>
+            <Button
+              variant={activeTab === 'formats' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('formats')}
+              className="text-xs"
+            >
+              Formats
+            </Button>
           </div>
 
           <ScrollArea className="h-[calc(100vh-140px)]">
@@ -88,6 +97,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             {activeTab === 'categories' && <CategoryManager />}
             {activeTab === 'productlines' && <ProductLineManager />}
             {activeTab === 'pillars' && <PillarManager />}
+            {activeTab === 'formats' && <FormatManager />}
           </ScrollArea>
         </div>
       </div>
