@@ -11,6 +11,7 @@ interface Category {
   id: string;
   name: string;
   color: string;
+  format: string;
   is_active: boolean;
 }
 
@@ -21,7 +22,8 @@ export const CategoryManager: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: '',
-    color: '#3B82F6'
+    color: '#3B82F6',
+    format: 'text'
   });
 
   const fetchCategories = async () => {
@@ -56,14 +58,15 @@ export const CategoryManager: React.FC = () => {
         .from('categories')
         .insert([{
           name: newCategory.name.toLowerCase(),
-          color: newCategory.color
+          color: newCategory.color,
+          format: newCategory.format
         }]);
 
       if (error) throw error;
 
       toast.success('Category created successfully!');
       setIsCreating(false);
-      setNewCategory({ name: '', color: '#3B82F6' });
+      setNewCategory({ name: '', color: '#3B82F6', format: 'text' });
       fetchCategories();
       
       // Trigger refresh in other components
@@ -161,6 +164,15 @@ export const CategoryManager: React.FC = () => {
                 onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
               />
             </div>
+            <div>
+              <Label htmlFor="format">Format</Label>
+              <Input
+                id="format"
+                value={newCategory.format}
+                onChange={(e) => setNewCategory({ ...newCategory, format: e.target.value })}
+                placeholder="e.g., text, image, video"
+              />
+            </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={handleCreate}>
                 <Save className="h-3 w-3 mr-1" />
@@ -171,7 +183,7 @@ export const CategoryManager: React.FC = () => {
                 variant="outline" 
                 onClick={() => {
                   setIsCreating(false);
-                  setNewCategory({ name: '', color: '#3B82F6' });
+                  setNewCategory({ name: '', color: '#3B82F6', format: 'text' });
                 }}
               >
                 <X className="h-3 w-3 mr-1" />
@@ -192,7 +204,10 @@ export const CategoryManager: React.FC = () => {
                     className="w-3 h-3 rounded-full border"
                     style={{ backgroundColor: category.color }}
                   />
-                  <span className="font-medium capitalize">{category.name}</span>
+                  <div>
+                    <span className="font-medium capitalize">{category.name}</span>
+                    <p className="text-xs text-muted-foreground">{category.format}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button

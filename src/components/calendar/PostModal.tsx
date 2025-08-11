@@ -52,6 +52,7 @@ export const PostModal: React.FC<PostModalProps> = ({
   const [productLine, setProductLine] = useState<string>('none');
   const [pillarOptions, setPillarOptions] = useState<Array<{name: string, color: string}>>([]);
   const [productLineOptions, setProductLineOptions] = useState<Array<{name: string, color: string}>>([]);
+  const [categoryOptions, setCategoryOptions] = useState<Array<{name: string, color: string, format: string}>>([]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -217,21 +218,24 @@ export const PostModal: React.FC<PostModalProps> = ({
   React.useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [platformsResult, statusesResult, pillarsResult, productLinesResult] = await Promise.all([
+        const [platformsResult, statusesResult, pillarsResult, productLinesResult, categoriesResult] = await Promise.all([
           supabase.from('platforms').select('name').eq('is_active', true).order('name', { ascending: true }),
           supabase.from('post_statuses').select('name').eq('is_active', true).order('name', { ascending: true }),
           supabase.from('pillars').select('name, color').eq('is_active', true).order('name', { ascending: true }),
           supabase.from('product_lines').select('name, color').eq('is_active', true).order('name', { ascending: true }),
+          supabase.from('categories').select('name, color, format').eq('is_active', true).order('name', { ascending: true }),
         ]);
         const platforms = platformsResult.data?.map(p => p.name) || [];
         const statuses = statusesResult.data?.map(s => s.name) || [];
         const pillars = pillarsResult.data || [];
         const productLines = productLinesResult.data || [];
+        const categories = categoriesResult.data || [];
         
         setPlatformOptions(platforms);
         setStatusOptions(statuses);
         setPillarOptions(pillars);
         setProductLineOptions(productLines);
+        setCategoryOptions(categories);
         
         if (!(editingPost || currentEditingPost)) {
           if (platforms.length && !platforms.includes(platform)) setPlatform(platforms[0]);
@@ -253,16 +257,18 @@ export const PostModal: React.FC<PostModalProps> = ({
       if (isOpen) {
         (async () => {
           try {
-            const [platformsResult, statusesResult, pillarsResult, productLinesResult] = await Promise.all([
+            const [platformsResult, statusesResult, pillarsResult, productLinesResult, categoriesResult] = await Promise.all([
               supabase.from('platforms').select('name').eq('is_active', true).order('name', { ascending: true }),
               supabase.from('post_statuses').select('name').eq('is_active', true).order('name', { ascending: true }),
               supabase.from('pillars').select('name, color').eq('is_active', true).order('name', { ascending: true }),
               supabase.from('product_lines').select('name, color').eq('is_active', true).order('name', { ascending: true }),
+              supabase.from('categories').select('name, color, format').eq('is_active', true).order('name', { ascending: true }),
             ]);
             setPlatformOptions(platformsResult.data?.map(p => p.name) || []);
             setStatusOptions(statusesResult.data?.map(s => s.name) || []);
             setPillarOptions(pillarsResult.data || []);
             setProductLineOptions(productLinesResult.data || []);
+            setCategoryOptions(categoriesResult.data || []);
           } catch (e) {
             console.error('Failed to refresh options after settings change', e);
           }
@@ -516,9 +522,19 @@ export const PostModal: React.FC<PostModalProps> = ({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Video">Video</SelectItem>
-                    <SelectItem value="Image">Image</SelectItem>
-                    <SelectItem value="Carousel">Carousel</SelectItem>
+                    {categoryOptions.map((cat) => (
+                      <SelectItem key={cat.name} value={cat.name}>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full border border-border"
+                            style={{ backgroundColor: cat.color }}
+                            aria-hidden
+                          />
+                          <span>{cat.name}</span>
+                          <span className="text-xs text-muted-foreground">({cat.format})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
