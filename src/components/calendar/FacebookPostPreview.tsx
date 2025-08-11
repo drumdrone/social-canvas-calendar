@@ -74,8 +74,8 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
     return isPlatformSelected && isStatusSelected;
   });
 
-  // Get up to 3 posts for weekly view
-  const weeklyPosts = filteredPosts.slice(0, 3);
+  // Get up to 4 posts for social view
+  const weeklyPosts = filteredPosts.slice(0, 4);
 
   if (loading) {
     return (
@@ -104,7 +104,7 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
     };
 
     return (
-      <Card key={post.id} className="w-full shadow-lg">
+      <Card key={post.id} className="w-full max-w-sm shadow-lg">
         <CardContent className="p-0">
           {/* Facebook Post Header */}
           <div className="flex items-center gap-3 p-4 border-b">
@@ -147,11 +147,11 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
 
           {/* Post Image */}
           {post.image_url && (
-            <div className="relative">
+            <div className="relative w-full aspect-square">
               <img
                 src={post.image_url}
                 alt={post.title || "Post image"}
-                className="w-full h-48 object-cover"
+                className="w-full h-full object-cover"
               />
             </div>
           )}
@@ -195,8 +195,8 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6 bg-muted/50">
-      <div className="flex gap-6 w-full max-w-6xl overflow-x-auto">
+    <div className="flex-1 p-6 bg-muted/50">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
         {weeklyPosts.map((post, index) => renderPost(post, index))}
       </div>
       
