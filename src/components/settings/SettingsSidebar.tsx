@@ -12,6 +12,7 @@ import { CategoryManager } from './CategoryManager';
 import { ProductLineManager } from './ProductLineManager';
 import { PillarManager } from './PillarManager';
 import { FormatManager } from './FormatManager';
+import { BackupManager } from './BackupManager';
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -22,7 +23,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses' | 'categories' | 'productlines' | 'pillars' | 'formats'>('platforms');
+  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses' | 'categories' | 'productlines' | 'pillars' | 'formats' | 'backup'>('platforms');
 
   if (!isOpen) return null;
 
@@ -89,6 +90,14 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             >
               Formats
             </Button>
+            <Button
+              variant={activeTab === 'backup' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('backup')}
+              className="text-xs"
+            >
+              Backup
+            </Button>
           </div>
 
           <ScrollArea className="h-[calc(100vh-140px)]">
@@ -98,6 +107,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             {activeTab === 'productlines' && <ProductLineManager />}
             {activeTab === 'pillars' && <PillarManager />}
             {activeTab === 'formats' && <FormatManager />}
+            {activeTab === 'backup' && <BackupManager />}
           </ScrollArea>
         </div>
       </div>
