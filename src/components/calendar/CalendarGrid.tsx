@@ -55,8 +55,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     return posts.filter(post => {
       const postDate = new Date(post.scheduled_date);
       const isSameDay = format(postDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
-      const isPlatformSelected = selectedPlatforms.includes(post.platform);
-      const isStatusSelected = selectedStatuses.includes(post.status);
+      const isPlatformSelected = selectedPlatforms.length === 0 || selectedPlatforms.includes(post.platform);
+      const isStatusSelected = selectedStatuses.length === 0 || selectedStatuses.includes(post.status);
       
       return isSameDay && isPlatformSelected && isStatusSelected;
     });

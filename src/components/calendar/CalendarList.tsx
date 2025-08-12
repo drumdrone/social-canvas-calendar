@@ -77,11 +77,11 @@ export const CalendarList: React.FC<CalendarListProps> = ({
   }, [currentDate]);
 
   const filterPosts = (posts: SocialPost[]) => {
-    return posts.filter(
-      (post) =>
-        selectedPlatforms.includes(post.platform) &&
-        selectedStatuses.includes(post.status)
-    );
+    return posts.filter((post) => {
+      const platformOk = selectedPlatforms.length === 0 || selectedPlatforms.includes(post.platform);
+      const statusOk = selectedStatuses.length === 0 || selectedStatuses.includes(post.status);
+      return platformOk && statusOk;
+    });
   };
 
   const handleAddPost = (month: Date) => {

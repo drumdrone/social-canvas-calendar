@@ -137,8 +137,8 @@ export const PostsTable: React.FC<PostsTableProps> = ({
   }, [isCreating]);
 
   const filteredPosts = posts.filter(post => {
-    const isPlatformSelected = selectedPlatforms.includes(post.platform);
-    const isStatusSelected = selectedStatuses.includes(post.status);
+    const isPlatformSelected = selectedPlatforms.length === 0 || selectedPlatforms.includes(post.platform);
+    const isStatusSelected = selectedStatuses.length === 0 || selectedStatuses.includes(post.status);
     return isPlatformSelected && isStatusSelected;
   });
 
