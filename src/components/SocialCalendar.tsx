@@ -6,6 +6,7 @@ import { PostsTable } from './calendar/PostsTable';
 import { PostModal } from './calendar/PostModal';
 import { CalendarFilters } from './calendar/CalendarFilters';
 import { FacebookPostPreview } from './calendar/FacebookPostPreview';
+import { PostEditSidebar } from './calendar/PostEditSidebar';
 import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
 import { Settings } from 'lucide-react';
@@ -40,6 +41,8 @@ export const SocialCalendar: React.FC = () => {
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<PostStatus[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [showEditSidebar, setShowEditSidebar] = useState(false);
+  const [editSidebarPost, setEditSidebarPost] = useState<SocialPost | null>(null);
 
   // Load initial platform and status selections from database
   useEffect(() => {
@@ -125,15 +128,24 @@ export const SocialCalendar: React.FC = () => {
   };
 
   const handlePostClick = (post: SocialPost) => {
-    setSelectedDate(new Date(post.scheduled_date));
-    setEditingPost(post);
-    setIsModalOpen(true);
+    setEditSidebarPost(post);
+    setShowEditSidebar(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedDate(null);
     setEditingPost(null);
+  };
+
+  const handleCloseEditSidebar = () => {
+    setShowEditSidebar(false);
+    setEditSidebarPost(null);
+  };
+
+  const handleEditSave = () => {
+    // Refresh the calendar data
+    window.location.reload();
   };
 
   const handleWheel = (e: WheelEvent) => {
@@ -224,6 +236,13 @@ export const SocialCalendar: React.FC = () => {
           editingPost={editingPost}
         />
       )}
+
+      <PostEditSidebar
+        isOpen={showEditSidebar}
+        onClose={handleCloseEditSidebar}
+        post={editSidebarPost}
+        onSave={handleEditSave}
+      />
     </div>
   );
 };
