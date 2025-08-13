@@ -287,6 +287,60 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          daily_hours_goal: number | null
+          google_sheet_id: string | null
+          hourly_rate: number | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_hours_goal?: number | null
+          google_sheet_id?: string | null
+          hourly_rate?: number | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_hours_goal?: number | null
+          google_sheet_id?: string | null
+          hourly_rate?: number | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       woocommerce_order_items: {
         Row: {
           created_at: string
@@ -511,15 +565,72 @@ export type Database = {
         }
         Relationships: []
       }
+      work_records: {
+        Row: {
+          created_at: string
+          date: string
+          earnings: number | null
+          end_time: string | null
+          estimated_end_time: string | null
+          id: string
+          interrupts: Json | null
+          is_day_off: boolean | null
+          is_paused: boolean | null
+          is_working: boolean | null
+          paused_time: number | null
+          start_time: string | null
+          updated_at: string
+          user_id: string
+          worked_hours: number | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          earnings?: number | null
+          end_time?: string | null
+          estimated_end_time?: string | null
+          id?: string
+          interrupts?: Json | null
+          is_day_off?: boolean | null
+          is_paused?: boolean | null
+          is_working?: boolean | null
+          paused_time?: number | null
+          start_time?: string | null
+          updated_at?: string
+          user_id: string
+          worked_hours?: number | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          earnings?: number | null
+          end_time?: string | null
+          estimated_end_time?: string | null
+          id?: string
+          interrupts?: Json | null
+          is_day_off?: boolean | null
+          is_paused?: boolean | null
+          is_working?: boolean | null
+          paused_time?: number | null
+          start_time?: string | null
+          updated_at?: string
+          user_id?: string
+          worked_hours?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -646,6 +757,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
