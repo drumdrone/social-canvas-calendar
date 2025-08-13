@@ -7,25 +7,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('test@example.com');
+  const [password, setPassword] = useState('123456');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    if (login(email, password)) {
-      toast({
-        title: 'Success',
-        description: 'Logged in successfully!',
-      });
-    } else {
+    try {
+      const success = await login(email, password);
+      if (success) {
+        toast({
+          title: 'Success',
+          description: 'Logged in successfully!',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to login. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
       toast({
         title: 'Error',
-        description: 'Invalid email or password',
+        description: 'An error occurred during login.',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -62,8 +75,8 @@ const Login = () => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
-              Sign In
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
           </form>
         </CardContent>
