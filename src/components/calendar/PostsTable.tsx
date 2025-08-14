@@ -53,6 +53,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     imageUrl: '',
     position: { x: 0, y: 0 }
   });
+  const [currentRowIndex, setCurrentRowIndex] = useState(0);
   const [newPost, setNewPost] = useState({
     title: '',
     content: '',
@@ -141,6 +142,37 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     const isStatusSelected = selectedStatuses.length === 0 || selectedStatuses.includes(post.status);
     return isPlatformSelected && isStatusSelected;
   });
+
+  // Enhanced scroll behavior for table row navigation
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (filteredPosts.length === 0) return;
+
+      e.preventDefault();
+      
+      if (e.deltaY > 0) {
+        // Scroll down - go to next row
+        setCurrentRowIndex(prev => Math.min(prev + 1, filteredPosts.length - 1));
+      } else {
+        // Scroll up - go to previous row
+        setCurrentRowIndex(prev => Math.max(prev - 1, 0));
+      }
+
+      // Scroll the selected row into view
+      setTimeout(() => {
+        const rowElement = document.querySelector(`[data-row-index="${currentRowIndex}"]`);
+        if (rowElement) {
+          rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    };
+
+    const tableContainer = document.querySelector('.posts-table-scroll');
+    if (tableContainer) {
+      tableContainer.addEventListener('wheel', handleWheel, { passive: false });
+      return () => tableContainer.removeEventListener('wheel', handleWheel);
+    }
+  }, [filteredPosts, currentRowIndex]);
 
   // Group posts by month
   const groupedPosts = filteredPosts.reduce((groups, post) => {
@@ -526,17 +558,23 @@ export const PostsTable: React.FC<PostsTableProps> = ({
   }
 
   return (
-    <div className="flex-1 p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Social Media Posts</h2>
-        <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Post
-        </Button>
-      </div>
+    <div className="flex-1 overflow-hidden">
+      <div className="p-4">
+        {/* Enhanced table navigation info */}
+        <div className="mb-4 text-sm text-muted-foreground">
+          Use scroll wheel to navigate through posts • {filteredPosts.length} posts total
+        </div>
+        
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Social Media Posts</h2>
+          <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Post
+          </Button>
+        </div>
 
-      <div className="bg-card rounded-lg border border-border">
-        <ScrollArea className="h-[calc(100vh-200px)]">
+        <div className="bg-card rounded-lg border border-border">
+          <ScrollArea className="h-[calc(100vh-200px)] posts-table-scroll">
           <Table>
           <TableHeader>
             <TableRow>
@@ -822,6 +860,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           </TableBody>
           </Table>
         </ScrollArea>
+        </div>
       </div>
 
       {/* Hover Image Preview */}

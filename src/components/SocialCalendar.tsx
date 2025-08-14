@@ -146,36 +146,8 @@ export const SocialCalendar: React.FC = () => {
     window.location.reload();
   };
 
-  const handleWheel = (e: WheelEvent) => {
-    e.preventDefault();
-    
-    if (e.deltaY > 0) {
-      // Scroll down - go to next period
-      if (viewMode === 'month') {
-        setCurrentDate(prev => addMonths(prev, 1));
-      } else if (viewMode === 'week') {
-        setCurrentDate(prev => addWeeks(prev, 1));
-      }
-    } else {
-      // Scroll up - go to previous period
-      if (viewMode === 'month') {
-        setCurrentDate(prev => addMonths(prev, -1));
-      } else if (viewMode === 'week') {
-        setCurrentDate(prev => addWeeks(prev, -1));
-      }
-    }
-  };
-
-  useEffect(() => {
-    const calendarElement = document.querySelector('.calendar-container');
-    if (calendarElement) {
-      calendarElement.addEventListener('wheel', handleWheel, { passive: false });
-      
-      return () => {
-        calendarElement.removeEventListener('wheel', handleWheel);
-      };
-    }
-  }, [viewMode]);
+  // Removed calendar month/week scrolling behavior
+  // Scroll wheel now only scrolls content, not calendar navigation
 
   return (
     <div className="h-screen flex flex-col bg-background calendar-container overflow-hidden max-h-screen">
