@@ -7,12 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Facebook, Instagram, Twitter, Linkedin, Upload, Calendar, Clock, Trash2, CalendarIcon } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Linkedin, Upload, Calendar, Clock, Trash2, CalendarIcon, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { Platform, PostStatus, SocialPost, Category } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PostVersionHistory } from './PostVersionHistory';
 
 interface PostModalProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ export const PostModal: React.FC<PostModalProps> = ({
   const [pillarOptions, setPillarOptions] = useState<Array<{name: string, color: string}>>([]);
   const [productLineOptions, setProductLineOptions] = useState<Array<{name: string, color: string}>>([]);
   const [categoryOptions, setCategoryOptions] = useState<Array<{name: string, color: string, format: string}>>([]);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -418,7 +420,7 @@ export const PostModal: React.FC<PostModalProps> = ({
             </div>
           )}
 
-          {/* Form Section */}
+            {/* Form Section */}
           <div className={!(editingPost || currentEditingPost) && existingPosts.length > 0 ? "border-t pt-4" : ""}>
             {(editingPost || currentEditingPost) && (
               <div className="flex items-center gap-2 mb-4 p-2 bg-muted/50 rounded-md">
@@ -428,11 +430,21 @@ export const PostModal: React.FC<PostModalProps> = ({
                   type="button"
                   variant="ghost"
                   size="sm"
+                  onClick={() => setShowVersionHistory(true)}
+                  className="ml-auto mr-2"
+                  title="View version history"
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setCurrentEditingPost(null);
                     handleClose();
                   }}
-                  className="ml-auto h-6 w-6 p-0"
+                  className="h-6 w-6 p-0"
                 >
                   ×
                 </Button>
@@ -670,6 +682,16 @@ export const PostModal: React.FC<PostModalProps> = ({
           </div>
         </div>
       </DialogContent>
+      
+      <PostVersionHistory
+        postId={(editingPost || currentEditingPost)?.id || null}
+        isOpen={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        onRestore={() => {
+          // Refresh the page to show restored post
+          window.location.reload();
+        }}
+      />
     </Dialog>
   );
 };

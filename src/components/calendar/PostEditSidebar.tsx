@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2 } from 'lucide-react';
+import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,7 @@ import { SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PostVersionHistory } from './PostVersionHistory';
 
 interface PostEditSidebarProps {
   isOpen: boolean;
@@ -42,6 +43,7 @@ export const PostEditSidebar: React.FC<PostEditSidebarProps> = ({
   const [pillarOptions, setPillarOptions] = useState<Array<{name: string, color: string}>>([]);
   const [productLineOptions, setProductLineOptions] = useState<Array<{name: string, color: string}>>([]);
   const [categoryOptions, setCategoryOptions] = useState<Array<{name: string, color: string, format: string}>>([]);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   // Load options from database
   useEffect(() => {
@@ -186,9 +188,19 @@ export const PostEditSidebar: React.FC<PostEditSidebarProps> = ({
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Edit Post</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowVersionHistory(true)}
+              title="View version history"
+            >
+              <History className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -374,6 +386,16 @@ export const PostEditSidebar: React.FC<PostEditSidebarProps> = ({
           </Button>
         </div>
       </div>
+      
+      <PostVersionHistory
+        postId={post?.id || null}
+        isOpen={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        onRestore={() => {
+          onSave(); // Refresh the calendar
+          onClose(); // Close the sidebar
+        }}
+      />
     </div>
   );
 };

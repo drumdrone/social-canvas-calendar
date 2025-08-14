@@ -182,6 +182,60 @@ export type Database = {
         }
         Relationships: []
       }
+      post_versions: {
+        Row: {
+          backup_reason: string | null
+          category: string
+          content: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          pillar: string | null
+          platform: string
+          post_id: string
+          product_line: string | null
+          scheduled_date: string
+          status: string
+          title: string
+          user_id: string
+          version_number: number
+        }
+        Insert: {
+          backup_reason?: string | null
+          category?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          pillar?: string | null
+          platform: string
+          post_id: string
+          product_line?: string | null
+          scheduled_date: string
+          status?: string
+          title: string
+          user_id: string
+          version_number?: number
+        }
+        Update: {
+          backup_reason?: string | null
+          category?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          pillar?: string | null
+          platform?: string
+          post_id?: string
+          product_line?: string | null
+          scheduled_date?: string
+          status?: string
+          title?: string
+          user_id?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
       product_lines: {
         Row: {
           color: string
@@ -627,12 +681,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_post_backup: {
+        Args: { p_backup_reason?: string; p_post_id: string }
+        Returns: string
+      }
+      get_post_versions: {
+        Args: { p_post_id: string }
+        Returns: {
+          backup_reason: string
+          category: string
+          content: string
+          created_at: string
+          image_url: string
+          pillar: string
+          platform: string
+          product_line: string
+          scheduled_date: string
+          status: string
+          title: string
+          version_id: string
+          version_number: number
+        }[]
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
       link_order_to_user: {
         Args: { order_id: number; user_email: string }
+        Returns: boolean
+      }
+      restore_post_from_backup: {
+        Args: { p_post_id: string; p_version_number: number }
         Returns: boolean
       }
     }
