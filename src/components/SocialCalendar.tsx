@@ -3,13 +3,13 @@ import { CalendarHeader } from './calendar/CalendarHeader';
 import { CalendarGrid } from './calendar/CalendarGrid';
 import { CalendarList } from './calendar/CalendarList';
 import { PostsTable } from './calendar/PostsTable';
-import { PostModal } from './calendar/PostModal';
 import { CalendarFilters } from './calendar/CalendarFilters';
 import { FacebookPostPreview } from './calendar/FacebookPostPreview';
-import { PostEditSidebar } from './calendar/PostEditSidebar';
+import { PostSlidingSidebar } from './calendar/PostSlidingSidebar';
+import { PostDataManager } from './calendar/PostDataManager';
 import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
-import { Settings } from 'lucide-react';
+import { Settings, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, addWeeks } from 'date-fns';
 
@@ -36,13 +36,12 @@ export const SocialCalendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<PostStatus[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [showEditSidebar, setShowEditSidebar] = useState(false);
-  const [editSidebarPost, setEditSidebarPost] = useState<SocialPost | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
 
   // Load initial platform and status selections from database
   useEffect(() => {
@@ -124,26 +123,25 @@ export const SocialCalendar: React.FC = () => {
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     setEditingPost(null);
-    setIsModalOpen(true);
+    setSidebarPost(null);
+    setShowSidebar(true);
   };
 
   const handlePostClick = (post: SocialPost) => {
-    setEditSidebarPost(post);
-    setShowEditSidebar(true);
+    setSidebarPost(post);
+    setEditingPost(post);
+    setSelectedDate(new Date(post.scheduled_date));
+    setShowSidebar(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedDate(null);
+  const handleCloseSidebar = () => {
+    setShowSidebar(false);
+    setSidebarPost(null);
     setEditingPost(null);
+    setSelectedDate(null);
   };
 
-  const handleCloseEditSidebar = () => {
-    setShowEditSidebar(false);
-    setEditSidebarPost(null);
-  };
-
-  const handleEditSave = () => {
+  const handleSidebarSave = () => {
     // Refresh the calendar data
     window.location.reload();
   };
@@ -181,19 +179,46 @@ export const SocialCalendar: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background calendar-container overflow-hidden max-h-screen">
-      <CalendarHeader 
-        currentDate={currentDate}
-        onDateChange={setCurrentDate}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-      />
-      
-      <CalendarFilters
-        selectedPlatforms={selectedPlatforms}
-        onPlatformsChange={setSelectedPlatforms}
-        selectedStatuses={selectedStatuses}
-        onStatusesChange={setSelectedStatuses}
-      />
+      {/* Header with controls */}
+      <div className="border-b border-border">
+        <CalendarHeader 
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
+        
+        {/* Action Bar */}
+        <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={() => handleDateClick(new Date())}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              New Post
+            </Button>
+            <PostDataManager onImportComplete={handleSidebarSave} />
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            Settings
+          </Button>
+        </div>
+        
+        <CalendarFilters
+          selectedPlatforms={selectedPlatforms}
+          onPlatformsChange={setSelectedPlatforms}
+          selectedStatuses={selectedStatuses}
+          onStatusesChange={setSelectedStatuses}
+        />
+      </div>
       <div className="flex-1 overflow-hidden">
         {viewMode === 'list' ? (
           <CalendarList
@@ -228,20 +253,19 @@ export const SocialCalendar: React.FC = () => {
         )}
       </div>
       
-      {viewMode !== 'table' && viewMode !== 'week' && (
-        <PostModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          selectedDate={selectedDate}
-          editingPost={editingPost}
-        />
-      )}
+      {/* Sliding Sidebar for Post Creation/Editing */}
+      <PostSlidingSidebar
+        isOpen={showSidebar}
+        onClose={handleCloseSidebar}
+        post={sidebarPost}
+        selectedDate={selectedDate}
+        onSave={handleSidebarSave}
+      />
 
-      <PostEditSidebar
-        isOpen={showEditSidebar}
-        onClose={handleCloseEditSidebar}
-        post={editSidebarPost}
-        onSave={handleEditSave}
+      {/* Settings Sidebar */}
+      <SettingsSidebar
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
       />
     </div>
   );

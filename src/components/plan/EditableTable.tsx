@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Palette, Copy, Trash2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { PostModal } from '@/components/calendar/PostModal';
+import { PostSlidingSidebar } from '@/components/calendar/PostSlidingSidebar';
 
 interface Cell {
   id: string;
@@ -136,8 +136,8 @@ export const EditableTable = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  // PostModal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // PostSlidingSidebar state
+  const [showSidebar, setShowSidebar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
 
@@ -266,12 +266,17 @@ export const EditableTable = () => {
 
   const handleNewPostClick = () => {
     setSelectedDate(new Date());
-    setIsModalOpen(true);
+    setShowSidebar(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseSidebar = () => {
+    setShowSidebar(false);
     setSelectedDate(null);
+  };
+
+  const handleSidebarSave = () => {
+    // Refresh data or handle save
+    window.location.reload();
   };
 
 
@@ -553,11 +558,12 @@ export const EditableTable = () => {
         ))}
       </div>
       
-      {/* PostModal */}
-      <PostModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
+      {/* PostSlidingSidebar */}
+      <PostSlidingSidebar
+        isOpen={showSidebar}
+        onClose={handleCloseSidebar}
         selectedDate={selectedDate}
+        onSave={handleSidebarSave}
       />
     </div>
   );

@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { SocialPost, Platform, PostStatus } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
-import { PostModal } from './PostModal';
+import { PostSlidingSidebar } from './PostSlidingSidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface FacebookPostPreviewProps {
@@ -21,7 +21,7 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
 }) => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
 
   useEffect(() => {
@@ -61,12 +61,17 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
 
   const handleEditPost = (post: SocialPost) => {
     setEditingPost(post);
-    setIsModalOpen(true);
+    setShowSidebar(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseSidebar = () => {
+    setShowSidebar(false);
     setEditingPost(null);
+  };
+
+  const handleSidebarSave = () => {
+    // Refresh the data
+    window.location.reload();
   };
 
   const filteredPosts = posts.filter(post => {
@@ -214,12 +219,13 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
         </div>
       </ScrollArea>
       
-      {/* PostModal for editing */}
-      <PostModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
+      {/* PostSlidingSidebar for editing */}
+      <PostSlidingSidebar
+        isOpen={showSidebar}
+        onClose={handleCloseSidebar}
+        post={editingPost}
         selectedDate={editingPost ? new Date(editingPost.scheduled_date) : null}
-        editingPost={editingPost}
+        onSave={handleSidebarSave}
       />
     </div>
   );
