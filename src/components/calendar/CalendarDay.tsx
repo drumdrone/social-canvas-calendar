@@ -77,118 +77,115 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       onClick={handleDayClick}
       style={{ minHeight: 'calc((100vh - 120px) / 4.5)' }}
     >
-      {/* Full Height Image Section */}
-      {hasImage && firstImagePost?.image_url ? (
-        <div 
-          className="h-full relative cursor-pointer hover:opacity-90 transition-opacity overflow-hidden"
-          onClick={(e) => handlePostClick(e, firstImagePost)}
-        >
-          <img 
-            src={firstImagePost.image_url} 
-            alt="Post image" 
-            className="w-full h-full object-cover object-center"
-          />
-          {/* Platform icon */}
-          <div className="absolute bottom-1 left-1">
-            {(() => {
-              const Icon = platformIcons[firstImagePost.platform];
-              const platformColors = {
-                facebook: "text-[#1877F2]",
-                instagram: "text-[#E4405F]", 
-                twitter: "text-[#1DA1F2]",
-                linkedin: "text-[#0077B5]",
-              };
-              return (
-                <div className="bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm">
-                  <Icon className={cn("w-3 h-3", platformColors[firstImagePost.platform])} />
-                </div>
-              );
-            })()}
-          </div>
-          {/* Date overlay on image */}
-          <div className="absolute top-1 left-1">
-            <span
-              className={cn(
-                "text-xs font-bold text-white bg-black/50 rounded-full w-5 h-5 flex items-center justify-center",
-                isToday && "bg-calendar-today text-calendar-today-foreground"
-              )}
+      {/* Two Row Layout */}
+      <div className="h-full flex flex-col">
+        {/* First Row - Date and Image/Primary Post */}
+        <div className="h-1/2 relative overflow-hidden border-b border-muted/30">
+          {hasImage && firstImagePost?.image_url ? (
+            <div 
+              className="h-full relative cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={(e) => handlePostClick(e, firstImagePost)}
             >
-              {format(date, 'd')}
-            </span>
-          </div>
-          {/* Posts count if multiple */}
-          {posts.length > 1 && (
-            <div className="absolute top-1 right-1">
-              <span className="text-xs font-bold text-white bg-black/50 rounded-full w-5 h-5 flex items-center justify-center">
-                {posts.length}
-              </span>
+              <img 
+                src={firstImagePost.image_url} 
+                alt="Post image" 
+                className="w-full h-full object-cover object-center"
+              />
+              {/* Platform icon */}
+              <div className="absolute bottom-1 left-1">
+                {(() => {
+                  const Icon = platformIcons[firstImagePost.platform];
+                  const platformColors = {
+                    facebook: "text-[#1877F2]",
+                    instagram: "text-[#E4405F]", 
+                    twitter: "text-[#1DA1F2]",
+                    linkedin: "text-[#0077B5]",
+                  };
+                  return (
+                    <div className="bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm">
+                      <Icon className={cn("w-3 h-3", platformColors[firstImagePost.platform])} />
+                    </div>
+                  );
+                })()}
+              </div>
+              {/* Date overlay on image */}
+              <div className="absolute top-1 left-1">
+                <span
+                  className={cn(
+                    "text-xs font-bold text-white bg-black/50 rounded-full w-5 h-5 flex items-center justify-center",
+                    isToday && "bg-calendar-today text-calendar-today-foreground"
+                  )}
+                >
+                  {format(date, 'd')}
+                </span>
+              </div>
             </div>
-          )}
-          {/* Description overlay at bottom */}
-          {posts.length > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-              <div 
-                className="cursor-pointer"
-                onClick={(e) => handlePostClick(e, posts[0])}
-              >
-                <div className="text-xs font-medium text-white truncate">
-                  {posts[0].title}
-                </div>
-                {posts[0].content && (
-                  <div className="text-xs text-white/80 line-clamp-2 leading-tight">
-                    {posts[0].content}
-                  </div>
+          ) : (
+            <div className="h-full p-2 flex flex-col justify-center">
+              <div className="flex items-center justify-between mb-1">
+                <span
+                  className={cn(
+                    "text-sm font-medium",
+                    isToday && "bg-calendar-today text-calendar-today-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold"
+                  )}
+                >
+                  {format(date, 'd')}
+                </span>
+                {posts.length > 0 && (
+                  <span className="text-xs font-bold bg-muted rounded-full w-5 h-5 flex items-center justify-center">
+                    {posts.length}
+                  </span>
                 )}
               </div>
+              {posts.length > 0 && (
+                <div 
+                  className="cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
+                  onClick={(e) => handlePostClick(e, posts[0])}
+                >
+                  <div className="text-xs font-medium truncate">
+                    {posts[0].title}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
-      ) : (
-        /* No image - show date prominently */
-        <div className="h-full p-2 flex flex-col">
-          <div className="flex items-start justify-between mb-2">
-            <span
-              className={cn(
-                "text-sm font-medium",
-                isToday && "bg-calendar-today text-calendar-today-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold"
-              )}
-            >
-              {format(date, 'd')}
-            </span>
-            {posts.length > 0 && (
-              <span className="text-xs font-bold bg-muted rounded-full w-5 h-5 flex items-center justify-center">
-                {posts.length}
-              </span>
-            )}
-          </div>
-          
-          {/* Posts list when no image */}
-          {posts.length > 0 ? (
-            <div 
-              className="flex-1 cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
-              onClick={(e) => handlePostClick(e, posts[0])}
-            >
-              <div className="text-xs font-medium truncate mb-1">
-                {posts[0].title}
-              </div>
-              {posts[0].content && (
-                <div className="text-xs text-muted-foreground line-clamp-3 leading-tight">
-                  {posts[0].content}
+
+        {/* Second Row - Additional Posts or Content */}
+        <div className="h-1/2 p-2 flex flex-col justify-start overflow-hidden">
+          {posts.length > 1 ? (
+            <div className="space-y-1">
+              {posts.slice(1, 3).map((post, index) => (
+                <div 
+                  key={index}
+                  className="cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
+                  onClick={(e) => handlePostClick(e, post)}
+                >
+                  <div className="text-xs font-medium truncate">
+                    {post.title}
+                  </div>
+                  {post.content && (
+                    <div className="text-xs text-muted-foreground truncate">
+                      {post.content}
+                    </div>
+                  )}
                 </div>
-              )}
-              {posts.length > 1 && (
-                <div className="text-xs text-muted-foreground truncate mt-1">
-                  +{posts.length - 1} more
+              ))}
+              {posts.length > 3 && (
+                <div className="text-xs text-muted-foreground text-center">
+                  +{posts.length - 3} more
                 </div>
               )}
             </div>
           ) : (
-            <div className="text-xs text-muted-foreground">
-              Click to add
+            <div className="flex items-center justify-center h-full">
+              <div className="text-xs text-muted-foreground text-center">
+                Click to add
+              </div>
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

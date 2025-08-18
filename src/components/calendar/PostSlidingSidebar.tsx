@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History, Plus } from 'lucide-react';
+import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History, Plus, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,6 +49,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [productLineOptions, setProductLineOptions] = useState<Array<{name: string, color: string}>>([]);
   const [categoryOptions, setCategoryOptions] = useState<Array<{name: string, color: string, format: string}>>([]);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [comments, setComments] = useState('');
+  const [activeTab, setActiveTab] = useState('content');
   const { toast } = useToast();
 
   // Load options from database
@@ -108,6 +111,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setCategory(post.category);
       setPillar((post as any).pillar || 'none');
       setProductLine((post as any).product_line || 'none');
+      setComments((post as any).comments || '');
       
       const postDate = new Date(post.scheduled_date);
       setScheduledDate(postDate);
@@ -122,6 +126,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setScheduledDate(selectedDate);
       setTime('12:00');
       setImage(null);
+      setComments('');
     }
   }, [post, selectedDate]);
 
@@ -306,238 +311,280 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           </div>
 
           {/* Content */}
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-6">
-              {/* Current Image Preview */}
-              {post?.image_url && (
-                <div className="space-y-2">
-                  <Label>Current Image</Label>
-                  <div className="relative cursor-pointer group" onClick={() => document.getElementById('image-upload')?.click()}>
-                    <img 
-                      src={post.image_url} 
-                      alt="Current post image" 
-                      className="w-full aspect-video object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors">
-                      <Upload className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex-1 overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+              <div className="px-6 pt-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="content" className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4" />
+                    Content
+                  </TabsTrigger>
+                  <TabsTrigger value="comments" className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Comments
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="content" className="flex-1 mt-0">
+                <ScrollArea className="h-full">
+                  <div className="p-6 space-y-6">
+                    {/* Current Image Preview */}
+                    {post?.image_url && (
+                      <div className="space-y-2">
+                        <Label>Current Image</Label>
+                        <div className="relative cursor-pointer group" onClick={() => document.getElementById('image-upload')?.click()}>
+                          <img 
+                            src={post.image_url} 
+                            alt="Current post image" 
+                            className="w-full aspect-video object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors">
+                            <Upload className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Click image to replace</p>
+                      </div>
+                    )}
+
+                    {/* Title */}
+                    <div className="space-y-2">
+                      <Label htmlFor="title" className="text-sm font-medium">
+                        Title *
+                      </Label>
+                      <Input
+                        id="title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="Enter post title..."
+                        className="text-base"
+                      />
+                    </div>
+
+                    {/* Content */}
+                    <div className="space-y-2">
+                      <Label htmlFor="content" className="text-sm font-medium">
+                        Content
+                      </Label>
+                      <Textarea
+                        id="content"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Write your post content..."
+                        rows={6}
+                        className="text-base resize-none"
+                      />
+                    </div>
+
+                    <Separator />
+
+                    {/* Platform and Status */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Platform</Label>
+                        <Select value={platform} onValueChange={setPlatform}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select platform" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {platformOptions.map((p) => (
+                              <SelectItem key={p} value={p}>
+                                {p}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Status</Label>
+                        <Select value={status} onValueChange={setStatus}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {statusOptions.map((s) => (
+                              <SelectItem key={s} value={s}>
+                                {s}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Category */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Category</Label>
+                      <Select value={category} onValueChange={setCategory}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categoryOptions.map((c) => (
+                            <SelectItem key={c.name} value={c.name}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Pillar and Product Line */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Pillar</Label>
+                        <Select value={pillar} onValueChange={setPillar}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select pillar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {pillarOptions.map((p) => (
+                              <SelectItem key={p.name} value={p.name}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Product Line</Label>
+                        <Select value={productLine} onValueChange={setProductLine}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select product line" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {productLineOptions.map((p) => (
+                              <SelectItem key={p.name} value={p.name}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Date and Time */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Scheduled Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !scheduledDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {scheduledDate ? format(scheduledDate, 'MMM d, yyyy') : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={scheduledDate}
+                              onSelect={(date) => date && setScheduledDate(date)}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Time</Label>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            type="time"
+                            value={time}
+                            onChange={(e) => setTime(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Image Upload */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        {post?.image_url ? 'Upload New Image' : 'Upload Image'}
+                      </Label>
+                      <Input
+                        id="image-upload"
+                        type="file"
+                        onChange={handleImageUpload}
+                        accept="image/*"
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                      />
+                      {image && (
+                        <p className="text-sm text-muted-foreground">
+                          Selected: {image.name}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">Click image to replace</p>
-                </div>
-              )}
+                  </ScrollArea>
+                </TabsContent>
 
-              {/* Title */}
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-sm font-medium">
-                  Title *
-                </Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter post title..."
-                  className="text-base"
-                />
-              </div>
+                <TabsContent value="comments" className="flex-1 mt-0">
+                  <ScrollArea className="h-full">
+                    <div className="p-6 space-y-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="comments" className="text-sm font-medium">
+                          Comments & Notes
+                        </Label>
+                        <Textarea
+                          id="comments"
+                          value={comments}
+                          onChange={(e) => setComments(e.target.value)}
+                          placeholder="Add your comments, notes, or ideas about this post..."
+                          rows={12}
+                          className="text-base resize-none"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          These comments are for your internal notes only and won't be posted publicly.
+                        </p>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
+            </div>
 
-              {/* Content */}
-              <div className="space-y-2">
-                <Label htmlFor="content" className="text-sm font-medium">
-                  Content
-                </Label>
-                <Textarea
-                  id="content"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Write your post content..."
-                  rows={6}
-                  className="text-base resize-none"
-                />
-              </div>
-
-              <Separator />
-
-              {/* Platform and Status */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Platform</Label>
-                  <Select value={platform} onValueChange={setPlatform}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select platform" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {platformOptions.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Status</Label>
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Category */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Category</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoryOptions.map((c) => (
-                      <SelectItem key={c.name} value={c.name}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Pillar and Product Line */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Pillar</Label>
-                  <Select value={pillar} onValueChange={setPillar}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select pillar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {pillarOptions.map((p) => (
-                        <SelectItem key={p.name} value={p.name}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Product Line</Label>
-                  <Select value={productLine} onValueChange={setProductLine}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select product line" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {productLineOptions.map((p) => (
-                        <SelectItem key={p.name} value={p.name}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Date and Time */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Scheduled Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !scheduledDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {scheduledDate ? format(scheduledDate, 'MMM d, yyyy') : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={scheduledDate}
-                        onSelect={(date) => date && setScheduledDate(date)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Time</Label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="time"
-                      value={time}
-                      onChange={(e) => setTime(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Image Upload */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  {post?.image_url ? 'Upload New Image' : 'Upload Image'}
-                </Label>
-                <Input
-                  id="image-upload"
-                  type="file"
-                  onChange={handleImageUpload}
-                  accept="image/*"
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                />
-                {image && (
-                  <p className="text-sm text-muted-foreground">
-                    Selected: {image.name}
-                  </p>
+            {/* Footer Actions */}
+            <div className="border-t border-border p-6">
+              <div className="flex gap-3">
+                <Button onClick={handleSave} disabled={uploading} className="flex-1">
+                  <Save className="h-4 w-4 mr-2" />
+                  {uploading ? 'Saving...' : (post ? 'Update Post' : 'Create Post')}
+                </Button>
+                {post && (
+                  <Button variant="destructive" onClick={handleDelete} size="default">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
             </div>
-          </ScrollArea>
-
-          {/* Footer Actions */}
-          <div className="border-t border-border p-6">
-            <div className="flex gap-3">
-              <Button onClick={handleSave} disabled={uploading} className="flex-1">
-                <Save className="h-4 w-4 mr-2" />
-                {uploading ? 'Saving...' : (post ? 'Update Post' : 'Create Post')}
-              </Button>
-              {post && (
-                <Button variant="destructive" onClick={handleDelete} size="default">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
           </div>
         </div>
-      </div>
 
-      {/* Version History Modal */}
-      <PostVersionHistory
-        postId={post?.id || null}
-        isOpen={showVersionHistory}
-        onClose={() => setShowVersionHistory(false)}
-        onRestore={() => {
-          onSave();
-          onClose();
-        }}
-      />
-    </>
-  );
-};
+        {/* Version History Modal */}
+        <PostVersionHistory
+          postId={post?.id || null}
+          isOpen={showVersionHistory}
+          onClose={() => setShowVersionHistory(false)}
+          onRestore={() => {
+            onSave();
+            onClose();
+          }}
+        />
+      </>
+    );
+  };
