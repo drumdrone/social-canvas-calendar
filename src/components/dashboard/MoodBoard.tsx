@@ -357,7 +357,11 @@ export const MoodBoard: React.FC = () => {
               top: note.position.y,
               transform: 'rotate(-2deg)'
             }}
-            onMouseDown={() => handleMouseDown('note', note.id)}
+            onMouseDown={(e) => {
+              if (selectedNote !== note.id) {
+                handleMouseDown('note', note.id);
+              }
+            }}
             onClick={() => setSelectedNote(selectedNote === note.id ? null : note.id)}
           >
             <div className="flex justify-between items-start mb-2">
@@ -366,8 +370,12 @@ export const MoodBoard: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   deleteNote(note.id);
                 }}
               >
@@ -378,13 +386,18 @@ export const MoodBoard: React.FC = () => {
               <Textarea
                 value={note.content}
                 onChange={(e) => updateNoteContent(note.id, e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && setSelectedNote(null)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    setSelectedNote(null);
+                  }
+                }}
                 className="min-h-[60px] text-sm bg-transparent border-none p-0 resize-none"
                 autoFocus
                 onBlur={() => setSelectedNote(null)}
               />
             ) : (
-              <div className="text-sm whitespace-pre-wrap break-words">
+              <div className="text-sm whitespace-pre-wrap break-words cursor-pointer">
                 {note.content}
               </div>
             )}

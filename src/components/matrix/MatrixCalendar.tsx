@@ -17,6 +17,7 @@ interface SocialPost {
   category: string;
   pillar: string;
   product_line: string;
+  image_url: string;
 }
 
 const platforms = [
@@ -143,7 +144,7 @@ export const MatrixCalendar: React.FC = () => {
                   <div className="text-xs font-medium">Day</div>
                 </th>
                 {platforms.map((platform) => (
-                  <th key={platform.name} className="border border-border p-2 text-left min-w-[150px] bg-muted">
+                  <th key={platform.name} className="border border-border p-2 text-left min-w-[180px] bg-muted">
                     <div className="flex items-center gap-2">
                       <div className={`w-3 h-3 rounded ${platform.color}`} />
                       <span className="text-xs font-medium">{platform.name}</span>
@@ -180,19 +181,40 @@ export const MatrixCalendar: React.FC = () => {
                             <div className="space-y-1">
                               {dayPosts.map((post) => (
                                 <div key={post.id} className="text-xs p-1 bg-background rounded border">
-                                  <div className="font-medium truncate">{post.title}</div>
-                                  {post.content && (
-                                    <div className="text-muted-foreground truncate">
-                                      {post.content.substring(0, 50)}...
+                                  <div className="flex gap-2">
+                                    {post.image_url && (
+                                      <img 
+                                        src={post.image_url} 
+                                        alt="" 
+                                        className="w-8 h-8 rounded object-cover flex-shrink-0"
+                                      />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-medium truncate">{post.title}</div>
+                                      {post.content && (
+                                        <div className="text-muted-foreground truncate text-[10px]">
+                                          {post.content.substring(0, 30)}...
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <Badge variant="secondary" className="text-xs px-1 py-0">
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                                    <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
                                       {post.status}
                                     </Badge>
                                     {post.category && (
-                                      <Badge variant="outline" className="text-xs px-1 py-0">
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
                                         {post.category}
+                                      </Badge>
+                                    )}
+                                    {post.product_line && (
+                                      <Badge variant="default" className="text-[9px] px-1 py-0 h-4 bg-primary/20 text-primary">
+                                        {post.product_line}
+                                      </Badge>
+                                    )}
+                                    {post.pillar && (
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-accent/20 text-accent-foreground">
+                                        {post.pillar}
                                       </Badge>
                                     )}
                                   </div>
