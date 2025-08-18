@@ -149,6 +149,7 @@ export const EditableTable = () => {
         const { data: planData, error } = await supabase
           .from('plan_sections')
           .select('*')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
           .order('section_order');
 
         if (error) {
@@ -198,14 +199,24 @@ export const EditableTable = () => {
       try {
         setIsSaving(true);
         
-        // Delete existing sections
-        await supabase.from('plan_sections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        // Delete existing sections for the current user
+        await supabase
+          .from('plan_sections')
+          .delete()
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
         
-        // Insert new sections
+        // Get current user ID
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error('No authenticated user found');
+          return;
+        }
+
+        // Insert new sections with correct user_id
         const sectionsToSave = sections.map((section, index) => ({
           section_data: JSON.parse(JSON.stringify(section)),
           section_order: index,
-          user_id: '00000000-0000-0000-0000-000000000000'
+          user_id: user.id
         }));
 
         const { error } = await supabase
