@@ -56,6 +56,15 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   
   const monthBg = getMonthBackground(date);
   
+  const handlePostClick = (e: React.MouseEvent, post: SocialPost) => {
+    e.stopPropagation(); // Prevent day click when clicking on post
+    onPostClick(post);
+  };
+
+  const handleDayClick = () => {
+    onClick();
+  };
+
   return (
     <div
       className={cn(
@@ -65,12 +74,15 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         isWeekend && isCurrentMonth && "bg-opacity-60",
         isToday && "border-calendar-today border-2"
       )}
-      onClick={onClick}
+      onClick={handleDayClick}
       style={{ minHeight: 'calc((100vh - 160px) / 5)' }}
     >
       {/* Image Section - 80% */}
       {hasImage && firstImagePost?.image_url ? (
-        <div className="h-4/5 relative">
+        <div 
+          className="h-4/5 relative cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={(e) => handlePostClick(e, firstImagePost)}
+        >
           <img 
             src={firstImagePost.image_url} 
             alt="Post image" 
@@ -135,7 +147,10 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       {/* Description Section - 20% */}
       <div className="h-1/5 p-1 bg-white/90 backdrop-blur-sm border-t border-border/20">
         {posts.length > 0 ? (
-          <div className="space-y-1">
+          <div 
+            className="space-y-1 cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
+            onClick={(e) => handlePostClick(e, posts[0])}
+          >
             <div className="text-xs font-medium truncate">
               {posts[0].title}
             </div>
