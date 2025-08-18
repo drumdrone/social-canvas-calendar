@@ -45,7 +45,7 @@ const createDefaultSection = (): Section => {
       }
       if (rowIndex === 0 && colIndex > 0 && colIndex < 5) {
         // B1-E1: Header labels (not editable)
-        const labels = ['Popis', 'Creativa', 'Product Line', 'Pilíř'] as const;
+        const labels = ['Popis', 'Plan Description', 'Product Line', 'Pilíř'] as const;
         return {
           id,
           content: labels[colIndex - 1],
@@ -412,7 +412,7 @@ export const EditableTable = () => {
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][1].content}</div>
                   </td>
-                  {/* C1 - Creativa */}
+                  {/* C1 - Plan Description */}
                   <td
                     className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 2 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
                     onClick={() => handleCellClick(sectionIdx, 0, 2)}
@@ -468,52 +468,14 @@ export const EditableTable = () => {
                             placeholder="Write here"
                           />
                         ) : colIndex === 2 ? (
-                          <Select
+                          <input
+                            type="text"
                             value={cell.content}
-                            onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
-                          >
-                            <SelectTrigger 
-                              className="w-full border-none shadow-none focus:ring-0"
-                              style={{
-                                backgroundColor: 
-                                  cell.content === 'Carousel' ? 'hsl(var(--accent))' : 
-                                  cell.content === 'Video' ? 'hsl(var(--secondary))' : 
-                                  cell.content === 'Image' ? 'hsl(var(--primary))' : 
-                                  'hsl(var(--muted))',
-                                color: 
-                                  cell.content === 'Carousel' ? 'hsl(var(--accent-foreground))' : 
-                                  cell.content === 'Video' ? 'hsl(var(--secondary-foreground))' : 
-                                  cell.content === 'Image' ? 'hsl(var(--primary-foreground))' : 
-                                  'hsl(var(--foreground))',
-                                fontWeight: '500'
-                              }}
-                            >
-                              <SelectValue placeholder="Creativa" />
-                            </SelectTrigger>
-                            <SelectContent className="z-50 bg-popover">
-                              {contentTypes.map((opt) => (
-                                <SelectItem key={opt} value={opt}>
-                                  <div 
-                                    className="px-3 py-2 rounded text-sm w-full font-medium"
-                                    style={{
-                                      backgroundColor: 
-                                        opt === 'Carousel' ? 'hsl(var(--accent))' : 
-                                        opt === 'Video' ? 'hsl(var(--secondary))' : 
-                                        opt === 'Image' ? 'hsl(var(--primary))' : 
-                                        'hsl(var(--muted))',
-                                      color: 
-                                        opt === 'Carousel' ? 'hsl(var(--accent-foreground))' : 
-                                        opt === 'Video' ? 'hsl(var(--secondary-foreground))' : 
-                                        opt === 'Image' ? 'hsl(var(--primary-foreground))' : 
-                                        'hsl(var(--foreground))'
-                                    }}
-                                  >
-                                    {opt}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            onChange={(e) => handleContentChange(sectionIdx, rIdx + 1, colIndex, e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                            className="w-full h-full bg-transparent border-none outline-none text-sm"
+                            placeholder="Plan description"
+                          />
                         ) : colIndex === 3 ? (
                           // Product Line select with enhanced colors
                           <Select

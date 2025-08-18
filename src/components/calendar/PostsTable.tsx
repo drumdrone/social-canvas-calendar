@@ -42,8 +42,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
 }) => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [availablePlatforms, setAvailablePlatforms] = useState<any[]>([]);
-  const [availableStatuses, setAvailableStatuses] = useState<any[]>([]);
+  const [availableFormats, setAvailableFormats] = useState<any[]>([]);
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [editingField, setEditingField] = useState<EditingField | null>(null);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
@@ -87,14 +86,12 @@ export const PostsTable: React.FC<PostsTableProps> = ({
 
   const fetchDynamicData = async () => {
     try {
-      const [platformsResult, statusesResult, categoriesResult] = await Promise.all([
-        supabase.from('platforms').select('*').eq('is_active', true).order('name'),
-        supabase.from('post_statuses').select('*').eq('is_active', true).order('name'),
+      const [formatsResult, categoriesResult] = await Promise.all([
+        supabase.from('formats').select('*').eq('is_active', true).order('name'),
         supabase.from('categories').select('*').eq('is_active', true).order('name')
       ]);
       
-      if (platformsResult.data) setAvailablePlatforms(platformsResult.data);
-      if (statusesResult.data) setAvailableStatuses(statusesResult.data);
+      if (formatsResult.data) setAvailableFormats(formatsResult.data);
       if (categoriesResult.data) setAvailableCategories(categoriesResult.data);
     } catch (error) {
       console.error('Error fetching dynamic data:', error);
@@ -403,7 +400,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
             />
           );
         case 'select':
-          if (field === 'platform') {
+          if (field === 'category') {
             return (
               <Select 
                 value={value} 
@@ -416,36 +413,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {availablePlatforms.map((p) => {
-                    const Icon = platformIcons[p.name as keyof typeof platformIcons];
-                    return (
-                      <SelectItem key={p.id} value={p.name}>
-                        <div className="flex items-center gap-2">
-                          {Icon && <Icon className="h-4 w-4" />}
-                          {p.name.charAt(0).toUpperCase() + p.name.slice(1)}
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            );
-          } else if (field === 'status') {
-            return (
-              <Select 
-                value={value} 
-                onValueChange={(newValue) => {
-                  updatePost(post.id, field, newValue);
-                  handleSaveField(post.id, field, newValue);
-                }}
-              >
-                <SelectTrigger className="min-w-[100px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStatuses.map((s) => (
-                    <SelectItem key={s.id} value={s.name}>
-                      <span className="capitalize">{s.name}</span>
+                  {availableFormats.map((f) => (
+                    <SelectItem key={f.id} value={f.name}>
+                      <span className="capitalize">{f.name}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -509,14 +479,15 @@ export const PostsTable: React.FC<PostsTableProps> = ({
               value={value || ''}
               onChange={(e) => updatePost(post.id, field, e.target.value)}
               onBlur={() => handleSaveField(post.id, field, value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSaveField(post.id, field, value);
-                }
-                if (e.key === 'Escape') {
-                  setEditingField(null);
-                }
-              }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSaveField(post.id, field, value);
+                setEditingField(null);
+              }
+              if (e.key === 'Escape') {
+                setEditingField(null);
+              }
+            }}
               autoFocus
               className="min-w-[150px]"
             />
@@ -531,18 +502,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
       >
         {type === 'textarea' ? (
           <div className="text-sm max-w-[200px] truncate">{value || 'Click to edit'}</div>
-        ) : type === 'select' && field === 'platform' ? (
+        ) : type === 'select' && field === 'category' ? (
           <div className="flex items-center gap-2">
-            {(() => {
-              const platform = availablePlatforms.find(p => p.name === value);
-              const Icon = platform ? platformIcons[platform.name as keyof typeof platformIcons] : null;
-              return (
-                <>
-                  {Icon && <Icon className="h-4 w-4" />}
-                  <span className="capitalize">{value}</span>
-                </>
-              );
-            })()}
+            <span className="capitalize">{value}</span>
           </div>
         ) : type === 'date' ? (
           <div className="text-sm">{format(new Date(value), 'MMM d, yyyy')}</div>
@@ -587,8 +549,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
               <TableHead className="w-[100px]">Image</TableHead>
               <TableHead className="w-[200px]">Title</TableHead>
               <TableHead className="w-[250px]">Content</TableHead>
-              <TableHead className="w-[150px]">Platform</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
+              <TableHead className="w-[120px]">Format</TableHead>
               <TableHead className="w-[150px]">Scheduled Date</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
@@ -643,36 +604,16 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                   />
                 </TableCell>
                 <TableCell>
-                  <Select value={newPost.platform} onValueChange={(value: Platform) => setNewPost({...newPost, platform: value})}>
+                  <Select value={newPost.category} onValueChange={(value: Category) => setNewPost({...newPost, category: value})}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {availablePlatforms.map((platform) => {
-                        const Icon = platformIcons[platform.name as keyof typeof platformIcons];
-                        return (
-                          <SelectItem key={platform.id} value={platform.name}>
-                            <div className="flex items-center gap-2">
-                              {Icon && <Icon className="h-4 w-4" />}
-                              {platform.name.charAt(0).toUpperCase() + platform.name.slice(1)}
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <Select value={newPost.status} onValueChange={(value: PostStatus) => setNewPost({...newPost, status: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                <SelectContent>
-                  {availableStatuses.map((status) => (
-                    <SelectItem key={status.id} value={status.name}>
-                      <span className="capitalize">{status.name}</span>
-                    </SelectItem>
-                  ))}
+                      {availableFormats.map((format) => (
+                        <SelectItem key={format.id} value={format.name}>
+                          <span className="capitalize">{format.name}</span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -711,7 +652,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                 <React.Fragment key={monthKey}>
                   {/* Month Header */}
                   <TableRow>
-                    <TableCell colSpan={7} className="bg-muted/50 font-semibold text-foreground py-3">
+                    <TableCell colSpan={6} className="bg-muted/50 font-semibold text-foreground py-3">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         {format(monthDate, 'MMMM yyyy')}
@@ -775,15 +716,12 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                           <TableCell>
                             {renderEditableCell(post, 'title', post.title, 'input')}
                           </TableCell>
-                          <TableCell>
-                            {renderEditableCell(post, 'content', post.content, 'textarea')}
-                          </TableCell>
-                          <TableCell>
-                            {renderEditableCell(post, 'platform', post.platform, 'select')}
-                          </TableCell>
-                          <TableCell>
-                            {renderEditableCell(post, 'status', post.status, 'select')}
-                          </TableCell>
+                <TableCell>
+                  {renderEditableCell(post, 'content', post.content, 'textarea')}
+                </TableCell>
+                <TableCell>
+                  {renderEditableCell(post, 'category', post.category, 'select')}
+                </TableCell>
           <TableCell>
             <div className="space-y-1">
               <div 
@@ -864,7 +802,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
             
             {sortedMonths.length === 0 && !isCreating && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No posts found. Create your first post!
                 </TableCell>
               </TableRow>

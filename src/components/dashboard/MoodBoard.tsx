@@ -391,14 +391,23 @@ export const MoodBoard: React.FC = () => {
                     e.preventDefault();
                     setSelectedNote(null);
                   }
+                  if (e.key === 'Escape') {
+                    setSelectedNote(null);
+                  }
                 }}
-                className="min-h-[60px] text-sm bg-transparent border-none p-0 resize-none"
+                className="min-h-[60px] text-sm bg-transparent border-none p-0 resize-none focus:ring-0 focus:outline-none"
                 autoFocus
                 onBlur={() => setSelectedNote(null)}
               />
             ) : (
-              <div className="text-sm whitespace-pre-wrap break-words cursor-pointer">
-                {note.content}
+              <div 
+                className="text-sm whitespace-pre-wrap break-words cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedNote(note.id);
+                }}
+              >
+                {note.content || 'Click to edit...'}
               </div>
             )}
           </Card>
