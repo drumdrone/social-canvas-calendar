@@ -50,20 +50,41 @@ export const MoodBoard: React.FC = () => {
   const addImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newImage: ImageNote = {
-          id: Date.now().toString(),
-          url: e.target?.result as string,
-          position: { x: Math.random() * 300, y: Math.random() * 200 },
-          width: 200,
-          height: 150
-        };
-        setImages([...images, newImage]);
-      };
-      reader.readAsDataURL(file);
+      processImageFile(file);
     }
     event.target.value = '';
+  };
+
+  const processImageFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const newImage: ImageNote = {
+        id: Date.now().toString(),
+        url: e.target?.result as string,
+        position: { x: Math.random() * 300, y: Math.random() * 200 },
+        width: 200,
+        height: 150
+      };
+      setImages([...images, newImage]);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePaste = (event: React.ClipboardEvent) => {
+    const items = event.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile();
+          if (file) {
+            processImageFile(file);
+          }
+          event.preventDefault();
+          break;
+        }
+      }
+    }
   };
 
   const deleteNote = (id: string) => {
@@ -145,6 +166,8 @@ export const MoodBoard: React.FC = () => {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onPaste={handlePaste}
+        tabIndex={0}
       >
         {/* Sticky Notes */}
         {stickyNotes.map((note) => (
