@@ -312,6 +312,12 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         imageUrl = publicUrl;
       }
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const { error } = await supabase
         .from('social_media_posts')
         .insert([{
@@ -322,7 +328,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           category: newPost.category,
           scheduled_date: scheduledDateTime.toISOString(),
           image_url: imageUrl,
-          user_id: '00000000-0000-0000-0000-000000000000',
+          user_id: user.id,
         }]);
 
       if (error) throw error;
