@@ -80,7 +80,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       {/* Two Row Layout */}
       <div className="h-full flex flex-col">
         {/* First Row - Date and Image/Primary Post */}
-        <div className="h-1/2 relative overflow-hidden border-b border-muted/30">
+        <div className="h-[90%] relative overflow-hidden border-b border-muted/30">
           {hasImage && firstImagePost?.image_url ? (
             <div 
               className="h-full relative cursor-pointer hover:opacity-90 transition-opacity"
@@ -152,7 +152,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         </div>
 
         {/* Second Row - Additional Posts or Content */}
-        <div className="h-1/2 p-2 flex flex-col justify-start overflow-hidden">
+        <div className="h-[10%] p-1 flex flex-col justify-start overflow-hidden">
           {posts.length > 1 ? (
             <div className="space-y-1">
               {posts.slice(1, 3).map((post, index) => (
