@@ -107,6 +107,42 @@ export type Database = {
         }
         Relationships: []
       }
+      mood_board_items: {
+        Row: {
+          created_at: string
+          format: string
+          id: string
+          image_prompt: string
+          napad: string
+          popis: string
+          text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          format?: string
+          id?: string
+          image_prompt?: string
+          napad?: string
+          popis?: string
+          text?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          format?: string
+          id?: string
+          image_prompt?: string
+          napad?: string
+          popis?: string
+          text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mood_board_notes: {
         Row: {
           color: string

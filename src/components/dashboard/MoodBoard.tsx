@@ -1,46 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Upload, X, Palette } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
-interface StickyNote {
+interface MoodBoardItem {
   id: string;
-  content: string;
-  color: string;
-  position: { x: number; y: number };
-}
-
-interface ImageNote {
-  id: string;
-  url: string;
-  position: { x: number; y: number };
-  width: number;
-  height: number;
+  napad: string;
+  text: string;
+  popis: string;
+  image_prompt: string;
+  format: string;
 }
 
 export const MoodBoard: React.FC = () => {
-  const [stickyNotes, setStickyNotes] = useState<StickyNote[]>([]);
-  const [images, setImages] = useState<ImageNote[]>([]);
-  const [selectedNote, setSelectedNote] = useState<string | null>(null);
-  const [newNoteContent, setNewNoteContent] = useState('');
-  const [draggedItem, setDraggedItem] = useState<{ type: 'note' | 'image'; id: string } | null>(null);
+  const [items, setItems] = useState<MoodBoardItem[]>([]);
+  const [editingCell, setEditingCell] = useState<{ rowId: string; column: keyof MoodBoardItem } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const colors = [
-    'bg-yellow-200', 'bg-pink-200', 'bg-blue-200', 'bg-green-200',
-    'bg-purple-200', 'bg-orange-200', 'bg-red-200', 'bg-cyan-200'
+  const columns: Array<{ key: keyof MoodBoardItem; label: string }> = [
+    { key: 'napad', label: 'Nápad' },
+    { key: 'text', label: 'Text' },
+    { key: 'popis', label: 'Popis' },
+    { key: 'image_prompt', label: 'Image prompt' },
+    { key: 'format', label: 'Formát' }
   ];
 
-  // Load data from Supabase on mount
   useEffect(() => {
     loadMoodBoardData();
   }, []);
+
+  useEffect(() => {
+    if (editingCell && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingCell]);
 
   const loadMoodBoardData = async () => {
     try {
@@ -48,40 +46,14 @@ export const MoodBoard: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Load sticky notes
-      const { data: notesData, error: notesError } = await supabase
-        .from('mood_board_notes')
+      const { data, error } = await supabase
+        .from('mood_board_items')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
 
-      if (notesError) throw notesError;
-
-      // Load images
-      const { data: imagesData, error: imagesError } = await supabase
-        .from('mood_board_images')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (imagesError) throw imagesError;
-
-      // Convert database format to component format
-      const notes = notesData.map(note => ({
-        id: note.id,
-        content: note.content,
-        color: note.color,
-        position: { x: Number(note.position_x), y: Number(note.position_y) }
-      }));
-
-      const imgs = imagesData.map(img => ({
-        id: img.id,
-        url: img.url,
-        position: { x: Number(img.position_x), y: Number(img.position_y) },
-        width: Number(img.width),
-        height: Number(img.height)
-      }));
-
-      setStickyNotes(notes);
-      setImages(imgs);
+      if (error) throw error;
+      setItems(data || []);
     } catch (error) {
       console.error('Error loading mood board data:', error);
       toast({
@@ -94,203 +66,118 @@ export const MoodBoard: React.FC = () => {
     }
   };
 
-  const saveStickyNote = async (note: StickyNote) => {
+  const saveItem = async (item: MoodBoardItem) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const { error } = await supabase
-        .from('mood_board_notes')
+        .from('mood_board_items')
         .upsert({
-          id: note.id,
+          id: item.id,
           user_id: user.id,
-          content: note.content,
-          color: note.color,
-          position_x: note.position.x,
-          position_y: note.position.y
+          napad: item.napad,
+          text: item.text,
+          popis: item.popis,
+          image_prompt: item.image_prompt,
+          format: item.format
         });
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error saving sticky note:', error);
+      console.error('Error saving item:', error);
       toast({
         title: "Error",
-        description: "Failed to save note",
+        description: "Failed to save item",
         variant: "destructive",
       });
     }
   };
 
-  const saveImage = async (image: ImageNote) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase
-        .from('mood_board_images')
-        .upsert({
-          id: image.id,
-          user_id: user.id,
-          url: image.url,
-          position_x: image.position.x,
-          position_y: image.position.y,
-          width: image.width,
-          height: image.height
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error saving image:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save image",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const addStickyNote = async () => {
-    if (!newNoteContent.trim()) return;
-    
-    const newNote: StickyNote = {
+  const addNewItem = async () => {
+    const newItem: MoodBoardItem = {
       id: crypto.randomUUID(),
-      content: newNoteContent,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      position: { x: Math.random() * 400, y: Math.random() * 300 }
+      napad: '',
+      text: '',
+      popis: '',
+      image_prompt: '',
+      format: ''
     };
     
-    setStickyNotes([...stickyNotes, newNote]);
-    setNewNoteContent('');
-    await saveStickyNote(newNote);
+    setItems([...items, newItem]);
+    await saveItem(newItem);
+    
+    // Start editing the first cell of the new row
+    setEditingCell({ rowId: newItem.id, column: 'napad' });
   };
 
-  const addImage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      processImageFile(file);
-    }
-    event.target.value = '';
-  };
-
-  const processImageFile = async (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const newImage: ImageNote = {
-        id: crypto.randomUUID(),
-        url: e.target?.result as string,
-        position: { x: Math.random() * 300, y: Math.random() * 200 },
-        width: 200,
-        height: 150
-      };
-      setImages([...images, newImage]);
-      await saveImage(newImage);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handlePaste = (event: React.ClipboardEvent) => {
-    const items = event.clipboardData?.items;
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.type.indexOf('image') !== -1) {
-          const file = item.getAsFile();
-          if (file) {
-            processImageFile(file);
-          }
-          event.preventDefault();
-          break;
-        }
-      }
-    }
-  };
-
-  const deleteNote = async (id: string) => {
-    setStickyNotes(stickyNotes.filter(note => note.id !== id));
+  const deleteItem = async (id: string) => {
+    setItems(items.filter(item => item.id !== id));
     try {
       const { error } = await supabase
-        .from('mood_board_notes')
+        .from('mood_board_items')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error deleting note:', error);
+      console.error('Error deleting item:', error);
       toast({
         title: "Error",
-        description: "Failed to delete note",
+        description: "Failed to delete item",
         variant: "destructive",
       });
     }
   };
 
-  const deleteImage = async (id: string) => {
-    setImages(images.filter(img => img.id !== id));
-    try {
-      const { error } = await supabase
-        .from('mood_board_images')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting image:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete image",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateNoteContent = async (id: string, content: string) => {
-    const updatedNotes = stickyNotes.map(note => 
-      note.id === id ? { ...note, content } : note
+  const updateItem = (id: string, column: keyof MoodBoardItem, value: string) => {
+    const updatedItems = items.map(item =>
+      item.id === id ? { ...item, [column]: value } : item
     );
-    setStickyNotes(updatedNotes);
-    
-    const updatedNote = updatedNotes.find(note => note.id === id);
-    if (updatedNote) {
-      await saveStickyNote(updatedNote);
-    }
+    setItems(updatedItems);
   };
 
-  const handleMouseDown = (type: 'note' | 'image', id: string) => {
-    setDraggedItem({ type, id });
+  const handleCellClick = (rowId: string, column: keyof MoodBoardItem) => {
+    if (column === 'id') return; // Don't edit ID column
+    setEditingCell({ rowId, column });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!draggedItem) return;
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    if (draggedItem.type === 'note') {
-      const updatedNotes = stickyNotes.map(note =>
-        note.id === draggedItem.id ? { ...note, position: { x, y } } : note
-      );
-      setStickyNotes(updatedNotes);
-    } else {
-      const updatedImages = images.map(img =>
-        img.id === draggedItem.id ? { ...img, position: { x, y } } : img
-      );
-      setImages(updatedImages);
-    }
-  };
-
-  const handleMouseUp = async () => {
-    if (draggedItem) {
-      // Save position changes
-      if (draggedItem.type === 'note') {
-        const note = stickyNotes.find(n => n.id === draggedItem.id);
-        if (note) await saveStickyNote(note);
-      } else {
-        const image = images.find(i => i.id === draggedItem.id);
-        if (image) await saveImage(image);
+  const handleKeyDown = async (e: React.KeyboardEvent, rowId: string, column: keyof MoodBoardItem) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      // Save current item
+      const item = items.find(i => i.id === rowId);
+      if (item) {
+        await saveItem(item);
       }
+
+      // Move to next cell
+      const currentColumnIndex = columns.findIndex(col => col.key === column);
+      const currentRowIndex = items.findIndex(item => item.id === rowId);
+      
+      if (currentColumnIndex < columns.length - 1) {
+        // Move to next column in same row
+        setEditingCell({ rowId, column: columns[currentColumnIndex + 1].key });
+      } else if (currentRowIndex < items.length - 1) {
+        // Move to first column of next row
+        const nextRowId = items[currentRowIndex + 1].id;
+        setEditingCell({ rowId: nextRowId, column: columns[0].key });
+      } else {
+        // End of table, stop editing
+        setEditingCell(null);
+      }
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
     }
-    setDraggedItem(null);
+  };
+
+  const handleBlur = async (rowId: string) => {
+    const item = items.find(i => i.id === rowId);
+    if (item) {
+      await saveItem(item);
+    }
+    setEditingCell(null);
   };
 
   if (isLoading) {
@@ -302,149 +189,73 @@ export const MoodBoard: React.FC = () => {
   }
 
   return (
-    <div className="h-full w-full">
-      <div className="flex items-center gap-4 mb-6 p-4 bg-card border-b">
-        <div className="flex gap-2 flex-1">
-          <Input
-            placeholder="Add a sticky note..."
-            value={newNoteContent}
-            onChange={(e) => setNewNoteContent(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && addStickyNote()}
-            className="max-w-xs"
-          />
-          <Button onClick={addStickyNote} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Note
-          </Button>
-        </div>
-        
-        <input
-          type="file"
-          accept="image/*"
-          onChange={addImage}
-          className="hidden"
-          id="image-upload"
-        />
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => document.getElementById('image-upload')?.click()}
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Add Image
+    <div className="h-full w-full p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">Mood Board</h2>
+        <Button onClick={addNewItem} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Item
         </Button>
       </div>
 
-      <div 
-        className="relative h-full bg-muted/20 overflow-hidden"
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onPaste={handlePaste}
-        tabIndex={0}
-      >
-        {/* Sticky Notes */}
-        {stickyNotes.map((note) => (
-          <Card
-            key={note.id}
-            className={cn(
-              "absolute w-48 p-3 shadow-lg cursor-move select-none",
-              note.color,
-              selectedNote === note.id && "ring-2 ring-primary"
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {columns.map((col) => (
+                <TableHead key={col.key} className="w-1/5">
+                  {col.label}
+                </TableHead>
+              ))}
+              <TableHead className="w-20">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => (
+              <TableRow key={item.id}>
+                {columns.map((col) => (
+                  <TableCell
+                    key={col.key}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleCellClick(item.id, col.key)}
+                  >
+                    {editingCell?.rowId === item.id && editingCell?.column === col.key ? (
+                      <Input
+                        ref={inputRef}
+                        value={item[col.key]}
+                        onChange={(e) => updateItem(item.id, col.key, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, item.id, col.key)}
+                        onBlur={() => handleBlur(item.id)}
+                        className="border-none p-0 h-auto bg-transparent focus:ring-0 focus:ring-offset-0"
+                      />
+                    ) : (
+                      <span className="block p-1">
+                        {item[col.key] || <span className="text-muted-foreground">Click to edit...</span>}
+                      </span>
+                    )}
+                  </TableCell>
+                ))}
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteItem(item.id)}
+                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {items.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={columns.length + 1} className="text-center text-muted-foreground">
+                  No items yet. Click "Add Item" to get started.
+                </TableCell>
+              </TableRow>
             )}
-            style={{
-              left: note.position.x,
-              top: note.position.y,
-              transform: 'rotate(-2deg)'
-            }}
-            onMouseDown={(e) => {
-              if (selectedNote !== note.id) {
-                handleMouseDown('note', note.id);
-              }
-            }}
-            onClick={() => setSelectedNote(selectedNote === note.id ? null : note.id)}
-          >
-            <div className="flex justify-between items-start mb-2">
-              <Palette className="h-3 w-3 text-muted-foreground" />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  deleteNote(note.id);
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-            {selectedNote === note.id ? (
-              <Textarea
-                value={note.content}
-                onChange={(e) => updateNoteContent(note.id, e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    setSelectedNote(null);
-                  }
-                  if (e.key === 'Escape') {
-                    setSelectedNote(null);
-                  }
-                }}
-                className="min-h-[60px] text-sm bg-transparent border-none p-0 resize-none focus:ring-0 focus:outline-none"
-                autoFocus
-                onBlur={() => setSelectedNote(null)}
-              />
-            ) : (
-              <div 
-                className="text-sm whitespace-pre-wrap break-words cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedNote(note.id);
-                }}
-              >
-                {note.content || 'Click to edit...'}
-              </div>
-            )}
-          </Card>
-        ))}
-
-        {/* Images */}
-        {images.map((image) => (
-          <div
-            key={image.id}
-            className="absolute shadow-lg cursor-move select-none group"
-            style={{
-              left: image.position.x,
-              top: image.position.y,
-              width: image.width,
-              height: image.height
-            }}
-            onMouseDown={() => handleMouseDown('image', image.id)}
-          >
-            <img
-              src={image.url}
-              alt="Mood board"
-              className="w-full h-full object-cover rounded-lg"
-              draggable={false}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute -top-2 -right-2 h-6 w-6 p-0 bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteImage(image.id);
-              }}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
