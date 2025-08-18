@@ -89,7 +89,18 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
   // Pre-fill form when post changes
   useEffect(() => {
+    console.log('PostSlidingSidebar post changed:', post);
     if (post) {
+      console.log('Setting form data for editing:', {
+        title: post.title,
+        content: post.content,
+        platform: post.platform,
+        status: post.status,
+        category: post.category,
+        pillar: (post as any).pillar,
+        product_line: (post as any).product_line
+      });
+      
       setTitle(post.title);
       setContent(post.content || '');
       setPlatform(post.platform);
@@ -102,6 +113,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setScheduledDate(postDate);
       setTime(format(postDate, 'HH:mm'));
     } else if (selectedDate) {
+      console.log('Resetting form for new post on date:', selectedDate);
       // Reset form for new post
       setTitle('');
       setContent('');

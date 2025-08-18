@@ -128,6 +128,7 @@ export const SocialCalendar: React.FC = () => {
   };
 
   const handlePostClick = (post: SocialPost) => {
+    console.log('Post clicked for editing:', post);
     setSidebarPost(post);
     setEditingPost(post);
     setSelectedDate(new Date(post.scheduled_date));

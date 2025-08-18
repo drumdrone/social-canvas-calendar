@@ -146,10 +146,19 @@ export const EditableTable = () => {
     const loadPlanData = async () => {
       try {
         setIsLoading(true);
+        
+        // Wait for authentication
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.log('No authenticated user, skipping data load');
+          setIsLoading(false);
+          return;
+        }
+
         const { data: planData, error } = await supabase
           .from('plan_sections')
           .select('*')
-          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+          .eq('user_id', user.id)
           .order('section_order');
 
         if (error) {
@@ -163,6 +172,9 @@ export const EditableTable = () => {
             return migrateSection(section);
           });
           setSections(loadedSections);
+        } else {
+          // Create default section if no data exists
+          setSections([createDefaultSection()]);
         }
       } catch (error) {
         console.error('Failed to load plan data:', error);
@@ -466,25 +478,40 @@ export const EditableTable = () => {
                             onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
                           >
                             <SelectTrigger 
-                              className={`w-full ${
-                                cell.content === 'Carousel' ? 'bg-accent/20 border-accent' : 
-                                cell.content === 'Video' ? 'bg-secondary/20 border-secondary' : 
-                                cell.content === 'Image' ? 'bg-primary/20 border-primary' : 
-                                'bg-muted'
-                              }`}
+                              className="w-full border-none shadow-none focus:ring-0"
+                              style={{
+                                backgroundColor: 
+                                  cell.content === 'Carousel' ? 'hsl(var(--accent))' : 
+                                  cell.content === 'Video' ? 'hsl(var(--secondary))' : 
+                                  cell.content === 'Image' ? 'hsl(var(--primary))' : 
+                                  'hsl(var(--muted))',
+                                color: 
+                                  cell.content === 'Carousel' ? 'hsl(var(--accent-foreground))' : 
+                                  cell.content === 'Video' ? 'hsl(var(--secondary-foreground))' : 
+                                  cell.content === 'Image' ? 'hsl(var(--primary-foreground))' : 
+                                  'hsl(var(--foreground))',
+                                fontWeight: '500'
+                              }}
                             >
-                              <SelectValue placeholder="Select type" />
+                              <SelectValue placeholder="Creativa" />
                             </SelectTrigger>
                             <SelectContent className="z-50 bg-popover">
                               {contentTypes.map((opt) => (
                                 <SelectItem key={opt} value={opt}>
                                   <div 
-                                    className={`px-2 py-1 rounded text-sm w-full ${
-                                      opt === 'Carousel' ? 'bg-accent/20 text-accent-foreground' : 
-                                      opt === 'Video' ? 'bg-secondary/20 text-secondary-foreground' : 
-                                      opt === 'Image' ? 'bg-primary/20 text-primary-foreground' : 
-                                      'bg-muted'
-                                    }`}
+                                    className="px-3 py-2 rounded text-sm w-full font-medium"
+                                    style={{
+                                      backgroundColor: 
+                                        opt === 'Carousel' ? 'hsl(var(--accent))' : 
+                                        opt === 'Video' ? 'hsl(var(--secondary))' : 
+                                        opt === 'Image' ? 'hsl(var(--primary))' : 
+                                        'hsl(var(--muted))',
+                                      color: 
+                                        opt === 'Carousel' ? 'hsl(var(--accent-foreground))' : 
+                                        opt === 'Video' ? 'hsl(var(--secondary-foreground))' : 
+                                        opt === 'Image' ? 'hsl(var(--primary-foreground))' : 
+                                        'hsl(var(--foreground))'
+                                    }}
                                   >
                                     {opt}
                                   </div>
@@ -493,29 +520,30 @@ export const EditableTable = () => {
                             </SelectContent>
                           </Select>
                         ) : colIndex === 3 ? (
-                          // Product Line select
+                          // Product Line select with enhanced colors
                           <Select
                             value={cell.content}
                             onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
                           >
                             <SelectTrigger 
-                              className="w-full"
+                              className="w-full border-none shadow-none focus:ring-0"
                               style={{
                                 backgroundColor: productLines.find(pl => pl.name === cell.content)?.color ? 
-                                  `${productLines.find(pl => pl.name === cell.content)?.color}20` : 
-                                  'transparent',
-                                borderColor: productLines.find(pl => pl.name === cell.content)?.color || 'hsl(var(--border))'
+                                  `${productLines.find(pl => pl.name === cell.content)?.color}30` : 
+                                  'hsl(var(--muted))',
+                                color: productLines.find(pl => pl.name === cell.content)?.color || 'hsl(var(--foreground))',
+                                fontWeight: '500'
                               }}
                             >
-                              <SelectValue placeholder="Select product line" />
+                              <SelectValue placeholder="Product Line" />
                             </SelectTrigger>
                             <SelectContent className="z-50 bg-popover">
                               {productLines.map((pl) => (
                                 <SelectItem key={pl.name} value={pl.name}>
                                   <div 
-                                    className="px-2 py-1 rounded text-sm w-full"
+                                    className="px-3 py-2 rounded text-sm w-full font-medium"
                                     style={{
-                                      backgroundColor: `${pl.color}20`,
+                                      backgroundColor: `${pl.color}30`,
                                       color: pl.color
                                     }}
                                   >
@@ -526,21 +554,33 @@ export const EditableTable = () => {
                             </SelectContent>
                           </Select>
                         ) : colIndex === 4 ? (
+                          // Pillar select with full background colors
                           <Select
                             value={cell.content || ""}
                             onValueChange={(value) => handleContentChange(sectionIdx, rIdx + 1, colIndex, value)}
                           >
-                            <SelectTrigger className="border-none shadow-none focus:ring-0 h-full">
-                              <SelectValue placeholder="Pillar" />
+                            <SelectTrigger 
+                              className="border-none shadow-none focus:ring-0 h-full w-full"
+                              style={{
+                                backgroundColor: pillars.find(p => p.name === cell.content)?.color ? 
+                                  `${pillars.find(p => p.name === cell.content)?.color}30` : 
+                                  'hsl(var(--muted))',
+                                color: pillars.find(p => p.name === cell.content)?.color || 'hsl(var(--foreground))',
+                                fontWeight: '500'
+                              }}
+                            >
+                              <SelectValue placeholder="Pilíř" />
                             </SelectTrigger>
                             <SelectContent className="z-50">
                               {pillars.map(pillar => (
                                 <SelectItem key={pillar.name} value={pillar.name}>
-                                  <div className="flex items-center gap-2">
-                                    <div 
-                                      className="w-3 h-3 rounded-full"
-                                      style={{ backgroundColor: pillar.color }}
-                                    />
+                                  <div 
+                                    className="px-3 py-2 rounded text-sm w-full font-medium"
+                                    style={{
+                                      backgroundColor: `${pillar.color}30`,
+                                      color: pillar.color
+                                    }}
+                                  >
                                     {pillar.name}
                                   </div>
                                 </SelectItem>
