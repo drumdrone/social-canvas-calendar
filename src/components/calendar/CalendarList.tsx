@@ -200,7 +200,14 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                                 src={post.image_url}
                                 alt="Post thumbnail"
                                 className="w-16 h-16 rounded-md object-cover border cursor-pointer"
-                                title={(post as any).comments || post.title}
+                                onMouseEnter={(e) => {
+                                  if ((post as any).comments) {
+                                    e.currentTarget.title = (post as any).comments;
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.removeAttribute('title');
+                                }}
                               />
                             )}
                             

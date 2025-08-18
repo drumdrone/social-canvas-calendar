@@ -733,14 +733,20 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                           <TableCell>
                             <div className="flex items-center gap-2">
                                {post.image_url ? (
-                                 <img 
-                                   src={post.image_url} 
-                                   alt="Post image" 
-                                   className="w-10 h-10 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                   onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
-                                   onMouseEnter={(e) => handleImageHover(e, post.image_url!)}
-                                   onMouseLeave={handleImageLeave}
-                                 />
+                                  <img 
+                                    src={post.image_url} 
+                                    alt="Post image" 
+                                    className="w-10 h-10 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
+                                    onMouseEnter={(e) => {
+                                      if ((post as any).comments) {
+                                        e.currentTarget.title = (post as any).comments;
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.removeAttribute('title');
+                                    }}
+                                  />
                               ) : (
                                 <div 
                                   className="w-10 h-10 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer hover:border-gray-400"
