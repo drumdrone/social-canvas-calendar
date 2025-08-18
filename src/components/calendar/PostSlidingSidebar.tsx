@@ -516,18 +516,38 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       <Label className="text-sm font-medium">
                         {post?.image_url ? 'Upload New Image' : 'Upload Image'}
                       </Label>
-                      <Input
-                        id="image-upload"
-                        type="file"
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                      />
-                      {image && (
-                        <p className="text-sm text-muted-foreground">
-                          Selected: {image.name}
-                        </p>
-                      )}
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start h-auto p-3"
+                          onClick={() => document.getElementById('image-upload')?.click()}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {image ? `Change Image (${image.name})` : 'Choose Image File'}
+                        </Button>
+                        <Input
+                          id="image-upload"
+                          type="file"
+                          onChange={handleImageUpload}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                        {image && (
+                          <p className="text-xs text-muted-foreground">
+                            Selected: {image.name}
+                          </p>
+                        )}
+                        {post?.image_url && !image && (
+                          <div className="mt-2">
+                            <img 
+                              src={post.image_url} 
+                              alt="Current post image" 
+                              className="w-full max-w-sm h-32 object-cover rounded border"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">Current image</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   </ScrollArea>

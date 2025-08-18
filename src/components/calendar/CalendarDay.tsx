@@ -90,6 +90,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                 src={firstImagePost.image_url} 
                 alt="Post image" 
                 className="w-full h-[90%] object-cover object-center"
+                title={(firstImagePost as any).comments || firstImagePost.title}
               />
               {/* Platform icon */}
               <div className="absolute bottom-1 left-1">

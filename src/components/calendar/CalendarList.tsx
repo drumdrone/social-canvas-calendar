@@ -199,7 +199,8 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                               <img
                                 src={post.image_url}
                                 alt="Post thumbnail"
-                                className="w-16 h-16 rounded-md object-cover border"
+                                className="w-16 h-16 rounded-md object-cover border cursor-pointer"
+                                title={(post as any).comments || post.title}
                               />
                             )}
                             

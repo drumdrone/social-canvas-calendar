@@ -352,7 +352,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     }
   };
 
-  const handleImageHover = (e: React.MouseEvent, imageUrl: string) => {
+  const handleImageHover = (e: React.MouseEvent, imageUrl: string, comments?: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setHoverImage({
       isVisible: true,
