@@ -99,8 +99,21 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                   e.currentTarget.removeAttribute('title');
                 }}
               />
+              
+              {/* Title overlay on image - always visible */}
+              <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm text-white p-2">
+                <div className="text-xs font-semibold truncate">
+                  {firstImagePost.title}
+                </div>
+                {firstImagePost.content && (
+                  <div className="text-xs opacity-80 truncate mt-1">
+                    {firstImagePost.content}
+                  </div>
+                )}
+              </div>
+              
               {/* Platform icon */}
-              <div className="absolute bottom-1 left-1">
+              <div className="absolute bottom-1 right-1">
                 {(() => {
                   const Icon = platformIcons[firstImagePost.platform];
                   const platformColors = {
@@ -149,10 +162,16 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                 <div 
                   className="cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
                   onClick={(e) => handlePostClick(e, posts[0])}
+                  title={(posts[0] as any).comments || ''}
                 >
-                  <div className="text-xs font-medium truncate">
+                  <div className="text-xs font-medium truncate mb-1">
                     {posts[0].title}
                   </div>
+                  {posts[0].content && (
+                    <div className="text-xs text-muted-foreground truncate">
+                      {posts[0].content}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -163,11 +182,12 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         <div className="h-[10%] p-1 flex flex-col justify-start overflow-hidden">
           {posts.length > 1 ? (
             <div className="space-y-1">
-              {posts.slice(1, 3).map((post, index) => (
+               {posts.slice(1, 3).map((post, index) => (
                 <div 
                   key={index}
                   className="cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
                   onClick={(e) => handlePostClick(e, post)}
+                  title={(post as any).comments || ''}
                 >
                   <div className="text-xs font-medium truncate">
                     {post.title}
