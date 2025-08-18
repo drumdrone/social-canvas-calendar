@@ -311,9 +311,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden flex flex-col">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-              <div className="px-6 pt-4">
+              <div className="px-6 pt-4 flex-shrink-0">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="content" className="flex items-center gap-2">
                     <CalendarIcon className="h-4 w-4" />
@@ -326,9 +326,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                 </TabsList>
               </div>
 
-              <TabsContent value="content" className="flex-1 mt-0">
+              <TabsContent value="content" className="flex-1 overflow-hidden mt-0">
                 <ScrollArea className="h-full">
-                  <div className="p-6 space-y-6">
+                  <div className="p-6 space-y-6 pb-20">
                     {/* Current Image Preview */}
                     {post?.image_url && (
                       <div className="space-y-2">
