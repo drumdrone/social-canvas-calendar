@@ -318,13 +318,6 @@ export const EditableTable = () => {
 
   return (
     <div className="space-y-6">
-      {/* Save indicator */}
-      {isSaving && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-lg">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-          <span className="text-sm text-primary">Saving changes...</span>
-        </div>
-      )}
       {/* Toolbar: only when editing the title background (A1 of a section) */}
       {selectedCell && currentCell && selectedCell.row === 0 && selectedCell.col === 0 && (
         <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg">

@@ -312,13 +312,17 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
               {post?.image_url && (
                 <div className="space-y-2">
                   <Label>Current Image</Label>
-                  <div className="relative">
+                  <div className="relative cursor-pointer group" onClick={() => document.getElementById('image-upload')?.click()}>
                     <img 
                       src={post.image_url} 
                       alt="Current post image" 
-                      className="w-full aspect-video object-cover rounded-lg border"
+                      className="w-full aspect-video object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
                     />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors">
+                      <Upload className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </div>
+                  <p className="text-sm text-muted-foreground">Click image to replace</p>
                 </div>
               )}
 
@@ -492,6 +496,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                   {post?.image_url ? 'Upload New Image' : 'Upload Image'}
                 </Label>
                 <Input
+                  id="image-upload"
                   type="file"
                   onChange={handleImageUpload}
                   accept="image/*"
