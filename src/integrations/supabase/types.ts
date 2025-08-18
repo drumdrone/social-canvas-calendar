@@ -71,6 +71,75 @@ export type Database = {
         }
         Relationships: []
       }
+      mood_board_images: {
+        Row: {
+          created_at: string
+          height: number
+          id: string
+          position_x: number
+          position_y: number
+          updated_at: string
+          url: string
+          user_id: string
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          height?: number
+          id?: string
+          position_x?: number
+          position_y?: number
+          updated_at?: string
+          url: string
+          user_id: string
+          width?: number
+        }
+        Update: {
+          created_at?: string
+          height?: number
+          id?: string
+          position_x?: number
+          position_y?: number
+          updated_at?: string
+          url?: string
+          user_id?: string
+          width?: number
+        }
+        Relationships: []
+      }
+      mood_board_notes: {
+        Row: {
+          color: string
+          content: string
+          created_at: string
+          id: string
+          position_x: number
+          position_y: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          content: string
+          created_at?: string
+          id?: string
+          position_x?: number
+          position_y?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          content?: string
+          created_at?: string
+          id?: string
+          position_x?: number
+          position_y?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pillars: {
         Row: {
           color: string

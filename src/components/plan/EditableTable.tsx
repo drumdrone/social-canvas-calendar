@@ -399,6 +399,7 @@ export const EditableTable = () => {
                       type="text"
                       value={section.cells[0][0].content}
                       onChange={(e) => handleContentChange(sectionIdx, 0, 0, e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                       className="w-full h-full bg-transparent border-none outline-none text-2xl font-bold"
                       placeholder="Title"
                       aria-label={`Plan title for section ${sectionIdx + 1}`}
@@ -462,6 +463,7 @@ export const EditableTable = () => {
                             type="text"
                             value={cell.content}
                             onChange={(e) => handleContentChange(sectionIdx, rIdx + 1, colIndex, e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                             className="w-full h-full bg-transparent border-none outline-none text-sm"
                             placeholder="Write here"
                           />
