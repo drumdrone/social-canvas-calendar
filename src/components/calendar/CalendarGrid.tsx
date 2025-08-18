@@ -88,14 +88,27 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       </div>
 
       {/* Calendar grid */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-auto scroll-smooth" 
+           onWheel={(e) => {
+             if (e.button === 1 || e.buttons === 4) { // Middle mouse button
+               e.preventDefault();
+               const container = e.currentTarget;
+               container.scrollTop += e.deltaY;
+             }
+           }}
+           onMouseDown={(e) => {
+             if (e.button === 1) { // Middle mouse button
+               e.preventDefault();
+             }
+           }}>
         <div 
           className={cn(
-            "grid h-full",
+            "grid",
             viewMode === 'month' ? "grid-cols-7" : "grid-cols-7"
           )}
           style={{
-            gridTemplateRows: viewMode === 'month' ? 'repeat(6, 1fr)' : '1fr'
+            gridTemplateRows: viewMode === 'month' ? 'repeat(6, minmax(180px, 1fr))' : 'minmax(180px, 1fr)',
+            minHeight: '100%'
           }}
         >
           {dates.map((date, index) => {

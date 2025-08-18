@@ -75,12 +75,12 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         isToday && "border-calendar-today border-2"
       )}
       onClick={handleDayClick}
-      style={{ minHeight: 'calc((100vh - 160px) / 5)' }}
+      style={{ minHeight: 'calc((100vh - 120px) / 4.5)' }}
     >
-      {/* Image Section - 80% */}
+      {/* Full Height Image Section */}
       {hasImage && firstImagePost?.image_url ? (
         <div 
-          className="h-4/5 relative cursor-pointer hover:opacity-90 transition-opacity"
+          className="h-full relative cursor-pointer hover:opacity-90 transition-opacity overflow-hidden"
           onClick={(e) => handlePostClick(e, firstImagePost)}
         >
           <img 
@@ -124,53 +124,71 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
               </span>
             </div>
           )}
+          {/* Description overlay at bottom */}
+          {posts.length > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+              <div 
+                className="cursor-pointer"
+                onClick={(e) => handlePostClick(e, posts[0])}
+              >
+                <div className="text-xs font-medium text-white truncate">
+                  {posts[0].title}
+                </div>
+                {posts[0].content && (
+                  <div className="text-xs text-white/80 line-clamp-2 leading-tight">
+                    {posts[0].content}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* No image - show date prominently */
-        <div className="h-4/5 p-2 flex items-start justify-between">
-          <span
-            className={cn(
-              "text-sm font-medium",
-              isToday && "bg-calendar-today text-calendar-today-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold"
-            )}
-          >
-            {format(date, 'd')}
-          </span>
-          {posts.length > 0 && (
-            <span className="text-xs font-bold bg-muted rounded-full w-5 h-5 flex items-center justify-center">
-              {posts.length}
+        <div className="h-full p-2 flex flex-col">
+          <div className="flex items-start justify-between mb-2">
+            <span
+              className={cn(
+                "text-sm font-medium",
+                isToday && "bg-calendar-today text-calendar-today-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold"
+              )}
+            >
+              {format(date, 'd')}
             </span>
+            {posts.length > 0 && (
+              <span className="text-xs font-bold bg-muted rounded-full w-5 h-5 flex items-center justify-center">
+                {posts.length}
+              </span>
+            )}
+          </div>
+          
+          {/* Posts list when no image */}
+          {posts.length > 0 ? (
+            <div 
+              className="flex-1 cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
+              onClick={(e) => handlePostClick(e, posts[0])}
+            >
+              <div className="text-xs font-medium truncate mb-1">
+                {posts[0].title}
+              </div>
+              {posts[0].content && (
+                <div className="text-xs text-muted-foreground line-clamp-3 leading-tight">
+                  {posts[0].content}
+                </div>
+              )}
+              {posts.length > 1 && (
+                <div className="text-xs text-muted-foreground truncate mt-1">
+                  +{posts.length - 1} more
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground">
+              Click to add
+            </div>
           )}
         </div>
       )}
-
-      {/* Description Section - 20% */}
-      <div className="h-1/5 p-1 bg-white/90 backdrop-blur-sm border-t border-border/20">
-        {posts.length > 0 ? (
-          <div 
-            className="space-y-1 cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
-            onClick={(e) => handlePostClick(e, posts[0])}
-          >
-            <div className="text-xs font-medium truncate">
-              {posts[0].title}
-            </div>
-            {posts[0].content && (
-              <div className="text-xs text-muted-foreground line-clamp-2 leading-tight">
-                {posts[0].content}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-xs text-muted-foreground">
-            Click to add
-          </div>
-        )}
-        {posts.length > 1 && (
-          <div className="text-xs text-muted-foreground truncate mt-1">
-            +{posts.length - 1} more
-          </div>
-        )}
-      </div>
     </div>
   );
 };
