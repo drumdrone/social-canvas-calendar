@@ -162,11 +162,12 @@ export const SocialCalendar: React.FC = () => {
         />
         
         {/* Action Bar */}
-        <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between px-4 py-3 bg-muted/30 gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <Button 
               onClick={() => handleDateClick(new Date())}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
+              size="sm"
             >
               <Plus className="h-4 w-4" />
               New Post
@@ -178,7 +179,7 @@ export const SocialCalendar: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={() => setShowSettings(true)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 w-full sm:w-auto"
           >
             <Settings className="h-4 w-4" />
             Settings

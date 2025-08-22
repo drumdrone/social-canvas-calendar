@@ -317,10 +317,10 @@ export const EditableTable = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 lg:p-6">
       {/* Toolbar: only when editing the title background (A1 of a section) */}
       {selectedCell && currentCell && selectedCell.row === 0 && selectedCell.col === 0 && (
-        <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-lg">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4 bg-card border border-border rounded-lg">
           <div className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
             <Select
@@ -329,7 +329,7 @@ export const EditableTable = () => {
                 updateCell(selectedCell.section, selectedCell.row, selectedCell.col, { backgroundColor: value })
               }
             >
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-full lg:w-48">
                 <SelectValue placeholder="Background color" />
               </SelectTrigger>
               <SelectContent className="z-50">
@@ -353,12 +353,12 @@ export const EditableTable = () => {
         {sections.map((section, sectionIdx) => (
           <div key={section.id} className="border border-border rounded-lg overflow-hidden">
             {/* Section actions */}
-            <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border-b border-border">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 py-3 bg-muted/40 border-b border-border gap-3">
               <div className="text-sm text-muted-foreground">Sekce {sectionIdx + 1}</div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => duplicateSection(sectionIdx)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card hover:bg-muted/60 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-card hover:bg-muted/60 transition-colors flex-1 sm:flex-none justify-center"
                   aria-label="Duplicate section"
                 >
                   <Copy className="h-4 w-4" />
@@ -366,7 +366,7 @@ export const EditableTable = () => {
                 </button>
                 <button
                   onClick={() => deleteSection(sectionIdx)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive text-destructive hover:bg-destructive/10 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive text-destructive hover:bg-destructive/10 transition-colors flex-1 sm:flex-none justify-center"
                   aria-label="Delete section"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -376,15 +376,16 @@ export const EditableTable = () => {
             </div>
 
             {/* Table for this section */}
-            <table className="w-full">
-              <colgroup>
-                <col style={{ width: '18%' }} />
-                <col style={{ width: '35%' }} />
-                <col style={{ width: '13%' }} />
-                <col style={{ width: '13%' }} />
-                <col style={{ width: '13%' }} />
-                <col style={{ width: '8%' }} />
-              </colgroup>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <colgroup>
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '35%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '8%' }} />
+                </colgroup>
               <tbody>
                 {/* Row 0: Header with 6 columns (A1 editable title, B1-E1 labels, F1 Create New) */}
                 <tr>
@@ -561,7 +562,8 @@ export const EditableTable = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
         ))}
       </div>

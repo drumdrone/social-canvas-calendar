@@ -189,67 +189,140 @@ export const MoodBoard: React.FC = () => {
   }
 
   return (
-    <div className="h-full w-full p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Mood Board</h2>
-        <Button onClick={addNewItem} size="sm">
+    <div className="h-full w-full p-4 lg:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+        <h2 className="text-xl lg:text-2xl font-bold">Mood Board</h2>
+        <Button onClick={addNewItem} size="sm" className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Item
         </Button>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              {columns.map((col) => (
-                <TableHead key={col.key} className="w-1/5">
-                  {col.label}
-                </TableHead>
-              ))}
-              <TableHead className="w-20">Actions</TableHead>
+              <TableHead className="min-w-[120px]">Nápad</TableHead>
+              <TableHead className="min-w-[150px] hidden sm:table-cell">Text</TableHead>
+              <TableHead className="min-w-[150px] hidden md:table-cell">Popis</TableHead>
+              <TableHead className="min-w-[150px] hidden lg:table-cell">Image prompt</TableHead>
+              <TableHead className="min-w-[100px]">Formát</TableHead>
+              <TableHead className="w-16">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.map((item) => (
               <TableRow key={item.id}>
-                {columns.map((col) => (
-                  <TableCell
-                    key={col.key}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleCellClick(item.id, col.key)}
-                  >
-                    {editingCell?.rowId === item.id && editingCell?.column === col.key ? (
-                      <Input
-                        ref={inputRef}
-                        value={item[col.key]}
-                        onChange={(e) => updateItem(item.id, col.key, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, item.id, col.key)}
-                        onBlur={() => handleBlur(item.id)}
-                        className="border-none p-0 h-auto bg-transparent focus:ring-0 focus:ring-offset-0"
-                      />
-                    ) : (
-                      <span className="block p-1">
-                        {item[col.key] || <span className="text-muted-foreground">Click to edit...</span>}
-                      </span>
-                    )}
-                  </TableCell>
-                ))}
+                <TableCell 
+                  className="cursor-pointer hover:bg-muted/50 font-medium"
+                  onClick={() => handleCellClick(item.id, 'napad')}
+                >
+                  {editingCell?.rowId === item.id && editingCell?.column === 'napad' ? (
+                    <Input
+                      ref={inputRef}
+                      value={item.napad}
+                      onChange={(e) => updateItem(item.id, 'napad', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, item.id, 'napad')}
+                      onBlur={() => handleBlur(item.id)}
+                      className="border-none p-0 h-auto bg-transparent focus:ring-0 focus:ring-offset-0"
+                    />
+                  ) : (
+                    <span className="block p-1">
+                      {item.napad || <span className="text-muted-foreground">Click to edit...</span>}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell 
+                  className="cursor-pointer hover:bg-muted/50 hidden sm:table-cell"
+                  onClick={() => handleCellClick(item.id, 'text')}
+                >
+                  {editingCell?.rowId === item.id && editingCell?.column === 'text' ? (
+                    <Input
+                      ref={inputRef}
+                      value={item.text}
+                      onChange={(e) => updateItem(item.id, 'text', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, item.id, 'text')}
+                      onBlur={() => handleBlur(item.id)}
+                      className="border-none p-0 h-auto bg-transparent focus:ring-0 focus:ring-offset-0"
+                    />
+                  ) : (
+                    <span className="block p-1">
+                      {item.text || <span className="text-muted-foreground">Click to edit...</span>}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell 
+                  className="cursor-pointer hover:bg-muted/50 hidden md:table-cell"
+                  onClick={() => handleCellClick(item.id, 'popis')}
+                >
+                  {editingCell?.rowId === item.id && editingCell?.column === 'popis' ? (
+                    <Input
+                      ref={inputRef}
+                      value={item.popis}
+                      onChange={(e) => updateItem(item.id, 'popis', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, item.id, 'popis')}
+                      onBlur={() => handleBlur(item.id)}
+                      className="border-none p-0 h-auto bg-transparent focus:ring-0 focus:ring-offset-0"
+                    />
+                  ) : (
+                    <span className="block p-1">
+                      {item.popis || <span className="text-muted-foreground">Click to edit...</span>}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell 
+                  className="cursor-pointer hover:bg-muted/50 hidden lg:table-cell"
+                  onClick={() => handleCellClick(item.id, 'image_prompt')}
+                >
+                  {editingCell?.rowId === item.id && editingCell?.column === 'image_prompt' ? (
+                    <Input
+                      ref={inputRef}
+                      value={item.image_prompt}
+                      onChange={(e) => updateItem(item.id, 'image_prompt', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, item.id, 'image_prompt')}
+                      onBlur={() => handleBlur(item.id)}
+                      className="border-none p-0 h-auto bg-transparent focus:ring-0 focus:ring-offset-0"
+                    />
+                  ) : (
+                    <span className="block p-1">
+                      {item.image_prompt || <span className="text-muted-foreground">Click to edit...</span>}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell 
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleCellClick(item.id, 'format')}
+                >
+                  {editingCell?.rowId === item.id && editingCell?.column === 'format' ? (
+                    <Input
+                      ref={inputRef}
+                      value={item.format}
+                      onChange={(e) => updateItem(item.id, 'format', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, item.id, 'format')}
+                      onBlur={() => handleBlur(item.id)}
+                      className="border-none p-0 h-auto bg-transparent focus:ring-0 focus:ring-offset-0"
+                    />
+                  ) : (
+                    <span className="block p-1">
+                      {item.format || <span className="text-muted-foreground">Click to edit...</span>}
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteItem(item.id)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                    className="h-6 w-6 lg:h-8 lg:w-8 p-0 text-destructive hover:text-destructive"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3 w-3 lg:h-4 lg:w-4" />
                   </Button>
                 </TableCell>
               </TableRow>
             ))}
             {items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={columns.length + 1} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No items yet. Click "Add Item" to get started.
                 </TableCell>
               </TableRow>
