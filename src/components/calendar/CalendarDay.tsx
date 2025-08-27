@@ -3,7 +3,9 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { SocialPost } from '../SocialCalendar';
 import { PostPreview } from './PostPreview';
-import { Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Linkedin, Share2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 interface CalendarDayProps {
   date: Date;
@@ -65,6 +67,13 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
     onClick();
   };
 
+  const handleCopyLink = (e: React.MouseEvent, post: SocialPost) => {
+    e.stopPropagation();
+    const shareableUrl = `${window.location.origin}/post/${post.id}`;
+    navigator.clipboard.writeText(shareableUrl);
+    toast.success('Share link copied to clipboard!');
+  };
+
   return (
     <div
       className={cn(
@@ -102,14 +111,26 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
               
               {/* Title overlay on image - always visible */}
               <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm text-white p-2">
-                <div className="text-xs font-semibold truncate">
-                  {firstImagePost.title}
-                </div>
-                {firstImagePost.content && (
-                  <div className="text-xs opacity-80 truncate mt-1">
-                    {firstImagePost.content}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold truncate">
+                      {firstImagePost.title}
+                    </div>
+                    {firstImagePost.content && (
+                      <div className="text-xs opacity-80 truncate mt-1">
+                        {firstImagePost.content}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => handleCopyLink(e, firstImagePost)}
+                    className="h-5 w-5 p-0 hover:bg-white/20 text-white hover:text-white ml-1 flex-shrink-0"
+                  >
+                    <Share2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
               
               {/* Platform icon */}
@@ -164,14 +185,26 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                   onClick={(e) => handlePostClick(e, posts[0])}
                   title={(posts[0] as any).comments || ''}
                 >
-                  <div className="text-xs font-medium truncate mb-1">
-                    {posts[0].title}
-                  </div>
-                  {posts[0].content && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      {posts[0].content}
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium truncate mb-1">
+                        {posts[0].title}
+                      </div>
+                      {posts[0].content && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {posts[0].content}
+                        </div>
+                      )}
                     </div>
-                  )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleCopyLink(e, posts[0])}
+                      className="h-4 w-4 p-0 hover:bg-muted/40 ml-1 flex-shrink-0"
+                    >
+                      <Share2 className="h-2.5 w-2.5" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -189,14 +222,26 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                   onClick={(e) => handlePostClick(e, post)}
                   title={(post as any).comments || ''}
                 >
-                  <div className="text-xs font-medium truncate">
-                    {post.title}
-                  </div>
-                  {post.content && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      {post.content}
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium truncate">
+                        {post.title}
+                      </div>
+                      {post.content && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {post.content}
+                        </div>
+                      )}
                     </div>
-                  )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleCopyLink(e, post)}
+                      className="h-4 w-4 p-0 hover:bg-muted/40 ml-1 flex-shrink-0"
+                    >
+                      <Share2 className="h-2.5 w-2.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
               {posts.length > 3 && (
