@@ -333,13 +333,13 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     {post?.image_url && (
                       <div className="space-y-2">
                         <Label>Current Image</Label>
-                        <div className="relative cursor-pointer group" onClick={() => document.getElementById('image-upload')?.click()}>
+                        <div className="relative cursor-pointer group h-80 overflow-hidden rounded-lg border" onClick={() => document.getElementById('image-upload')?.click()}>
                           <img 
                             src={post.image_url} 
                             alt="Current post image" 
-                            className="w-full aspect-video object-cover rounded-lg border group-hover:opacity-80 transition-opacity"
+                            className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors">
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
                             <Upload className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </div>
