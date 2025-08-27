@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, isSameMonth } from 'date-fns';
-import { Facebook, Instagram, Twitter, Linkedin, Calendar, Clock, Trash2, Plus, Save, X, Edit, Upload, Image as ImageIcon } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Linkedin, Calendar, Clock, Trash2, Plus, Save, X, Edit, Upload, Image as ImageIcon, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -788,11 +788,24 @@ export const PostsTable: React.FC<PostsTableProps> = ({
               </div>
             </div>
           </TableCell>
-                          <TableCell>
-                            <Button size="sm" variant="outline" onClick={() => handleDelete(post.id)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </TableCell>
+                           <TableCell>
+                             <div className="flex gap-1">
+                               <Button 
+                                 size="sm" 
+                                 variant="outline" 
+                                 onClick={() => {
+                                   const shareableUrl = `${window.location.origin}/post/${post.id}`;
+                                   navigator.clipboard.writeText(shareableUrl);
+                                   toast.success('Share link copied to clipboard!');
+                                 }}
+                               >
+                                 <Share2 className="h-3 w-3" />
+                               </Button>
+                               <Button size="sm" variant="outline" onClick={() => handleDelete(post.id)}>
+                                 <Trash2 className="h-3 w-3" />
+                               </Button>
+                             </div>
+                           </TableCell>
                         </TableRow>
                       );
                     })}

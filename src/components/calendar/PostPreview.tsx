@@ -1,7 +1,9 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { SocialPost } from '../SocialCalendar';
-import { Facebook, Instagram, Twitter, Linkedin, Image } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Linkedin, Image, Share2, Copy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 interface PostPreviewProps {
   post: SocialPost;
@@ -32,6 +34,13 @@ const statusColors = {
 export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact = false }) => {
   const Icon = platformIcons[post.platform];
   
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shareableUrl = `${window.location.origin}/post/${post.id}`;
+    navigator.clipboard.writeText(shareableUrl);
+    toast.success('Share link copied to clipboard!');
+  };
+  
   return (
     <div 
       className={cn(
@@ -47,6 +56,16 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
       <div className="flex items-center gap-1 mb-1">
         <Icon className={compact ? "h-2 w-2" : "h-3 w-3"} />
         <span className="font-medium truncate flex-1">{post.title}</span>
+        {!compact && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCopyLink}
+            className="h-5 w-5 p-0 hover:bg-background/80"
+          >
+            <Share2 className="h-3 w-3" />
+          </Button>
+        )}
         <span className={cn(
           "px-1 py-0.5 rounded font-medium",
           compact ? "text-xs" : "text-xs",
