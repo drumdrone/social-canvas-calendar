@@ -133,11 +133,11 @@ const ShareablePost = () => {
                   <ImageIcon className="h-4 w-4" />
                   Image
                 </h3>
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border rounded-lg overflow-hidden h-80">
                   <img 
                     src={post.image_url} 
                     alt="Post image" 
-                    className="w-full h-auto max-h-96 object-cover"
+                    className="w-full h-full object-cover"
                   />
                 </div>
               </div>

@@ -158,7 +158,7 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
 
           {/* Post Image */}
           {post.image_url && (
-            <div className="relative w-full aspect-square">
+            <div className="relative w-full h-80 overflow-hidden">
               <img
                 src={post.image_url}
                 alt={post.title || "Post image"}
