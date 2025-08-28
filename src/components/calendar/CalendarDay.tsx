@@ -165,7 +165,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
               {firstImagePost.author && authorData[firstImagePost.author] && (
                 <div className="absolute top-2 right-2">
                   <div 
-                    className="rounded-full w-8 h-8 flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-lg"
+                    className="rounded-full w-8 h-8 flex items-center justify-center text-white font-bold text-sm shadow-lg p-1"
                     style={{ backgroundColor: authorData[firstImagePost.author].color }}
                   >
                     {authorData[firstImagePost.author].initials.slice(0, 3)}
@@ -240,7 +240,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                     {posts[0].author && authorData[posts[0].author] && (
                       <div className="absolute top-0 right-0">
                         <div 
-                          className="rounded-full w-6 h-6 flex items-center justify-center text-white font-bold text-xs border border-white shadow-sm"
+                          className="rounded-full w-7 h-7 flex items-center justify-center text-white font-bold text-xs shadow-md p-1"
                           style={{ backgroundColor: authorData[posts[0].author].color }}
                         >
                           {authorData[posts[0].author].initials.slice(0, 3)}

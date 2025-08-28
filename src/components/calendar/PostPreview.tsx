@@ -88,7 +88,7 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
         <div className="flex items-center gap-1 absolute top-0 right-0 bg-background/90 rounded-md p-1">
           {post.author && authorData && (
             <div 
-              className="rounded-full w-6 h-6 flex items-center justify-center text-white font-bold text-xs border-2 border-white shadow-sm"
+              className="rounded-full w-7 h-7 flex items-center justify-center text-white font-bold text-xs shadow-md p-1"
               style={{ backgroundColor: authorData.color }}
             >
               {authorData.initials.slice(0, 3)}

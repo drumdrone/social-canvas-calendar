@@ -14,7 +14,7 @@ interface Cell {
 
 interface Section {
   id: string;
-  cells: Cell[][]; // 5 rows x 6 cols (A-F)
+  cells: Cell[][]; // 5 rows x 5 cols (A-E)
 }
 
 const backgroundColors = [
@@ -32,7 +32,7 @@ const categories = ['Novinky', 'Veda'] as const;
 
 const createDefaultSection = (): Section => {
   const cells: Cell[][] = Array.from({ length: 5 }, (_, rowIndex) =>
-    Array.from({ length: 6 }, (_, colIndex) => {
+    Array.from({ length: 5 }, (_, colIndex) => {
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       if (rowIndex === 0 && colIndex === 0) {
         // A1: Title cell (H1-like), editable with background color
@@ -43,9 +43,9 @@ const createDefaultSection = (): Section => {
           backgroundColor: 'transparent',
         };
       }
-      if (rowIndex === 0 && colIndex > 0 && colIndex < 5) {
-        // B1-E1: Header labels (not editable)
-        const labels = ['Popis', 'Plan Description', 'Product Line', 'Pilíř'] as const;
+      if (rowIndex === 0 && colIndex > 0 && colIndex < 4) {
+        // B1-D1: Header labels (not editable)
+        const labels = ['Popis', 'Plan Description', 'Pilíř'] as const;
         return {
           id,
           content: labels[colIndex - 1],
@@ -53,8 +53,8 @@ const createDefaultSection = (): Section => {
           backgroundColor: 'transparent',
         };
       }
-      if (rowIndex === 0 && colIndex === 5) {
-        // F1: Create New header
+      if (rowIndex === 0 && colIndex === 4) {
+        // E1: Create New header
         return {
           id,
           content: 'Create New',
@@ -83,29 +83,35 @@ const createDefaultSection = (): Section => {
   return { id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` , cells };
 };
 
-// Migration function to ensure sections have 6 columns
+// Migration function to ensure sections have 5 columns
 const migrateSection = (section: Section): Section => {
   if (!section.cells || section.cells.length === 0) {
     return createDefaultSection();
   }
   
-  // Check if we need to migrate from 5 to 6 columns
-  const needsMigration = section.cells.some(row => row.length < 6);
+  // Check if we need to migrate to 5 columns
+  const needsMigration = section.cells.some(row => row.length !== 5);
   
   if (!needsMigration) {
     return section;
   }
 
-  // Migrate each row to have 6 columns
+  // Migrate each row to have 5 columns (remove product line column)
   const migratedCells = section.cells.map((row, rowIndex) => {
-    // Ensure we have at least 6 columns
-    const newRow = [...row];
-    while (newRow.length < 6) {
+    let newRow = [...row];
+    
+    // If we have more than 5 columns, remove the product line column (index 3)
+    if (newRow.length > 5) {
+      newRow.splice(3, 1); // Remove product line column
+    }
+    
+    // Ensure we have exactly 5 columns
+    while (newRow.length < 5) {
       const colIndex = newRow.length;
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       
-      if (rowIndex === 0 && colIndex === 5) {
-        // F1: Create New header
+      if (rowIndex === 0 && colIndex === 4) {
+        // E1: Create New header
         newRow.push({
           id,
           content: 'Create New',
@@ -377,17 +383,16 @@ export const EditableTable = () => {
 
             {/* Table for this section */}
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
+              <table className="w-full min-w-[700px]">
                 <colgroup>
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '35%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '20%' }} />
+                  <col style={{ width: '40%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '10%' }} />
                 </colgroup>
               <tbody>
-                {/* Row 0: Header with 6 columns (A1 editable title, B1-E1 labels, F1 Create New) */}
+                {/* Row 0: Header with 5 columns (A1 editable title, B1-D1 labels, E1 Create New) */}
                 <tr>
                   {/* A1 - Editable Title */}
                   <td
@@ -420,26 +425,19 @@ export const EditableTable = () => {
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][2].content}</div>
                   </td>
-                  {/* D1 - Product Line */}
+                  {/* D1 - Pilíř */}
                   <td
                     className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 3 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
                     onClick={() => handleCellClick(sectionIdx, 0, 3)}
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][3].content}</div>
                   </td>
-                  {/* E1 - Pilíř */}
-                  <td
-                    className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 4 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
-                    onClick={() => handleCellClick(sectionIdx, 0, 4)}
-                  >
-                    <div className="text-sm text-muted-foreground font-medium">{section.cells[0][4].content}</div>
-                  </td>
-                  {/* F1 - Create New header */}
+                  {/* E1 - Create New header */}
                   <td
                     className="border border-border p-4 cursor-pointer hover:bg-muted/50"
                   >
                     <div className="text-sm text-muted-foreground font-medium text-center">
-                      {section.cells[0] && section.cells[0][5] ? section.cells[0][5].content : 'Create New'}
+                      {section.cells[0] && section.cells[0][4] ? section.cells[0][4].content : 'Create New'}
                     </div>
                   </td>
                 </tr>
@@ -450,24 +448,37 @@ export const EditableTable = () => {
                     {row.map((cell, colIndex) => (
                       <td
                         key={cell.id}
-                        className={`border border-border p-2 min-w-[120px] h-16 cursor-pointer ${
-                          selectedCell?.section === sectionIdx && selectedCell?.row === rIdx + 1 && selectedCell?.col === colIndex
-                            ? 'ring-2 ring-primary ring-inset'
-                            : 'hover:bg-muted/50'
-                        }`}
+                         className={`border border-border p-1 min-w-[120px] h-16 cursor-pointer relative ${
+                           selectedCell?.section === sectionIdx && selectedCell?.row === rIdx + 1 && selectedCell?.col === colIndex
+                             ? 'ring-2 ring-primary ring-inset'
+                             : 'hover:bg-muted/50'
+                         }`}
                         onClick={() => handleCellClick(sectionIdx, rIdx + 1, colIndex)}
                       >
                         {colIndex === 0 ? (
                           <div className="text-sm text-foreground">{weeks[rIdx]}</div>
                         ) : colIndex === 1 ? (
-                          <input
-                            type="text"
-                            value={cell.content}
-                            onChange={(e) => handleContentChange(sectionIdx, rIdx + 1, colIndex, e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                            className="w-full h-full bg-transparent border-none outline-none text-sm"
-                            placeholder="Write here"
-                          />
+                          // URL input that opens in new window when clicked
+                          <div className="w-full h-full">
+                            <input
+                              type="url"
+                              value={cell.content}
+                              onChange={(e) => handleContentChange(sectionIdx, rIdx + 1, colIndex, e.target.value)}
+                              onKeyPress={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                              className="w-full h-full bg-transparent border-none outline-none text-sm"
+                              placeholder="Enter URL..."
+                            />
+                            {cell.content && cell.content.startsWith('http') && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(cell.content, '_blank');
+                                }}
+                                className="absolute inset-0 cursor-pointer"
+                                title="Open URL in new window"
+                              />
+                            )}
+                          </div>
                         ) : colIndex === 2 ? (
                           <input
                             type="text"
@@ -478,40 +489,6 @@ export const EditableTable = () => {
                             placeholder="Plan description"
                           />
                         ) : colIndex === 3 ? (
-                          // Product Line select with enhanced colors
-                          <Select
-                            value={cell.content}
-                            onValueChange={(value) => updateCell(sectionIdx, rIdx + 1, colIndex, { content: value })}
-                          >
-                            <SelectTrigger 
-                              className="w-full border-none shadow-none focus:ring-0"
-                              style={{
-                                backgroundColor: productLines.find(pl => pl.name === cell.content)?.color ? 
-                                  `${productLines.find(pl => pl.name === cell.content)?.color}30` : 
-                                  'hsl(var(--muted))',
-                                color: productLines.find(pl => pl.name === cell.content)?.color || 'hsl(var(--foreground))',
-                                fontWeight: '500'
-                              }}
-                            >
-                              <SelectValue placeholder="Product Line" />
-                            </SelectTrigger>
-                            <SelectContent className="z-50 bg-popover">
-                              {productLines.map((pl) => (
-                                <SelectItem key={pl.name} value={pl.name}>
-                                  <div 
-                                    className="px-3 py-2 rounded text-sm w-full font-medium"
-                                    style={{
-                                      backgroundColor: `${pl.color}30`,
-                                      color: pl.color
-                                    }}
-                                  >
-                                    {pl.name}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : colIndex === 4 ? (
                           // Pillar select with full background colors
                           <Select
                             value={cell.content || ""}
@@ -545,7 +522,7 @@ export const EditableTable = () => {
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : colIndex === 5 ? (
+                        ) : colIndex === 4 ? (
                           <div className="flex justify-center">
                             <Button
                               variant="ghost"
