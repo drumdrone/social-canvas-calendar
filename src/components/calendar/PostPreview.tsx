@@ -78,34 +78,39 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
         onClick?.();
       }}
     >
-      <div className="flex items-center gap-1 mb-1">
-        <Icon className={compact ? "h-2 w-2" : "h-3 w-3"} />
-        <span className="font-medium truncate flex-1">{post.title}</span>
-        {post.author && authorData && (
-          <Badge 
-            className="text-white font-bold text-xs rounded-full w-4 h-4 flex items-center justify-center p-0 text-[8px]"
-            style={{ backgroundColor: authorData.color }}
-          >
-            {authorData.initials}
-          </Badge>
-        )}
-        {!compact && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCopyLink}
-            className="h-5 w-5 p-0 hover:bg-background/80"
-          >
-            <Share2 className="h-3 w-3" />
-          </Button>
-        )}
-        <span className={cn(
-          "px-1 py-0.5 rounded font-medium",
-          compact ? "text-xs" : "text-xs",
-          statusColors[post.status]
-        )}>
-          {post.status.charAt(0).toUpperCase()}
-        </span>
+      <div className="flex items-start justify-between mb-1 relative">
+        <div className="flex items-center gap-1 flex-1 pr-2">
+          <Icon className={compact ? "h-2 w-2" : "h-3 w-3"} />
+          <span className="font-medium truncate flex-1">{post.title}</span>
+        </div>
+        
+        {/* Right side with author badge and status */}
+        <div className="flex items-center gap-1 absolute top-0 right-0 bg-background/90 rounded-md p-1">
+          {post.author && authorData && (
+            <div 
+              className="rounded-full w-6 h-6 flex items-center justify-center text-white font-bold text-xs border-2 border-white shadow-sm"
+              style={{ backgroundColor: authorData.color }}
+            >
+              {authorData.initials.slice(0, 3)}
+            </div>
+          )}
+          <span className={cn(
+            "px-1.5 py-0.5 rounded-full font-medium text-xs",
+            statusColors[post.status]
+          )}>
+            {post.status.charAt(0).toUpperCase()}
+          </span>
+          {!compact && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopyLink}
+              className="h-5 w-5 p-0 hover:bg-background/80"
+            >
+              <Share2 className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
       </div>
       
       {!compact && post.image_url && (

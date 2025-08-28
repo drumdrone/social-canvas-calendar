@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { SocialPost } from '../SocialCalendar';
@@ -6,6 +6,7 @@ import { PostPreview } from './PostPreview';
 import { Facebook, Instagram, Twitter, Linkedin, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CalendarDayProps {
   date: Date;
@@ -28,6 +29,33 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
 }) => {
   const hasImage = posts.some(post => post.image_url);
   const firstImagePost = posts.find(post => post.image_url);
+  const [authorData, setAuthorData] = useState<{ [key: string]: { initials: string; color: string } }>({});
+  
+  useEffect(() => {
+    const fetchAuthorData = async () => {
+      const authors = new Set(posts.map(post => post.author).filter(Boolean));
+      if (authors.size === 0) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('authors')
+          .select('initials, color')
+          .in('initials', Array.from(authors));
+        
+        if (data) {
+          const authorMap = data.reduce((acc, author) => {
+            acc[author.initials] = author;
+            return acc;
+          }, {} as { [key: string]: { initials: string; color: string } });
+          setAuthorData(authorMap);
+        }
+      } catch (error) {
+        console.error('Error fetching author data:', error);
+      }
+    };
+
+    fetchAuthorData();
+  }, [posts]);
   
   const platformIcons = {
     facebook: Facebook,
@@ -133,6 +161,18 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                 </div>
               </div>
               
+              {/* Author badge overlay - top right */}
+              {firstImagePost.author && authorData[firstImagePost.author] && (
+                <div className="absolute top-2 right-2">
+                  <div 
+                    className="rounded-full w-8 h-8 flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-lg"
+                    style={{ backgroundColor: authorData[firstImagePost.author].color }}
+                  >
+                    {authorData[firstImagePost.author].initials.slice(0, 3)}
+                  </div>
+                </div>
+              )}
+              
               {/* Platform icon */}
               <div className="absolute bottom-1 right-1">
                 {(() => {
@@ -185,8 +225,8 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                   onClick={(e) => handlePostClick(e, posts[0])}
                   title={(posts[0] as any).comments || ''}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between relative">
+                    <div className="flex-1 min-w-0 pr-8">
                       <div className="text-xs font-medium truncate mb-1">
                         {posts[0].title}
                       </div>
@@ -196,6 +236,17 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                         </div>
                       )}
                     </div>
+                    {/* Author badge for non-image posts */}
+                    {posts[0].author && authorData[posts[0].author] && (
+                      <div className="absolute top-0 right-0">
+                        <div 
+                          className="rounded-full w-6 h-6 flex items-center justify-center text-white font-bold text-xs border border-white shadow-sm"
+                          style={{ backgroundColor: authorData[posts[0].author].color }}
+                        >
+                          {authorData[posts[0].author].initials.slice(0, 3)}
+                        </div>
+                      </div>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
