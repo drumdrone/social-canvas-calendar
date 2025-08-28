@@ -211,7 +211,7 @@ export const PlanTable = () => {
         .from('plan_sections')
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (existingData) {
         const { error } = await supabase
