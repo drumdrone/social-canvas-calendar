@@ -420,46 +420,45 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       </div>
                     </div>
 
-                    {/* Category and Author */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Category</Label>
-                        <Select value={category} onValueChange={setCategory}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categoryOptions.map((c) => (
-                              <SelectItem key={c.name} value={c.name}>
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    {/* Category */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Category</Label>
+                      <Select value={category} onValueChange={setCategory}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categoryOptions.map((c) => (
+                            <SelectItem key={c.name} value={c.name}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Author</Label>
-                        <Select value={author} onValueChange={setAuthor}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select author" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">None</SelectItem>
-                            {authorOptions.map((a) => (
-                              <SelectItem key={a.initials} value={a.initials}>
-                                <div className="flex items-center gap-2">
-                                  <div 
-                                    className="w-3 h-3 rounded-full"
-                                    style={{ backgroundColor: a.color }}
-                                  />
-                                  {a.name} ({a.initials})
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    {/* Author */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Author</Label>
+                      <Select value={author} onValueChange={setAuthor}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select author" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {authorOptions.map((a) => (
+                            <SelectItem key={a.initials} value={a.initials}>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: a.color }}
+                                />
+                                {a.name} ({a.initials})
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     {/* Pillar and Product Line */}
