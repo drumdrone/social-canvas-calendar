@@ -125,6 +125,7 @@ export const MonthSection: React.FC<MonthSectionProps> = ({
     }
 
     if (field === 'url' && week[field]) {
+      const displayUrl = week[field].length > 25 ? week[field].substring(0, 25) + '...' : week[field];
       return (
         <div className="flex items-center gap-2 p-1">
           <a
@@ -133,8 +134,9 @@ export const MonthSection: React.FC<MonthSectionProps> = ({
             rel="noopener noreferrer"
             className="text-primary hover:underline flex-1 truncate"
             onClick={(e) => e.stopPropagation()}
+            title={week[field]}
           >
-            {week[field]}
+            {displayUrl}
           </a>
           <Button
             size="sm"
@@ -248,10 +250,9 @@ export const MonthSection: React.FC<MonthSectionProps> = ({
             <TableRow>
               <TableHead className="w-[100px]">Week</TableHead>
               <TableHead className="w-[150px]">Title</TableHead>
+              <TableHead className="w-[200px]">Notes</TableHead>
               <TableHead className="w-[120px]">Pillar</TableHead>
               <TableHead className="w-[200px]">URL</TableHead>
-              
-              <TableHead>Notes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -259,9 +260,9 @@ export const MonthSection: React.FC<MonthSectionProps> = ({
               <TableRow key={week.id}>
                 <TableCell className="font-medium">Week {index + 1}</TableCell>
                 <TableCell>{renderCell(week, 'title')}</TableCell>
+                <TableCell>{renderCell(week, 'notes')}</TableCell>
                 <TableCell>{renderCell(week, 'pillar')}</TableCell>
                 <TableCell>{renderCell(week, 'url')}</TableCell>
-                <TableCell>{renderCell(week, 'notes')}</TableCell>
               </TableRow>
             ))}
           </TableBody>

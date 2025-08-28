@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Upload, FolderOpen, Image } from "lucide-react";
-import { MediaGallery } from "@/components/media/MediaGallery";
+import { X, Upload, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,8 +17,6 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
   onImagesChange,
   maxImages = 3
 }) => {
-  const [showMediaGallery, setShowMediaGallery] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<number>(0);
   const [uploading, setUploading] = useState(false);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
@@ -60,16 +57,6 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
     onImagesChange(newImages);
   };
 
-  const handleGallerySelect = (imageUrl: string) => {
-    const newImages = [...images];
-    newImages[selectedSlot] = imageUrl;
-    onImagesChange(newImages);
-  };
-
-  const openGalleryForSlot = (slotIndex: number) => {
-    setSelectedSlot(slotIndex);
-    setShowMediaGallery(true);
-  };
 
   return (
     <div className="space-y-4">
@@ -102,15 +89,6 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
               <div className="h-32 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2">
                 <Image className="w-8 h-8 text-muted-foreground" />
                 <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openGalleryForSlot(index)}
-                    className="text-xs h-7"
-                  >
-                    <FolderOpen className="w-3 h-3 mr-1" />
-                    Gallery
-                  </Button>
                   <Label className="cursor-pointer">
                     <Button
                       size="sm"
@@ -138,12 +116,6 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
         ))}
       </div>
 
-      <MediaGallery
-        isOpen={showMediaGallery}
-        onClose={() => setShowMediaGallery(false)}
-        onSelect={handleGallerySelect}
-        currentImages={images.filter(Boolean) as string[]}
-      />
     </div>
   );
 };
