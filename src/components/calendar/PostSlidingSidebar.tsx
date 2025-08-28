@@ -395,7 +395,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                             <SelectValue placeholder="Select platform" />
                           </SelectTrigger>
                           <SelectContent>
-                            {platformOptions.map((p) => (
+                            {platformOptions.filter(p => p && p.trim() !== '').map((p) => (
                               <SelectItem key={p} value={p}>
                                 {p}
                               </SelectItem>
@@ -411,7 +411,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                           <SelectContent>
-                            {statusOptions.map((s) => (
+                            {statusOptions.filter(s => s && s.trim() !== '').map((s) => (
                               <SelectItem key={s} value={s}>
                                 {s}
                               </SelectItem>
@@ -428,12 +428,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {categoryOptions.map((c) => (
-                            <SelectItem key={c.name} value={c.name}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
+                          <SelectContent>
+                            {categoryOptions.filter(c => c.name && c.name.trim() !== '').map((c) => (
+                              <SelectItem key={c.name} value={c.name}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -447,7 +447,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                         </SelectTrigger>
                         <SelectContent className="bg-background border border-border shadow-lg z-[60]">
                           <SelectItem value="none">None</SelectItem>
-                          {authorOptions.map((a) => (
+                          {authorOptions.filter(a => a.initials && a.initials.trim() !== '').map((a) => (
                             <SelectItem key={a.initials} value={a.initials}>
                               <div className="flex items-center gap-2">
                                 <div 
@@ -472,7 +472,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">None</SelectItem>
-                            {pillarOptions.map((p) => (
+                            {pillarOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
                               <SelectItem key={p.name} value={p.name}>
                                 {p.name}
                               </SelectItem>
@@ -489,7 +489,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">None</SelectItem>
-                            {productLineOptions.map((p) => (
+                            {productLineOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
                               <SelectItem key={p.name} value={p.name}>
                                 {p.name}
                               </SelectItem>
