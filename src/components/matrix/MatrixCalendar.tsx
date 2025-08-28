@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, endOfMonth, eachWeekOfInterval, getWeeksInMonth, getWeek, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+import { useImageHover } from '@/hooks/useImageHover';
 
 interface SocialPost {
   id: string;
@@ -17,7 +18,10 @@ interface SocialPost {
   category: string;
   pillar: string;
   product_line: string;
-  image_url: string;
+  image_url?: string;
+  image_url_1?: string;
+  image_url_2?: string;
+  image_url_3?: string;
   author?: string;
 }
 
@@ -37,6 +41,7 @@ export const MatrixCalendar: React.FC = () => {
   const [authorsData, setAuthorsData] = useState<Record<string, { initials: string; color: string }>>({});
   const [loading, setLoading] = useState(false);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [enlargedImage, setEnlargedImage] = useState<{ url: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
     fetchPosts();
@@ -197,57 +202,11 @@ export const MatrixCalendar: React.FC = () => {
                         const dayPosts = getPostsForDateAndPlatform(day, platform.name);
                         return (
                           <td key={platform.name} className="border border-border p-1 align-top">
-                            <div className="space-y-1">
-                              {dayPosts.map((post) => (
-                                <div key={post.id} className="text-xs p-1 bg-background rounded border">
-                                  <div className="flex gap-2">
-                                    {post.image_url && (
-                                      <img 
-                                        src={post.image_url} 
-                                        alt="" 
-                                        className="w-8 h-8 rounded object-cover flex-shrink-0"
-                                      />
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-medium truncate">{post.title}</div>
-                                      {post.content && (
-                                        <div className="text-muted-foreground truncate text-[10px]">
-                                          {post.content.substring(0, 30)}...
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-wrap items-center gap-1 mt-1">
-                                    <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
-                                      {post.status}
-                                    </Badge>
-                                    {post.category && (
-                                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
-                                        {post.category}
-                                      </Badge>
-                                    )}
-                                    {post.product_line && (
-                                      <Badge variant="default" className="text-[9px] px-1 py-0 h-4 bg-primary/20 text-primary">
-                                        {post.product_line}
-                                      </Badge>
-                                    )}
-                                     {post.pillar && (
-                                       <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-accent/20 text-accent-foreground">
-                                         {post.pillar}
-                                       </Badge>
-                                     )}
-                                     {post.author && authorsData[post.author] && (
-                                       <Badge 
-                                         className="text-white font-bold text-xs rounded-full w-4 h-4 flex items-center justify-center p-0 text-[8px]"
-                                         style={{ backgroundColor: authorsData[post.author].color }}
-                                       >
-                                         {authorsData[post.author].initials}
-                                       </Badge>
-                                     )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                             <div className="space-y-1">
+                               {dayPosts.map((post) => (
+                                 <PostCell key={post.id} post={post} onImageHover={setEnlargedImage} />
+                               ))}
+                             </div>
                           </td>
                         );
                       })}
@@ -259,6 +218,123 @@ export const MatrixCalendar: React.FC = () => {
           </table>
         </div>
       </Card>
+      
+      {/* Enlarged Image Overlay */}
+      {enlargedImage && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <div className="relative max-w-3xl max-h-[80vh]">
+            <img 
+              src={enlargedImage.url} 
+              alt="Enlarged view"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface PostCellProps {
+  post: SocialPost;
+  onImageHover: (imageData: { url: string; x: number; y: number } | null) => void;
+}
+
+const PostCell: React.FC<PostCellProps> = ({ post, onImageHover }) => {
+  const images = [post.image_url_1, post.image_url_2, post.image_url_3, post.image_url].filter(Boolean) as string[];
+  const { currentImage, setIsHovering, hasMultipleImages } = useImageHover(images, 1500);
+  
+  // We need to get authorsData from parent component - let's pass it as prop
+  const [authorsData, setAuthorsData] = useState<Record<string, { initials: string; color: string }>>({});
+  
+  useEffect(() => {
+    if (post.author) {
+      const fetchAuthor = async () => {
+        const { data } = await supabase
+          .from('authors')
+          .select('initials, color')
+          .eq('initials', post.author)
+          .single();
+        if (data) {
+          setAuthorsData(prev => ({ ...prev, [post.author!]: data }));
+        }
+      };
+      fetchAuthor();
+    }
+  }, [post.author]);
+
+  const handleImageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentImage) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      onImageHover({
+        url: currentImage,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      });
+    }
+  };
+
+  return (
+    <div className="text-xs p-1 bg-background rounded border">
+      <div className="flex gap-2">
+        {currentImage && (
+          <div className="relative">
+            <img 
+              src={currentImage} 
+              alt="" 
+              className="w-8 h-8 rounded object-cover flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+              onClick={handleImageClick}
+            />
+            {hasMultipleImages && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full text-[8px] text-primary-foreground flex items-center justify-center">
+                {images.length}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="font-medium truncate">{post.title}</div>
+          {post.content && (
+            <div className="text-muted-foreground truncate text-[10px]">
+              {post.content.substring(0, 30)}...
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-1 mt-1">
+        <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+          {post.status}
+        </Badge>
+        {post.category && (
+          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+            {post.category}
+          </Badge>
+        )}
+        {post.product_line && (
+          <Badge variant="default" className="text-[9px] px-1 py-0 h-4 bg-primary/20 text-primary">
+            {post.product_line}
+          </Badge>
+        )}
+        {post.pillar && (
+          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-accent/20 text-accent-foreground">
+            {post.pillar}
+          </Badge>
+        )}
+        {post.author && authorsData[post.author] && (
+          <Badge 
+            className="text-white font-bold text-xs rounded-full w-4 h-4 flex items-center justify-center p-0 text-[8px]"
+            style={{ backgroundColor: authorsData[post.author].color }}
+          >
+            {authorsData[post.author].initials}
+          </Badge>
+        )}
+      </div>
     </div>
   );
 };

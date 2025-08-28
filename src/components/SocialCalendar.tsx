@@ -48,6 +48,7 @@ export const SocialCalendar: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Load initial platform and status selections from database
   useEffect(() => {
@@ -149,8 +150,9 @@ export const SocialCalendar: React.FC = () => {
   };
 
   const handleSidebarSave = () => {
-    // Refresh the calendar data
-    window.location.reload();
+    // Refresh the calendar data without losing current date/state
+    setRefreshKey(prev => prev + 1);
+    handleCloseSidebar();
   };
 
   // Removed calendar month/week scrolling behavior
@@ -222,6 +224,7 @@ export const SocialCalendar: React.FC = () => {
           />
         ) : (
           <CalendarGrid
+            key={refreshKey}
             dates={getDates()}
             viewMode={viewMode}
             currentDate={currentDate}
