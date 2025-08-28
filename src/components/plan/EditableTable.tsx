@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Palette, Copy, Trash2, Plus } from 'lucide-react';
+import { Palette, Copy, Trash2, Plus, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PostSlidingSidebar } from '@/components/calendar/PostSlidingSidebar';
 
@@ -510,14 +510,14 @@ export const EditableTable = () => {
                           />
                         ) : colIndex === 3 ? (
                           // Pilíř URL input that opens in new window when clicked
-                          <div className="w-full h-full relative">
+                          <div className="w-full h-full relative group">
                             <input
                               type="url"
                               value={cell.content}
                               onChange={(e) => handleContentChange(sectionIdx, rIdx + 1, colIndex, e.target.value)}
                               onKeyPress={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                              className="w-full h-full bg-transparent border-none outline-none text-sm"
-                              placeholder="here goes url"
+                              className="w-full h-full bg-transparent border-none outline-none text-sm pr-8"
+                              placeholder="Enter URL..."
                             />
                             {cell.content && (cell.content.startsWith('http') || cell.content.includes('www.')) && (
                               <button
@@ -526,61 +526,72 @@ export const EditableTable = () => {
                                   const url = cell.content.startsWith('http') ? cell.content : `https://${cell.content}`;
                                   window.open(url, '_blank');
                                 }}
-                                className="absolute inset-0 cursor-pointer bg-transparent hover:bg-primary/5 transition-colors"
+                                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
                                 title="Open URL in new window"
-                              />
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </button>
                             )}
                           </div>
                         ) : colIndex === 4 ? (
-                          // Pillar display with flat design
+                          // Pillar select - always show select dropdown for easy editing
                           <div className="w-full h-full flex items-center">
-                            {cell.content ? (
-                              (() => {
-                                const selectedPillar = pillars.find(p => p.name === cell.content);
-                                return selectedPillar ? (
-                                  <div 
-                                    className="inline-flex items-center px-2 py-1 rounded-sm text-xs font-medium text-white w-full justify-center"
-                                    style={{ backgroundColor: selectedPillar.color }}
-                                  >
-                                    {selectedPillar.name}
-                                  </div>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground">{cell.content}</span>
-                                );
-                              })()
-                            ) : (
-                              <Select
-                                value={cell.content}
-                                onValueChange={(value) => handleContentChange(sectionIdx, rIdx + 1, colIndex, value)}
+                            <Select
+                              value={cell.content || ""}
+                              onValueChange={(value) => handleContentChange(sectionIdx, rIdx + 1, colIndex, value)}
+                            >
+                              <SelectTrigger className="border-none shadow-none focus:ring-0 h-full w-full bg-transparent hover:bg-muted/30 transition-colors">
+                                <SelectValue placeholder="Vyberte pilíř">
+                                  {cell.content ? (
+                                    (() => {
+                                      const selectedPillar = pillars.find(p => p.name === cell.content);
+                                      return selectedPillar ? (
+                                        <div className="flex items-center gap-2 w-full">
+                                          <div 
+                                            className="w-2 h-2 rounded-full flex-shrink-0"
+                                            style={{ backgroundColor: selectedPillar.color }}
+                                          />
+                                          <span className="text-sm font-medium">
+                                            {selectedPillar.name}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-sm text-muted-foreground">{cell.content}</span>
+                                      );
+                                    })()
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">Vyberte pilíř</span>
+                                  )}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent 
+                                className="z-[9999] bg-popover border border-border shadow-lg max-h-[200px] overflow-y-auto min-w-[200px]"
+                                position="popper"
+                                sideOffset={4}
+                                align="start"
                               >
-                                <SelectTrigger className="border-none shadow-none focus:ring-0 h-full w-full bg-transparent hover:bg-muted/30 transition-colors">
-                                  <SelectValue placeholder="Pilíř" />
-                                </SelectTrigger>
-                                <SelectContent 
-                                  className="z-[9999] bg-background border border-border shadow-lg max-h-[200px] overflow-y-auto"
-                                  position="popper"
-                                  sideOffset={4}
-                                >
-                                  {pillars.map(pillar => (
-                                    <SelectItem 
-                                      key={pillar.name} 
-                                      value={pillar.name}
-                                      className="hover:bg-muted/50 focus:bg-muted/50 cursor-pointer"
-                                    >
-                                      <div className="flex items-center gap-2 w-full">
-                                        <div 
-                                          className="w-2 h-2 rounded-full flex-shrink-0"
-                                          style={{ backgroundColor: pillar.color }}
-                                        />
-                                        <span className="text-sm font-medium text-foreground">
-                                          {pillar.name}
-                                        </span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
+                                <SelectItem value="" className="text-muted-foreground">
+                                  Žádný pilíř
+                                </SelectItem>
+                                {pillars.map(pillar => (
+                                  <SelectItem 
+                                    key={pillar.name} 
+                                    value={pillar.name}
+                                    className="hover:bg-accent focus:bg-accent cursor-pointer"
+                                  >
+                                    <div className="flex items-center gap-2 w-full">
+                                      <div 
+                                        className="w-3 h-3 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: pillar.color }}
+                                      />
+                                      <span className="text-sm font-medium">
+                                        {pillar.name}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         ) : colIndex === 5 ? (
                           <div className="flex justify-center">
