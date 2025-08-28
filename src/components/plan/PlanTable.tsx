@@ -20,9 +20,11 @@ interface PlanRow {
 export const PlanTable = () => {
   const [rows, setRows] = useState<PlanRow[]>([]);
   const [editingCell, setEditingCell] = useState<{ rowId: string; field: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch pillars for the select dropdown
-  const { data: pillars = [] } = useQuery({
+  const { data: pillars = [], isLoading: pillarsLoading, error: pillarsError } = useQuery({
     queryKey: ['pillars'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -37,7 +39,7 @@ export const PlanTable = () => {
   });
 
   // Fetch plan sections
-  const { data: planSections, refetch } = useQuery({
+  const { data: planSections, refetch, isLoading: sectionsLoading, error: sectionsError } = useQuery({
     queryKey: ['plan-sections'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,16 +53,43 @@ export const PlanTable = () => {
   });
 
   useEffect(() => {
-    if (planSections && planSections.length > 0) {
-      const sectionData = planSections[0]?.section_data as any;
-      if (sectionData?.rows) {
-        setRows(sectionData.rows);
-      }
-    } else {
-      // Initialize with empty rows
-      setRows([createEmptyRow()]);
+    setIsLoading(sectionsLoading || pillarsLoading);
+    
+    if (sectionsError || pillarsError) {
+      setError(sectionsError?.message || pillarsError?.message || 'Failed to load data');
+      setIsLoading(false);
+      return;
     }
-  }, [planSections]);
+
+    if (!sectionsLoading && !pillarsLoading) {
+      try {
+        if (planSections && planSections.length > 0) {
+          const sectionData = planSections[0]?.section_data as any;
+          console.log('Plan section data:', sectionData);
+          
+          // Handle different data structures
+          if (sectionData?.rows && Array.isArray(sectionData.rows)) {
+            setRows(sectionData.rows);
+          } else if (sectionData?.cells) {
+            // Convert old cell-based structure to rows if needed
+            console.warn('Converting old cell-based data structure');
+            setRows([createEmptyRow()]);
+          } else {
+            setRows([createEmptyRow()]);
+          }
+        } else {
+          // Initialize with empty rows
+          setRows([createEmptyRow()]);
+        }
+        setError(null);
+      } catch (err) {
+        console.error('Error processing plan data:', err);
+        setError('Failed to process plan data');
+        setRows([createEmptyRow()]);
+      }
+      setIsLoading(false);
+    }
+  }, [planSections, sectionsLoading, pillarsLoading, sectionsError, pillarsError]);
 
   const createEmptyRow = (): PlanRow => ({
     id: crypto.randomUUID(),
@@ -196,6 +225,36 @@ const saveData = async () => {
       </div>
     );
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Content Planning Table</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-8">
+            <div className="text-muted-foreground">Loading...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Content Planning Table</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-8">
+            <div className="text-destructive">Error: {error}</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
