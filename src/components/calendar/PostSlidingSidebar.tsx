@@ -446,7 +446,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                           <SelectValue placeholder="Select author" />
                         </SelectTrigger>
                         <SelectContent className="bg-background border border-border shadow-lg z-[60]">
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {authorOptions.map((a) => (
                             <SelectItem key={a.initials} value={a.initials}>
                               <div className="flex items-center gap-2">
