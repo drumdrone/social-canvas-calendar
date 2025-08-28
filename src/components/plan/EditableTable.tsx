@@ -14,7 +14,7 @@ interface Cell {
 
 interface Section {
   id: string;
-  cells: Cell[][]; // 5 rows x 5 cols (A-E)
+  cells: Cell[][]; // 5 rows x 6 cols (A-F)
 }
 
 const backgroundColors = [
@@ -32,7 +32,7 @@ const categories = ['Novinky', 'Veda'] as const;
 
 const createDefaultSection = (): Section => {
   const cells: Cell[][] = Array.from({ length: 5 }, (_, rowIndex) =>
-    Array.from({ length: 5 }, (_, colIndex) => {
+    Array.from({ length: 6 }, (_, colIndex) => {
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       if (rowIndex === 0 && colIndex === 0) {
         // A1: Title cell (H1-like), editable with background color
@@ -43,9 +43,9 @@ const createDefaultSection = (): Section => {
           backgroundColor: 'transparent',
         };
       }
-      if (rowIndex === 0 && colIndex > 0 && colIndex < 4) {
-        // B1-D1: Header labels (not editable)
-        const labels = ['Popis', 'Plan Description', 'Pilíř'] as const;
+      if (rowIndex === 0 && colIndex > 0 && colIndex < 5) {
+        // B1-E1: Header labels (not editable)
+        const labels = ['Popis', 'Plan Description', 'Products', 'Pilíř'] as const;
         return {
           id,
           content: labels[colIndex - 1],
@@ -53,8 +53,8 @@ const createDefaultSection = (): Section => {
           backgroundColor: 'transparent',
         };
       }
-      if (rowIndex === 0 && colIndex === 4) {
-        // E1: Create New header
+      if (rowIndex === 0 && colIndex === 5) {
+        // F1: Create New header
         return {
           id,
           content: 'Create New',
@@ -83,35 +83,46 @@ const createDefaultSection = (): Section => {
   return { id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` , cells };
 };
 
-// Migration function to ensure sections have 5 columns
+// Migration function to ensure sections have 6 columns
 const migrateSection = (section: Section): Section => {
   if (!section.cells || section.cells.length === 0) {
     return createDefaultSection();
   }
   
-  // Check if we need to migrate to 5 columns
-  const needsMigration = section.cells.some(row => row.length !== 5);
+  // Check if we need to migrate to 6 columns
+  const needsMigration = section.cells.some(row => row.length !== 6);
   
   if (!needsMigration) {
     return section;
   }
 
-  // Migrate each row to have 5 columns (remove product line column)
+  // Migrate each row to have 6 columns (add Products column)
   const migratedCells = section.cells.map((row, rowIndex) => {
     let newRow = [...row];
     
-    // If we have more than 5 columns, remove the product line column (index 3)
-    if (newRow.length > 5) {
-      newRow.splice(3, 1); // Remove product line column
-    }
-    
-    // Ensure we have exactly 5 columns
-    while (newRow.length < 5) {
+    // If we have less than 6 columns, add the missing ones
+    while (newRow.length < 6) {
       const colIndex = newRow.length;
       const id = `${rowIndex}-${colIndex}-${Math.random().toString(36).slice(2, 7)}`;
       
-      if (rowIndex === 0 && colIndex === 4) {
-        // E1: Create New header
+      if (rowIndex === 0 && colIndex === 3) {
+        // Products column header
+        newRow.push({
+          id,
+          content: 'Products',
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        });
+      } else if (rowIndex === 0 && colIndex === 4) {
+        // Pilíř column header
+        newRow.push({
+          id,
+          content: 'Pilíř',
+          fontSize: 'small',
+          backgroundColor: 'transparent',
+        });
+      } else if (rowIndex === 0 && colIndex === 5) {
+        // Create New header
         newRow.push({
           id,
           content: 'Create New',
@@ -383,16 +394,17 @@ export const EditableTable = () => {
 
             {/* Table for this section */}
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px]">
+              <table className="w-full min-w-[900px]">
                 <colgroup>
-                  <col style={{ width: '20%' }} />
-                  <col style={{ width: '40%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '28%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '12%' }} />
                 </colgroup>
               <tbody>
-                {/* Row 0: Header with 5 columns (A1 editable title, B1-D1 labels, E1 Create New) */}
+                {/* Row 0: Header with 6 columns (A1 editable title, B1-E1 labels, F1 Create New) */}
                 <tr>
                   {/* A1 - Editable Title */}
                   <td
@@ -425,19 +437,26 @@ export const EditableTable = () => {
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][2].content}</div>
                   </td>
-                  {/* D1 - Pilíř */}
+                  {/* D1 - Products */}
                   <td
                     className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 3 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
                     onClick={() => handleCellClick(sectionIdx, 0, 3)}
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][3].content}</div>
                   </td>
-                  {/* E1 - Create New header */}
+                  {/* E1 - Pilíř */}
+                  <td
+                    className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 4 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
+                    onClick={() => handleCellClick(sectionIdx, 0, 4)}
+                  >
+                    <div className="text-sm text-muted-foreground font-medium">{section.cells[0][4].content}</div>
+                  </td>
+                  {/* F1 - Create New header */}
                   <td
                     className="border border-border p-4 cursor-pointer hover:bg-muted/50"
                   >
                     <div className="text-sm text-muted-foreground font-medium text-center">
-                      {section.cells[0] && section.cells[0][4] ? section.cells[0][4].content : 'Create New'}
+                      {section.cells[0] && section.cells[0][5] ? section.cells[0][5].content : 'Create New'}
                     </div>
                   </td>
                 </tr>
@@ -489,40 +508,62 @@ export const EditableTable = () => {
                             placeholder="Plan description"
                           />
                         ) : colIndex === 3 ? (
-                          // Pillar select with full background colors
+                          // Products URL input that opens in new window when clicked
+                          <div className="w-full h-full relative">
+                            <input
+                              type="url"
+                              value={cell.content}
+                              onChange={(e) => handleContentChange(sectionIdx, rIdx + 1, colIndex, e.target.value)}
+                              onKeyPress={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                              className="w-full h-full bg-transparent border-none outline-none text-sm"
+                              placeholder="Product URL..."
+                            />
+                            {cell.content && cell.content.startsWith('http') && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(cell.content, '_blank');
+                                }}
+                                className="absolute inset-0 cursor-pointer bg-transparent hover:bg-blue-50/50 transition-colors"
+                                title="Open URL in new window"
+                              />
+                            )}
+                          </div>
+                        ) : colIndex === 4 ? (
+                          // Pillar select with flat, minimalistic colors
                           <Select
                             value={cell.content || ""}
                             onValueChange={(value) => handleContentChange(sectionIdx, rIdx + 1, colIndex, value)}
                           >
                             <SelectTrigger 
-                              className="border-none shadow-none focus:ring-0 h-full w-full"
-                              style={{
-                                backgroundColor: pillars.find(p => p.name === cell.content)?.color ? 
-                                  `${pillars.find(p => p.name === cell.content)?.color}30` : 
-                                  'hsl(var(--muted))',
-                                color: pillars.find(p => p.name === cell.content)?.color || 'hsl(var(--foreground))',
-                                fontWeight: '500'
-                              }}
+                              className="border-none shadow-none focus:ring-0 h-full w-full bg-transparent hover:bg-muted/30 transition-colors"
                             >
-                              <SelectValue placeholder="Pilíř" />
+                              <SelectValue 
+                                placeholder="Pilíř"
+                                className={pillars.find(p => p.name === cell.content) ? "font-medium" : ""}
+                              />
                             </SelectTrigger>
-                            <SelectContent className="z-50">
+                            <SelectContent className="z-50 bg-background border border-border shadow-lg">
                               {pillars.map(pillar => (
-                                <SelectItem key={pillar.name} value={pillar.name}>
-                                  <div 
-                                    className="px-3 py-2 rounded text-sm w-full font-medium"
-                                    style={{
-                                      backgroundColor: `${pillar.color}30`,
-                                      color: pillar.color
-                                    }}
-                                  >
-                                    {pillar.name}
+                                <SelectItem 
+                                  key={pillar.name} 
+                                  value={pillar.name}
+                                  className="hover:bg-muted/50 focus:bg-muted/50"
+                                >
+                                  <div className="flex items-center gap-2 w-full">
+                                    <div 
+                                      className="w-3 h-3 rounded-sm flex-shrink-0"
+                                      style={{ backgroundColor: pillar.color }}
+                                    />
+                                    <span className="text-sm font-medium text-foreground">
+                                      {pillar.name}
+                                    </span>
                                   </div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : colIndex === 4 ? (
+                        ) : colIndex === 5 ? (
                           <div className="flex justify-center">
                             <Button
                               variant="ghost"
