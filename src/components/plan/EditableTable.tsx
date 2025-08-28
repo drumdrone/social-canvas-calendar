@@ -556,12 +556,16 @@ export const EditableTable = () => {
                                 <SelectTrigger className="border-none shadow-none focus:ring-0 h-full w-full bg-transparent hover:bg-muted/30 transition-colors">
                                   <SelectValue placeholder="Pilíř" />
                                 </SelectTrigger>
-                                <SelectContent className="z-50 bg-background border border-border shadow-lg">
+                                <SelectContent 
+                                  className="z-[9999] bg-background border border-border shadow-lg max-h-[200px] overflow-y-auto"
+                                  position="popper"
+                                  sideOffset={4}
+                                >
                                   {pillars.map(pillar => (
                                     <SelectItem 
                                       key={pillar.name} 
                                       value={pillar.name}
-                                      className="hover:bg-muted/50 focus:bg-muted/50"
+                                      className="hover:bg-muted/50 focus:bg-muted/50 cursor-pointer"
                                     >
                                       <div className="flex items-center gap-2 w-full">
                                         <div 
