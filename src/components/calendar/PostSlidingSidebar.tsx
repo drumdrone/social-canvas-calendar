@@ -90,6 +90,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     };
 
     if (isOpen) {
+      console.log('PostSlidingSidebar opened, loading options...');
       loadOptions();
     }
   }, [isOpen, post, platform, status, category]);
@@ -270,7 +271,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300"
         onClick={onClose}
       />
       
@@ -444,7 +445,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                         <SelectTrigger>
                           <SelectValue placeholder="Select author" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-background border border-border shadow-lg z-[60]">
                           <SelectItem value="">None</SelectItem>
                           {authorOptions.map((a) => (
                             <SelectItem key={a.initials} value={a.initials}>
