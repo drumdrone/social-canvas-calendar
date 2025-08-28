@@ -165,9 +165,10 @@ export const EditableTable = () => {
         setIsLoading(true);
         
         // Wait for authentication
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          console.log('No authenticated user, skipping data load');
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) {
+          console.log('No authenticated user or auth error, using default data:', authError?.message);
+          setSections([createDefaultSection()]);
           setIsLoading(false);
           return;
         }
