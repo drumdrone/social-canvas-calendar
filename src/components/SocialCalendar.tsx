@@ -7,9 +7,10 @@ import { CalendarFilters } from './calendar/CalendarFilters';
 import { FacebookPostPreview } from './calendar/FacebookPostPreview';
 import { PostSlidingSidebar } from './calendar/PostSlidingSidebar';
 import { PostDataManager } from './calendar/PostDataManager';
+import { PlanningPanel } from './calendar/PlanningPanel';
 import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
-import { Settings, Plus } from 'lucide-react';
+import { Settings, Plus, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, addWeeks } from 'date-fns';
 
@@ -47,6 +48,7 @@ export const SocialCalendar: React.FC = () => {
   const [selectedStatuses, setSelectedStatuses] = useState<PostStatus[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showPlanning, setShowPlanning] = useState(false);
   const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -180,6 +182,15 @@ export const SocialCalendar: React.FC = () => {
               <Plus className="h-4 w-4" />
               New Post
             </Button>
+            <Button 
+              onClick={() => setShowPlanning(true)}
+              className="flex items-center gap-2 w-full sm:w-auto"
+              size="sm"
+              variant="outline"
+            >
+              <FileText className="h-4 w-4" />
+              Planning
+            </Button>
             <PostDataManager onImportComplete={handleSidebarSave} />
           </div>
           
@@ -243,6 +254,13 @@ export const SocialCalendar: React.FC = () => {
         post={sidebarPost}
         selectedDate={selectedDate}
         onSave={handleSidebarSave}
+      />
+
+      {/* Planning Panel */}
+      <PlanningPanel
+        selectedDate={selectedDate}
+        isOpen={showPlanning}
+        onClose={() => setShowPlanning(false)}
       />
 
       {/* Settings Sidebar */}

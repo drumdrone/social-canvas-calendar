@@ -35,11 +35,6 @@ const navigation = [
     href: '/matrix',
     icon: Grid3X3,
   },
-  {
-    name: 'Plan',
-    href: '/plan',
-    icon: FileText,
-  },
 ];
 
 export const AppSidebar: React.FC = () => {
