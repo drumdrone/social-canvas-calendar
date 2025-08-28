@@ -1,27 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Save, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-
-interface PlanRow {
-  id: string;
-  title: string;
-  pillar: string;
-  url: string;
-  notes: string;
-}
+import { useToast } from '@/hooks/use-toast';
+import { MonthSection, MonthData, WeekRow } from './MonthSection';
+import { Plus } from 'lucide-react';
 
 export const PlanTable = () => {
-  const [rows, setRows] = useState<PlanRow[]>([]);
-  const [editingCell, setEditingCell] = useState<{ rowId: string; field: string } | null>(null);
+  const [months, setMonths] = useState<MonthData[]>([]);
+  const [editingCell, setEditingCell] = useState<{ monthId: string; weekId: string; field: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Fetch pillars for the select dropdown
   const { data: pillars = [], isLoading: pillarsLoading, error: pillarsError } = useQuery({
@@ -67,163 +58,110 @@ export const PlanTable = () => {
           const sectionData = planSections[0]?.section_data as any;
           console.log('Plan section data:', sectionData);
           
-          // Handle different data structures
-          if (sectionData?.rows && Array.isArray(sectionData.rows)) {
-            setRows(sectionData.rows);
-          } else if (sectionData?.cells) {
-            // Convert old cell-based structure to rows if needed
-            console.warn('Converting old cell-based data structure');
-            setRows([createEmptyRow()]);
+          // Handle new month-based structure
+          if (sectionData?.months && Array.isArray(sectionData.months)) {
+            setMonths(sectionData.months);
           } else {
-            setRows([createEmptyRow()]);
+            // Initialize with one empty month
+            setMonths([createEmptyMonth()]);
           }
         } else {
-          // Initialize with empty rows
-          setRows([createEmptyRow()]);
+          // Initialize with one empty month
+          setMonths([createEmptyMonth()]);
         }
         setError(null);
       } catch (err) {
         console.error('Error processing plan data:', err);
         setError('Failed to process plan data');
-        setRows([createEmptyRow()]);
+        setMonths([createEmptyMonth()]);
       }
       setIsLoading(false);
     }
   }, [planSections, sectionsLoading, pillarsLoading, sectionsError, pillarsError]);
 
-  const createEmptyRow = (): PlanRow => ({
+  const createEmptyWeek = (): WeekRow => ({
     id: crypto.randomUUID(),
     title: '',
     pillar: '',
     url: '',
-    notes: ''
+    notes: '',
   });
 
-  const addRow = () => {
-    setRows([...rows, createEmptyRow()]);
+  const createEmptyMonth = (): MonthData => ({
+    id: crypto.randomUUID(),
+    name: `Month ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+    color: '#3B82F6',
+    weeks: Array.from({ length: 4 }, () => createEmptyWeek()),
+  });
+
+  const addMonth = () => {
+    const newMonth = createEmptyMonth();
+    setMonths([...months, newMonth]);
   };
 
-  const deleteRow = (rowId: string) => {
-    setRows(rows.filter(row => row.id !== rowId));
+  const deleteMonth = (monthId: string) => {
+    setMonths(months.filter(month => month.id !== monthId));
   };
 
-  const updateCell = (rowId: string, field: keyof PlanRow, value: string) => {
-    setRows(rows.map(row => 
-      row.id === rowId ? { ...row, [field]: value } : row
+  const updateMonth = (monthId: string, updates: Partial<MonthData>) => {
+    setMonths(months.map(month => 
+      month.id === monthId ? { ...month, ...updates } : month
     ));
   };
 
-const saveData = async () => {
+  const saveData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
-        toast.error('You must be logged in to save data');
+        toast({
+          title: "Authentication required",
+          description: "Please log in to save your plan data.",
+          variant: "destructive",
+        });
         return;
       }
 
-      const sectionData = { rows } as any;
-      
-      // Check if we have existing data to update or need to insert
-      if (planSections && planSections.length > 0) {
+      const dataToSave = {
+        user_id: user.id,
+        section_data: { months } as any,
+        section_order: 0,
+      };
+
+      // Try to update existing data first
+      const { data: existingData } = await supabase
+        .from('plan_sections')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingData) {
         const { error } = await supabase
           .from('plan_sections')
-          .update({ section_data: sectionData })
-          .eq('id', planSections[0].id);
-        
+          .update({ section_data: { months } as any, updated_at: new Date().toISOString() })
+          .eq('id', existingData.id);
+
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('plan_sections')
-          .insert([{
-            user_id: user.id,
-            section_data: sectionData,
-            section_order: 0
-          }]);
-        
+          .insert([dataToSave]);
+
         if (error) throw error;
       }
 
-      toast.success('Plan saved successfully');
-      refetch();
-    } catch (error) {
-      console.error('Error saving plan:', error);
-      toast.error('Failed to save plan');
+      toast({
+        title: "Success",
+        description: "Plan data saved successfully!",
+      });
+    } catch (error: any) {
+      console.error('Error saving plan data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save plan data. Please try again.",
+        variant: "destructive",
+      });
     }
-  };
-
-  const handleCellClick = (rowId: string, field: string) => {
-    setEditingCell({ rowId, field });
-  };
-
-  const handleCellBlur = () => {
-    setEditingCell(null);
-  };
-
-  const renderCell = (row: PlanRow, field: keyof PlanRow) => {
-    const isEditing = editingCell?.rowId === row.id && editingCell?.field === field;
-    const value = row[field];
-
-    if (field === 'pillar') {
-      return (
-        <Select
-          value={value}
-          onValueChange={(newValue) => updateCell(row.id, field, newValue)}
-        >
-          <SelectTrigger className="w-full min-w-[150px]">
-            <SelectValue placeholder="Select pillar" />
-          </SelectTrigger>
-          <SelectContent>
-            {pillars.map((pillar) => (
-              <SelectItem key={pillar.id} value={pillar.name}>
-                {pillar.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      );
-    }
-
-    if (field === 'url') {
-      return isEditing ? (
-        <Input
-          value={value}
-          onChange={(e) => updateCell(row.id, field, e.target.value)}
-          onBlur={handleCellBlur}
-          autoFocus
-          className="min-w-[200px]"
-        />
-      ) : (
-        <div
-          onClick={() => handleCellClick(row.id, field)}
-          className="min-h-[40px] p-2 cursor-pointer hover:bg-muted/50 rounded border-dashed border border-transparent hover:border-border"
-        >
-          {value ? (
-            <a href={value} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              {value}
-            </a>
-          ) : (
-            <span className="text-muted-foreground">Click to add URL</span>
-          )}
-        </div>
-      );
-    }
-
-    return isEditing ? (
-      <Input
-        value={value}
-        onChange={(e) => updateCell(row.id, field, e.target.value)}
-        onBlur={handleCellBlur}
-        autoFocus
-        className="min-w-[150px]"
-      />
-    ) : (
-      <div
-        onClick={() => handleCellClick(row.id, field)}
-        className="min-h-[40px] p-2 cursor-pointer hover:bg-muted/50 rounded border-dashed border border-transparent hover:border-border"
-      >
-        {value || <span className="text-muted-foreground">Click to edit</span>}
-      </div>
-    );
   };
 
   if (isLoading) {
@@ -257,63 +195,45 @@ const saveData = async () => {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Content Planning Table</CardTitle>
-        <div className="flex gap-2">
-          <Button onClick={addRow} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Row
-          </Button>
-          <Button onClick={saveData} size="sm" variant="outline">
-            <Save className="h-4 w-4 mr-2" />
-            Save
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Pillar</TableHead>
-                <TableHead>URL</TableHead>
-                <TableHead>Notes</TableHead>
-                <TableHead className="w-[50px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="min-w-[200px]">
-                    {renderCell(row, 'title')}
-                  </TableCell>
-                  <TableCell className="min-w-[150px]">
-                    {renderCell(row, 'pillar')}
-                  </TableCell>
-                  <TableCell className="min-w-[200px]">
-                    {renderCell(row, 'url')}
-                  </TableCell>
-                  <TableCell className="min-w-[200px]">
-                    {renderCell(row, 'notes')}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteRow(row.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Content Planning - Monthly & Weekly Structure</CardTitle>
+          <div className="flex gap-2">
+            <Button onClick={addMonth} variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Month
+            </Button>
+            <Button onClick={saveData}>
+              Save Plan
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {months.map((month) => (
+        <MonthSection
+          key={month.id}
+          month={month}
+          pillars={pillars}
+          onUpdateMonth={updateMonth}
+          onDeleteMonth={deleteMonth}
+          editingCell={editingCell}
+          setEditingCell={setEditingCell}
+        />
+      ))}
+
+      {months.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground mb-4">No months added yet.</p>
+            <Button onClick={addMonth}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Month
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
