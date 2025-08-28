@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Facebook, Instagram, Twitter, Linkedin, Calendar, Clock, Image as ImageIcon } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Linkedin, Calendar, Clock, Image as ImageIcon, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,6 +30,7 @@ const statusColors = {
 const ShareablePost = () => {
   const { id } = useParams<{ id: string }>();
   const [post, setPost] = useState<SocialPost | null>(null);
+  const [authorData, setAuthorData] = useState<{ initials: string; name: string; color: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,12 +47,27 @@ const ShareablePost = () => {
           .from('social_media_posts')
           .select('*')
           .eq('id', id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           setError('Post not found');
-        } else {
+        } else if (data) {
           setPost(data as SocialPost);
+
+          // Fetch author data if author is set
+          if (data.author) {
+            const { data: authorInfo, error: authorError } = await supabase
+              .from('authors')
+              .select('initials, name, color')
+              .eq('initials', data.author)
+              .maybeSingle();
+
+            if (authorInfo) {
+              setAuthorData(authorInfo);
+            }
+          }
+        } else {
+          setError('Post not found');
         }
       } catch (err) {
         setError('Failed to fetch post');
@@ -114,8 +130,8 @@ const ShareablePost = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Scheduled Date & Time */}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            {/* Scheduled Date & Time & Author */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
                 <span>{format(new Date(post.scheduled_date), 'MMM dd, yyyy')}</span>
@@ -124,6 +140,18 @@ const ShareablePost = () => {
                 <Clock className="h-4 w-4" />
                 <span>{format(new Date(post.scheduled_date), 'HH:mm')}</span>
               </div>
+              {authorData && (
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>by {authorData.name}</span>
+                  <Badge 
+                    className="text-white font-bold text-xs rounded-full w-6 h-6 flex items-center justify-center p-0"
+                    style={{ backgroundColor: authorData.color }}
+                  >
+                    {authorData.initials}
+                  </Badge>
+                </div>
+              )}
             </div>
 
             {/* Image */}
@@ -172,6 +200,12 @@ const ShareablePost = () => {
                   <div>
                     <span className="font-medium">Product Line:</span>
                     <span className="ml-2 text-muted-foreground">{(post as any).product_line}</span>
+                  </div>
+                )}
+                {authorData && (
+                  <div>
+                    <span className="font-medium">Author:</span>
+                    <span className="ml-2 text-muted-foreground">{authorData.name}</span>
                   </div>
                 )}
               </div>
