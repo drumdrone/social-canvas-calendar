@@ -45,7 +45,7 @@ const createDefaultSection = (): Section => {
       }
       if (rowIndex === 0 && colIndex > 0 && colIndex < 5) {
         // B1-E1: Header labels (not editable)
-        const labels = ['Popis', 'Creativa', 'Products', 'Pilíř'] as const;
+        const labels = ['Popis', 'Creativa', 'Pilíř', 'Pilíř'] as const;
         return {
           id,
           content: labels[colIndex - 1],
@@ -437,7 +437,7 @@ export const EditableTable = () => {
                   >
                     <div className="text-sm text-muted-foreground font-medium">{section.cells[0][2].content}</div>
                   </td>
-                  {/* D1 - Products */}
+                  {/* D1 - Pilíř */}
                   <td
                     className={`border border-border p-4 cursor-pointer ${selectedCell?.section === sectionIdx && selectedCell?.row === 0 && selectedCell?.col === 3 ? 'ring-2 ring-primary ring-inset' : 'hover:bg-muted/50'}`}
                     onClick={() => handleCellClick(sectionIdx, 0, 3)}
@@ -499,30 +499,17 @@ export const EditableTable = () => {
                             )}
                           </div>
                         ) : colIndex === 2 ? (
-                          // Creativa URL input that opens in new window when clicked
-                          <div className="w-full h-full relative">
-                            <input
-                              type="url"
-                              value={cell.content}
-                              onChange={(e) => handleContentChange(sectionIdx, rIdx + 1, colIndex, e.target.value)}
-                              onKeyPress={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                              className="w-full h-full bg-transparent border-none outline-none text-sm"
-                              placeholder="Add URL..."
-                            />
-                            {cell.content && (cell.content.startsWith('http') || cell.content.includes('www.')) && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const url = cell.content.startsWith('http') ? cell.content : `https://${cell.content}`;
-                                  window.open(url, '_blank');
-                                }}
-                                className="absolute inset-0 cursor-pointer bg-transparent hover:bg-primary/5 transition-colors"
-                                title="Open URL in new window"
-                              />
-                            )}
-                          </div>
+                          // Creativa plain text input
+                          <input
+                            type="text"
+                            value={cell.content}
+                            onChange={(e) => handleContentChange(sectionIdx, rIdx + 1, colIndex, e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                            className="w-full h-full bg-transparent border-none outline-none text-sm"
+                            placeholder="Creativa text..."
+                          />
                         ) : colIndex === 3 ? (
-                          // Products URL input that opens in new window when clicked
+                          // Pilíř URL input that opens in new window when clicked
                           <div className="w-full h-full relative">
                             <input
                               type="url"
