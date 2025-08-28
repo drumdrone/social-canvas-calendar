@@ -14,9 +14,6 @@ export interface WeekRow {
   pillar: string;
   url: string;
   notes: string;
-  image1?: string;
-  image2?: string;
-  image3?: string;
 }
 
 export interface MonthData {
@@ -45,7 +42,7 @@ export const MonthSection: React.FC<MonthSectionProps> = ({
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(month.name);
-  const [currentImageIndex, setCurrentImageIndex] = useState<Record<string, number>>({});
+  
   const { toast } = useToast();
 
   const handleNameSave = () => {
@@ -65,37 +62,6 @@ export const MonthSection: React.FC<MonthSectionProps> = ({
     onUpdateMonth(month.id, { weeks: updatedWeeks });
   };
 
-  const handleImageUpload = async (weekId: string, imageField: 'image1' | 'image2' | 'image3', file: File) => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${weekId}-${imageField}-${Date.now()}.${fileExt}`;
-      const filePath = `plan-images/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('social-media-images')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('social-media-images')
-        .getPublicUrl(filePath);
-
-      updateWeek(weekId, imageField, publicUrl);
-      
-      toast({
-        title: "Success",
-        description: "Image uploaded successfully!",
-      });
-    } catch (error: any) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload image. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const deleteUrl = (weekId: string) => {
     updateWeek(weekId, 'url', '');
@@ -107,25 +73,6 @@ export const MonthSection: React.FC<MonthSectionProps> = ({
     }
   };
 
-  const getCurrentImage = (week: WeekRow) => {
-    const images = [week.image1, week.image2, week.image3].filter(Boolean);
-    if (images.length === 0) return null;
-    
-    const currentIndex = currentImageIndex[week.id] || 0;
-    return images[currentIndex % images.length];
-  };
-
-  const handleImageHover = (weekId: string) => {
-    const week = month.weeks.find(w => w.id === weekId);
-    if (!week) return;
-    
-    const images = [week.image1, week.image2, week.image3].filter(Boolean);
-    if (images.length <= 1) return;
-    
-    const currentIndex = currentImageIndex[weekId] || 0;
-    const nextIndex = (currentIndex + 1) % images.length;
-    setCurrentImageIndex(prev => ({ ...prev, [weekId]: nextIndex }));
-  };
 
   const handleCellClick = (weekId: string, field: string) => {
     setEditingCell({ monthId: month.id, weekId, field });
@@ -303,7 +250,7 @@ export const MonthSection: React.FC<MonthSectionProps> = ({
               <TableHead className="w-[150px]">Title</TableHead>
               <TableHead className="w-[120px]">Pillar</TableHead>
               <TableHead className="w-[200px]">URL</TableHead>
-              <TableHead className="w-[100px]">Images</TableHead>
+              
               <TableHead>Notes</TableHead>
             </TableRow>
           </TableHeader>
@@ -314,45 +261,6 @@ export const MonthSection: React.FC<MonthSectionProps> = ({
                 <TableCell>{renderCell(week, 'title')}</TableCell>
                 <TableCell>{renderCell(week, 'pillar')}</TableCell>
                 <TableCell>{renderCell(week, 'url')}</TableCell>
-                <TableCell>
-                  <div className="flex flex-col gap-2">
-                    {getCurrentImage(week) && (
-                      <div
-                        className="relative w-16 h-12 cursor-pointer overflow-hidden rounded border"
-                        onMouseEnter={() => handleImageHover(week.id)}
-                      >
-                        <img
-                          src={getCurrentImage(week)!}
-                          alt="Plan image"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex gap-1">
-                      {(['image1', 'image2', 'image3'] as const).map((imageField) => (
-                        <label key={imageField} className="cursor-pointer">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleImageUpload(week.id, imageField, file);
-                            }}
-                          />
-                          <Button
-                            size="sm"
-                            variant={week[imageField] ? "default" : "outline"}
-                            className="h-6 w-6 p-0"
-                            type="button"
-                          >
-                            {week[imageField] ? (index + 1) : <Upload className="h-3 w-3" />}
-                          </Button>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </TableCell>
                 <TableCell>{renderCell(week, 'notes')}</TableCell>
               </TableRow>
             ))}

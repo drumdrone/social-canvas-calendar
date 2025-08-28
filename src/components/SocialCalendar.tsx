@@ -24,6 +24,9 @@ export interface SocialPost {
   content?: string;
   platform: Platform;
   image_url?: string;
+  image_url_1?: string;
+  image_url_2?: string;
+  image_url_3?: string;
   scheduled_date: string;
   status: PostStatus;
   category: Category;

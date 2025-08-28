@@ -519,6 +519,9 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          image_url_1: string | null
+          image_url_2: string | null
+          image_url_3: string | null
           pillar: string | null
           platform: string
           product_line: string | null
@@ -535,6 +538,9 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          image_url_1?: string | null
+          image_url_2?: string | null
+          image_url_3?: string | null
           pillar?: string | null
           platform: string
           product_line?: string | null
@@ -551,6 +557,9 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          image_url_1?: string | null
+          image_url_2?: string | null
+          image_url_3?: string | null
           pillar?: string | null
           platform?: string
           product_line?: string | null
@@ -961,6 +970,10 @@ export type Database = {
       link_order_to_user: {
         Args: { order_id: number; user_email: string }
         Returns: boolean
+      }
+      restore_old_plan_data: {
+        Args: { p_user_id: string }
+        Returns: undefined
       }
       restore_post_from_backup: {
         Args: { p_post_id: string; p_version_number: number }

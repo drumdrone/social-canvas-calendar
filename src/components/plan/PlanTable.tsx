@@ -91,9 +91,6 @@ export const PlanTable = () => {
     pillar: '',
     url: '',
     notes: '',
-    image1: '',
-    image2: '',
-    image3: '',
   });
 
   const createEmptyMonth = (): MonthData => ({
@@ -152,9 +149,6 @@ export const PlanTable = () => {
           pillar: '',
           url: '',
           notes: '',
-          image1: '',
-          image2: '',
-          image3: '',
         };
 
         // Extract content from week cells

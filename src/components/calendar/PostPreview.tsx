@@ -37,6 +37,14 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
   const Icon = platformIcons[post.platform];
   const [authorData, setAuthorData] = useState<{ initials: string; color: string } | null>(null);
   
+  const postImages = [
+    post.image_url_1 || post.image_url,
+    post.image_url_2,
+    post.image_url_3
+  ].filter(Boolean) as string[];
+  
+  const { currentImage, setIsHovering, hasMultipleImages } = useImageHover(postImages);
+  
   useEffect(() => {
     const fetchAuthorData = async () => {
       if (post.author) {

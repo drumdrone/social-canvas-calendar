@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
+import { MultiImageUpload } from './MultiImageUpload';
 
 interface PostSlidingSidebarProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('');
   const [time, setTime] = useState('12:00');
-  const [image, setImage] = useState<File | null>(null);
+  const [postImages, setPostImages] = useState<(string | null)[]>([null, null, null]);
   const [uploading, setUploading] = useState(false);
   const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
   const [platformOptions, setPlatformOptions] = useState<string[]>([]);
@@ -119,6 +120,14 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setAuthor(post.author || '');
       setComments((post as any).comments || '');
       
+      // Set existing images
+      const images: (string | null)[] = [
+        post.image_url_1 || post.image_url || null,
+        post.image_url_2 || null,
+        post.image_url_3 || null
+      ];
+      setPostImages(images);
+      
       const postDate = new Date(post.scheduled_date);
       setScheduledDate(postDate);
       setTime(format(postDate, 'HH:mm'));
@@ -132,17 +141,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setAuthor('');
       setScheduledDate(selectedDate);
       setTime('12:00');
-      setImage(null);
+      setPostImages([null, null, null]);
       setComments('');
     }
   }, [post, selectedDate]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setImage(file);
-    }
-  };
 
   const uploadImage = async (file: File) => {
     const inferredExt = (file.name && file.name.includes('.')) ? file.name.split('.').pop() : (file.type ? file.type.split('/').pop() : 'png');
@@ -176,11 +179,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
-      let imageUrl = post?.image_url || null;
-      
-      if (image) {
-        imageUrl = await uploadImage(image);
-      }
 
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
@@ -192,7 +190,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         platform,
         status,
         category,
-        image_url: imageUrl,
+        image_url_1: postImages[0],
+        image_url_2: postImages[1],
+        image_url_3: postImages[2],
+        // Keep old image_url for backward compatibility
+        image_url: postImages[0],
         scheduled_date: scheduledDateTime.toISOString(),
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
@@ -543,44 +545,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       </div>
                     </div>
 
-                    {/* Image Upload */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        {post?.image_url ? 'Upload New Image' : 'Upload Image'}
-                      </Label>
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start h-auto p-3"
-                          onClick={() => document.getElementById('image-upload')?.click()}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          {image ? `Change Image (${image.name})` : 'Choose Image File'}
-                        </Button>
-                        <Input
-                          id="image-upload"
-                          type="file"
-                          onChange={handleImageUpload}
-                          accept="image/*"
-                          className="hidden"
-                        />
-                        {image && (
-                          <p className="text-xs text-muted-foreground">
-                            Selected: {image.name}
-                          </p>
-                        )}
-                        {post?.image_url && !image && (
-                          <div className="mt-2">
-                            <img 
-                              src={post.image_url} 
-                              alt="Current post image" 
-                              className="w-full max-w-sm h-32 object-cover rounded border"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">Current image</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    {/* Multi-Image Upload */}
+                    <MultiImageUpload
+                      images={postImages}
+                      onImagesChange={setPostImages}
+                      maxImages={3}
+                    />
                   </div>
                   </ScrollArea>
                 </TabsContent>
