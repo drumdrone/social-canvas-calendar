@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { Platform, PostStatus, SocialPost, Category } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -41,6 +42,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
   currentDate,
 }) => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [authorsData, setAuthorsData] = useState<Record<string, { initials: string; color: string }>>({});
   const [loading, setLoading] = useState(true);
   const [availableFormats, setAvailableFormats] = useState<any[]>([]);
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
@@ -76,6 +78,23 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         console.error('Error fetching posts:', error);
       } else {
         setPosts((data as SocialPost[]) || []);
+
+        // Fetch authors data
+        const authorInitials = data?.map(post => post.author).filter(Boolean) || [];
+        if (authorInitials.length > 0) {
+          const { data: authorsData, error: authorsError } = await supabase
+            .from('authors')
+            .select('initials, color')
+            .in('initials', authorInitials);
+          
+          if (authorsData) {
+            const authorsMap = authorsData.reduce((acc, author) => {
+              acc[author.initials] = author;
+              return acc;
+            }, {} as Record<string, { initials: string; color: string }>);
+            setAuthorsData(authorsMap);
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -714,7 +733,17 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                             </div>
                           </TableCell>
                           <TableCell>
-                            {renderEditableCell(post, 'title', post.title, 'input')}
+                            <div className="flex items-center gap-2">
+                              {renderEditableCell(post, 'title', post.title, 'input')}
+                              {post.author && authorsData[post.author] && (
+                                <Badge 
+                                  className="text-white font-bold text-xs rounded-full w-5 h-5 flex items-center justify-center p-0 text-[9px] flex-shrink-0"
+                                  style={{ backgroundColor: authorsData[post.author].color }}
+                                >
+                                  {authorsData[post.author].initials}
+                                </Badge>
+                              )}
+                            </div>
                           </TableCell>
                 <TableCell>
                   {renderEditableCell(post, 'content', post.content, 'textarea')}

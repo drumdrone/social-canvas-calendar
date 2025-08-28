@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      authors: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          initials: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          initials: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          initials?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
@@ -43,6 +73,89 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      documents: {
+        Row: {
+          content: Json | null
+          created_at: string
+          folder_id: string | null
+          id: string
+          project_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          project_id: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          project_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       formats: {
         Row: {
@@ -368,8 +481,39 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       social_media_posts: {
         Row: {
+          author: string | null
           category: string
           content: string | null
           created_at: string
@@ -385,6 +529,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          author?: string | null
           category?: string
           content?: string | null
           created_at?: string
@@ -400,6 +545,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          author?: string | null
           category?: string
           content?: string | null
           created_at?: string

@@ -18,6 +18,7 @@ interface SocialPost {
   pillar: string;
   product_line: string;
   image_url: string;
+  author?: string;
 }
 
 const platforms = [
@@ -33,6 +34,7 @@ const platforms = [
 export const MatrixCalendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [authorsData, setAuthorsData] = useState<Record<string, { initials: string; color: string }>>({});
   const [loading, setLoading] = useState(false);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), 'yyyy-MM'));
 
@@ -55,6 +57,23 @@ export const MatrixCalendar: React.FC = () => {
 
       if (error) throw error;
       setPosts(data || []);
+
+      // Fetch authors data
+      const authorInitials = data?.map(post => post.author).filter(Boolean) || [];
+      if (authorInitials.length > 0) {
+        const { data: authorsData, error: authorsError } = await supabase
+          .from('authors')
+          .select('initials, color')
+          .in('initials', authorInitials);
+        
+        if (authorsData) {
+          const authorsMap = authorsData.reduce((acc, author) => {
+            acc[author.initials] = author;
+            return acc;
+          }, {} as Record<string, { initials: string; color: string }>);
+          setAuthorsData(authorsMap);
+        }
+      }
     } catch (error) {
       console.error('Error fetching posts:', error);
     }
@@ -212,11 +231,19 @@ export const MatrixCalendar: React.FC = () => {
                                         {post.product_line}
                                       </Badge>
                                     )}
-                                    {post.pillar && (
-                                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-accent/20 text-accent-foreground">
-                                        {post.pillar}
-                                      </Badge>
-                                    )}
+                                     {post.pillar && (
+                                       <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-accent/20 text-accent-foreground">
+                                         {post.pillar}
+                                       </Badge>
+                                     )}
+                                     {post.author && authorsData[post.author] && (
+                                       <Badge 
+                                         className="text-white font-bold text-xs rounded-full w-4 h-4 flex items-center justify-center p-0 text-[8px]"
+                                         style={{ backgroundColor: authorsData[post.author].color }}
+                                       >
+                                         {authorsData[post.author].initials}
+                                       </Badge>
+                                     )}
                                   </div>
                                 </div>
                               ))}

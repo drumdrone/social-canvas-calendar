@@ -48,6 +48,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [pillarOptions, setPillarOptions] = useState<Array<{name: string, color: string}>>([]);
   const [productLineOptions, setProductLineOptions] = useState<Array<{name: string, color: string}>>([]);
   const [categoryOptions, setCategoryOptions] = useState<Array<{name: string, color: string, format: string}>>([]);
+  const [authorOptions, setAuthorOptions] = useState<Array<{initials: string, name: string, color: string}>>([]);
+  const [author, setAuthor] = useState<string>('');
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [comments, setComments] = useState('');
   const [activeTab, setActiveTab] = useState('content');
@@ -57,12 +59,13 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [platformsResult, statusesResult, pillarsResult, productLinesResult, categoriesResult] = await Promise.all([
+        const [platformsResult, statusesResult, pillarsResult, productLinesResult, categoriesResult, authorsResult] = await Promise.all([
           supabase.from('platforms').select('name').eq('is_active', true).order('name'),
           supabase.from('post_statuses').select('name').eq('is_active', true).order('name'),
           supabase.from('pillars').select('name, color').eq('is_active', true).order('name'),
           supabase.from('product_lines').select('name, color').eq('is_active', true).order('name'),
           supabase.from('categories').select('name, color, format').eq('is_active', true).order('name'),
+          supabase.from('authors').select('initials, name, color').eq('is_active', true).order('name'),
         ]);
         
         const platforms = platformsResult.data?.map(p => p.name) || [];
@@ -73,6 +76,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         setPillarOptions(pillarsResult.data || []);
         setProductLineOptions(productLinesResult.data || []);
         setCategoryOptions(categoriesResult.data || []);
+        setAuthorOptions(authorsResult.data || []);
 
         // Set defaults for new posts
         if (!post) {
@@ -111,6 +115,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setCategory(post.category);
       setPillar((post as any).pillar || 'none');
       setProductLine((post as any).product_line || 'none');
+      setAuthor(post.author || '');
       setComments((post as any).comments || '');
       
       const postDate = new Date(post.scheduled_date);
@@ -123,6 +128,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setContent('');
       setPillar('none');
       setProductLine('none');
+      setAuthor('');
       setScheduledDate(selectedDate);
       setTime('12:00');
       setImage(null);
@@ -189,6 +195,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         scheduled_date: scheduledDateTime.toISOString(),
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
+        author: author || null,
       };
 
       if (post) {
@@ -413,21 +420,46 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       </div>
                     </div>
 
-                    {/* Category */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Category</Label>
-                      <Select value={category} onValueChange={setCategory}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categoryOptions.map((c) => (
-                            <SelectItem key={c.name} value={c.name}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    {/* Category and Author */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Category</Label>
+                        <Select value={category} onValueChange={setCategory}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categoryOptions.map((c) => (
+                              <SelectItem key={c.name} value={c.name}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Author</Label>
+                        <Select value={author} onValueChange={setAuthor}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select author" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">None</SelectItem>
+                            {authorOptions.map((a) => (
+                              <SelectItem key={a.initials} value={a.initials}>
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: a.color }}
+                                  />
+                                  {a.name} ({a.initials})
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     {/* Pillar and Product Line */}

@@ -30,6 +30,9 @@ export interface SocialPost {
   created_at: string;
   updated_at: string;
   user_id: string;
+  pillar?: string;
+  product_line?: string;
+  author?: string;
 }
 
 export const SocialCalendar: React.FC = () => {

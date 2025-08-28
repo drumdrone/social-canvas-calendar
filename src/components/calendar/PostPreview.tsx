@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { SocialPost } from '../SocialCalendar';
 import { Facebook, Instagram, Twitter, Linkedin, Image, Share2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface PostPreviewProps {
@@ -33,6 +35,29 @@ const statusColors = {
 
 export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact = false }) => {
   const Icon = platformIcons[post.platform];
+  const [authorData, setAuthorData] = useState<{ initials: string; color: string } | null>(null);
+  
+  useEffect(() => {
+    const fetchAuthorData = async () => {
+      if (post.author) {
+        try {
+          const { data, error } = await supabase
+            .from('authors')
+            .select('initials, color')
+            .eq('initials', post.author)
+            .maybeSingle();
+          
+          if (data) {
+            setAuthorData(data);
+          }
+        } catch (error) {
+          console.error('Error fetching author data:', error);
+        }
+      }
+    };
+
+    fetchAuthorData();
+  }, [post.author]);
   
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -56,6 +81,14 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
       <div className="flex items-center gap-1 mb-1">
         <Icon className={compact ? "h-2 w-2" : "h-3 w-3"} />
         <span className="font-medium truncate flex-1">{post.title}</span>
+        {post.author && authorData && (
+          <Badge 
+            className="text-white font-bold text-xs rounded-full w-4 h-4 flex items-center justify-center p-0 text-[8px]"
+            style={{ backgroundColor: authorData.color }}
+          >
+            {authorData.initials}
+          </Badge>
+        )}
         {!compact && (
           <Button
             variant="ghost"

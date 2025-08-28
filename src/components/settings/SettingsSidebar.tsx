@@ -13,6 +13,7 @@ import { ProductLineManager } from './ProductLineManager';
 import { PillarManager } from './PillarManager';
 import { FormatManager } from './FormatManager';
 import { BackupManager } from './BackupManager';
+import { AuthorManager } from './AuthorManager';
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses' | 'categories' | 'productlines' | 'pillars' | 'formats' | 'backup'>('platforms');
+  const [activeTab, setActiveTab] = useState<'platforms' | 'statuses' | 'categories' | 'productlines' | 'pillars' | 'formats' | 'authors' | 'backup'>('platforms');
 
   if (!isOpen) return null;
 
@@ -91,6 +92,14 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
               Formats
             </Button>
             <Button
+              variant={activeTab === 'authors' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('authors')}
+              className="text-xs"
+            >
+              Authors
+            </Button>
+            <Button
               variant={activeTab === 'backup' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveTab('backup')}
@@ -107,6 +116,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
             {activeTab === 'productlines' && <ProductLineManager />}
             {activeTab === 'pillars' && <PillarManager />}
             {activeTab === 'formats' && <FormatManager />}
+            {activeTab === 'authors' && <AuthorManager />}
             {activeTab === 'backup' && <BackupManager />}
           </ScrollArea>
         </div>
