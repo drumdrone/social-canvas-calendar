@@ -61,6 +61,12 @@ export const PlanTable = () => {
           // Handle new month-based structure
           if (sectionData?.months && Array.isArray(sectionData.months)) {
             setMonths(sectionData.months);
+          } else if (sectionData?.cells && Array.isArray(sectionData.cells)) {
+            // Migration from old cells format to new months format
+            const migratedMonths = migrateCellsToMonths(sectionData.cells);
+            setMonths(migratedMonths);
+            // Auto-save the migrated data
+            setTimeout(() => saveData(), 1000);
           } else {
             // Initialize with one empty month
             setMonths([createEmptyMonth()]);
@@ -85,6 +91,9 @@ export const PlanTable = () => {
     pillar: '',
     url: '',
     notes: '',
+    image1: '',
+    image2: '',
+    image3: '',
   });
 
   const createEmptyMonth = (): MonthData => ({
@@ -107,6 +116,81 @@ export const PlanTable = () => {
     setMonths(months.map(month => 
       month.id === monthId ? { ...month, ...updates } : month
     ));
+  };
+
+  const migrateCellsToMonths = (cells: any[]): MonthData[] => {
+    // Group cells by month if they have month indicators, or create two default months
+    const monthGroups: { [key: string]: any[] } = {};
+    
+    cells.forEach((cell, index) => {
+      const content = cell.content || '';
+      
+      // Try to detect month from content or position
+      if (content.toLowerCase().includes('září') || content.toLowerCase().includes('september')) {
+        if (!monthGroups['Září 2024']) monthGroups['Září 2024'] = [];
+        monthGroups['Září 2024'].push(cell);
+      } else if (content.toLowerCase().includes('říjen') || content.toLowerCase().includes('october')) {
+        if (!monthGroups['Říjen 2024']) monthGroups['Říjen 2024'] = [];
+        monthGroups['Říjen 2024'].push(cell);
+      } else {
+        // Default grouping by position
+        const monthKey = index < cells.length / 2 ? 'Září 2024' : 'Říjen 2024';
+        if (!monthGroups[monthKey]) monthGroups[monthKey] = [];
+        monthGroups[monthKey].push(cell);
+      }
+    });
+
+    return Object.entries(monthGroups).map(([monthName, cellGroup]) => {
+      const weeks: WeekRow[] = [];
+      
+      // Group cells into weeks (4 cells per week)
+      for (let i = 0; i < 4; i++) {
+        const weekCells = cellGroup.slice(i * 4, (i + 1) * 4);
+        const week: WeekRow = {
+          id: crypto.randomUUID(),
+          title: '',
+          pillar: '',
+          url: '',
+          notes: '',
+          image1: '',
+          image2: '',
+          image3: '',
+        };
+
+        // Extract content from week cells
+        weekCells.forEach((cell, cellIndex) => {
+          const content = cell.content || '';
+          switch (cellIndex) {
+            case 0:
+              week.title = content;
+              break;
+            case 1:
+              week.pillar = content;
+              break;
+            case 2:
+              week.url = content;
+              break;
+            case 3:
+              week.notes = content;
+              break;
+          }
+        });
+
+        weeks.push(week);
+      }
+
+      // Ensure we always have 4 weeks
+      while (weeks.length < 4) {
+        weeks.push(createEmptyWeek());
+      }
+
+      return {
+        id: crypto.randomUUID(),
+        name: monthName,
+        color: monthName.includes('Září') ? '#10B981' : '#F59E0B',
+        weeks: weeks.slice(0, 4),
+      };
+    });
   };
 
   const saveData = async () => {
