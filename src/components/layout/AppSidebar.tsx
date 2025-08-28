@@ -31,6 +31,11 @@ const navigation = [
     icon: LayoutDashboard,
   },
   {
+    name: 'Plan',
+    href: '/plan',
+    icon: FileText,
+  },
+  {
     name: 'Matrix',
     href: '/matrix',
     icon: Grid3X3,

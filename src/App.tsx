@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Matrix from "./pages/Matrix";
+import Plan from "./pages/Plan";
 import ShareablePost from "./pages/ShareablePost";
 import NotFound from "./pages/NotFound";
 
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/matrix" element={<Matrix />} />
+            <Route path="/plan" element={<Plan />} />
             <Route path="/post/:id" element={<ShareablePost />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
