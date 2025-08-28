@@ -7,6 +7,9 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
+  sessionExpiresAt: Date | null;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,21 +25,57 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let refreshTimer: NodeJS.Timeout;
+
     // Check current auth session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsAuthenticated(!!session);
       setUser(session?.user ?? null);
+      setSessionExpiresAt(session?.expires_at ? new Date(session.expires_at * 1000) : null);
+      setIsLoading(false);
+      
+      if (session) {
+        scheduleRefresh(session.expires_at);
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
       setUser(session?.user ?? null);
+      setSessionExpiresAt(session?.expires_at ? new Date(session.expires_at * 1000) : null);
+      setIsLoading(false);
+      
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+      }
+      
+      if (session) {
+        scheduleRefresh(session.expires_at);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    const scheduleRefresh = (expiresAt: number) => {
+      const now = Math.floor(Date.now() / 1000);
+      const timeUntilRefresh = (expiresAt - now - 300) * 1000; // Refresh 5 minutes before expiry
+      
+      if (timeUntilRefresh > 0) {
+        refreshTimer = setTimeout(() => {
+          refreshSession();
+        }, timeUntilRefresh);
+      }
+    };
+
+    return () => {
+      subscription.unsubscribe();
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+      }
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -82,11 +121,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    // Clean up auth state
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    // Force page reload for clean state
+    window.location.href = '/';
+  };
+
+  const refreshSession = async (): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Session refresh error:', error);
+        return false;
+      }
+      return !!data.session;
+    } catch (error) {
+      console.error('Session refresh error:', error);
+      return false;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      user, 
+      login, 
+      logout, 
+      refreshSession, 
+      sessionExpiresAt, 
+      isLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );
