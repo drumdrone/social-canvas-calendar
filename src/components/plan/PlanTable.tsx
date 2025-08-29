@@ -35,6 +35,12 @@ export const PlanTable: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const planDataRef = React.useRef<PlanData>({ months: [] });
+
+  // Update ref when planData changes
+  React.useEffect(() => {
+    planDataRef.current = planData;
+  }, [planData]);
 
   // Auto-save with debouncing
   const autoSave = useCallback(
@@ -76,15 +82,15 @@ export const PlanTable: React.FC = () => {
   );
 
   // Debounced auto-save
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
+  React.useEffect(() => {
+    if (!hasUnsavedChanges || !user) return;
     
     const timeoutId = setTimeout(() => {
-      autoSave(planData);
+      autoSave(planDataRef.current);
     }, 2000); // Save after 2 seconds of inactivity
 
     return () => clearTimeout(timeoutId);
-  }, [planData, hasUnsavedChanges, autoSave]);
+  }, [hasUnsavedChanges, autoSave, user]);
 
   // Load plan data
   const loadPlanData = useCallback(async () => {

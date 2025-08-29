@@ -20,6 +20,7 @@ interface PlanWeekProps {
   onUpdate: (updates: Partial<PlanWeekData>) => void;
   onDelete: () => void;
   canDelete: boolean;
+  isInline?: boolean;
 }
 
 export const PlanWeek: React.FC<PlanWeekProps> = ({
@@ -27,6 +28,7 @@ export const PlanWeek: React.FC<PlanWeekProps> = ({
   onUpdate,
   onDelete,
   canDelete,
+  isInline = false,
 }) => {
   const [pillars, setPillars] = useState<Array<{ name: string; color: string }>>([]);
 
@@ -51,6 +53,75 @@ export const PlanWeek: React.FC<PlanWeekProps> = ({
   };
 
   const selectedPillar = pillars.find(p => p.name === week.pillar);
+
+  if (isInline) {
+    return (
+      <div className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-2">
+          <Input
+            placeholder="Week title..."
+            value={week.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            className="font-medium"
+          />
+          <div className="space-y-2">
+            <select
+              value={week.pillar}
+              onChange={(e) => handleInputChange('pillar', e.target.value)}
+              className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
+            >
+              <option value="">Select pillar...</option>
+              {pillars.map(pillar => (
+                <option key={pillar.name} value={pillar.name}>
+                  {pillar.name}
+                </option>
+              ))}
+            </select>
+            {selectedPillar && (
+              <Badge 
+                variant="secondary" 
+                className="text-xs"
+                style={{ 
+                  backgroundColor: `${selectedPillar.color}20`,
+                  color: selectedPillar.color,
+                  borderColor: `${selectedPillar.color}40`
+                }}
+              >
+                {selectedPillar.name}
+              </Badge>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <Input
+            placeholder="URL..."
+            value={week.url}
+            onChange={(e) => handleInputChange('url', e.target.value)}
+            className="flex-1 text-sm"
+          />
+          {week.url && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => window.open(week.url, '_blank')}
+              className="flex-shrink-0"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+
+        <Textarea
+          placeholder="Notes..."
+          value={week.notes}
+          onChange={(e) => handleInputChange('notes', e.target.value)}
+          rows={2}
+          className="text-sm resize-none"
+        />
+      </div>
+    );
+  }
 
   return (
     <Card className="h-full">

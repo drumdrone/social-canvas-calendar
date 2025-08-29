@@ -47,30 +47,28 @@ export const PlanMonth: React.FC<PlanMonthProps> = ({
     setIsEditingName(false);
   };
 
-  const updateWeek = (weekId: string, updates: Partial<PlanWeekData>) => {
-    const updatedWeeks = month.weeks.map(week =>
-      week.id === weekId ? { ...week, ...updates } : week
-    );
+  const updateWeek = (weekIndex: number, updates: Partial<PlanWeekData>) => {
+    const updatedWeeks = [...month.weeks];
+    updatedWeeks[weekIndex] = { ...updatedWeeks[weekIndex], ...updates };
     onUpdate({ weeks: updatedWeeks });
   };
 
-  const addWeek = () => {
-    const newWeek: PlanWeekData = {
-      id: crypto.randomUUID(),
-      title: '',
-      pillar: '',
-      url: '',
-      notes: '',
-    };
-    onUpdate({ weeks: [...month.weeks, newWeek] });
+  // Ensure we always have exactly 4 weeks
+  const ensureFourWeeks = () => {
+    const weeks = [...month.weeks];
+    while (weeks.length < 4) {
+      weeks.push({
+        id: crypto.randomUUID(),
+        title: '',
+        pillar: '',
+        url: '',
+        notes: '',
+      });
+    }
+    return weeks.slice(0, 4); // Ensure max 4 weeks
   };
 
-  const deleteWeek = (weekId: string) => {
-    if (month.weeks.length > 1) {
-      const updatedWeeks = month.weeks.filter(week => week.id !== weekId);
-      onUpdate({ weeks: updatedWeeks });
-    }
-  };
+  const displayWeeks = ensureFourWeeks();
 
   const colorOptions = [
     '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
@@ -145,24 +143,30 @@ export const PlanMonth: React.FC<PlanMonthProps> = ({
         
         <div className="flex items-center justify-between">
           <Badge variant="secondary">
-            {month.weeks.length} week{month.weeks.length !== 1 ? 's' : ''}
+            4 weeks
           </Badge>
-          <Button size="sm" onClick={addWeek} variant="outline">
-            Add Week
-          </Button>
         </div>
       </CardHeader>
       
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {month.weeks.map((week) => (
-            <PlanWeek
-              key={week.id}
-              week={week}
-              onUpdate={(updates) => updateWeek(week.id, updates)}
-              onDelete={() => deleteWeek(week.id)}
-              canDelete={month.weeks.length > 1}
-            />
+        <div className="space-y-4">
+          {displayWeeks.map((week, index) => (
+            <div key={week.id || `week-${index}`} className="flex items-start gap-4 p-4 border rounded-lg bg-muted/20">
+              <div className="flex-shrink-0 w-20 pt-2">
+                <Badge variant="outline" className="text-sm font-medium">
+                  {index + 1}. week
+                </Badge>
+              </div>
+              <div className="flex-1">
+                <PlanWeek
+                  week={week}
+                  onUpdate={(updates) => updateWeek(index, updates)}
+                  onDelete={() => {}}
+                  canDelete={false}
+                  isInline={true}
+                />
+              </div>
+            </div>
           ))}
         </div>
       </CardContent>
