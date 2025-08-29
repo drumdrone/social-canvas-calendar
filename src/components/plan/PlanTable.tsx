@@ -88,22 +88,53 @@ export const PlanTable: React.FC = () => {
     
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      // First, check if a record exists for this user and section_order
+      const { data: existingRecord, error: queryError } = await supabase
         .from('plan_sections')
-        .upsert({
-          user_id: user.id,
-          section_data: data as any,
-          section_order: 0,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,section_order'
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('section_order', 0)
+        .maybeSingle();
+
+      if (queryError) {
+        console.error('Query error:', queryError);
+        toast({
+          title: "Save failed",
+          description: `Database query failed: ${queryError.message}`,
+          variant: "destructive",
         });
+        return false;
+      }
+
+      // Prepare the data to save
+      const saveData = {
+        user_id: user.id,
+        section_data: data as any,
+        section_order: 0,
+        updated_at: new Date().toISOString()
+      };
+
+      let error;
+      if (existingRecord) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('plan_sections')
+          .update(saveData)
+          .eq('id', existingRecord.id);
+        error = updateError;
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from('plan_sections')
+          .insert(saveData);
+        error = insertError;
+      }
 
       if (error) {
         console.error('Save error:', error);
         toast({
           title: "Save failed",
-          description: "Could not save your changes. Please try again.",
+          description: `Database error: ${error.message}`,
           variant: "destructive",
         });
         return false;
@@ -114,7 +145,7 @@ export const PlanTable: React.FC = () => {
       console.error('Save error:', error);
       toast({
         title: "Save failed", 
-        description: "Something went wrong saving your changes.",
+        description: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
       return false;
