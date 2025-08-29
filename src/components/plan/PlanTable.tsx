@@ -3,11 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Save, Calendar, RefreshCw, AlertCircle } from 'lucide-react';
+import { Plus, Save, Calendar, RefreshCw, CloudOff, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlanMonth } from './PlanMonth';
-import { useToast } from '@/hooks/use-toast';
 
 interface PlanWeek {
   id: string;
@@ -30,141 +29,134 @@ interface PlanData {
 
 export const PlanTable: React.FC = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [planData, setPlanData] = useState<PlanData>({ months: [] });
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'syncing' | 'local'>('saved');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  // Load plan data from database
+  // Load plan data from localStorage and database
   const loadPlanData = useCallback(async () => {
     if (!user) return;
     
     setIsLoading(true);
+    
+    // First, load from localStorage for immediate UI update
+    const localStorageKey = `plan-data-${user.id}`;
+    const localData = localStorage.getItem(localStorageKey);
+    const localTimestamp = localStorage.getItem(`${localStorageKey}-timestamp`);
+    
+    if (localData) {
+      try {
+        const parsedLocalData = JSON.parse(localData) as PlanData;
+        setPlanData(parsedLocalData);
+        setLastSaved(localTimestamp ? new Date(localTimestamp) : null);
+      } catch (error) {
+        console.error('Error parsing local data:', error);
+      }
+    }
+    
+    // Then, check database for newer data
     try {
       const { data, error } = await supabase
         .from('plan_sections')
-        .select('section_data')
+        .select('section_data, updated_at')
         .eq('user_id', user.id)
         .eq('section_order', 0)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (error) {
-        console.error('Failed to load plan data:', error);
-        toast({
-          title: "Failed to load plan",
-          description: "Could not load your plan data. Please refresh the page.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (data?.section_data) {
-        const loadedData = data.section_data as unknown as PlanData;
-        setPlanData(loadedData);
-      } else {
-        // Initialize with empty data
-        setPlanData({ months: [] });
+      if (!error && data?.section_data) {
+        const dbTimestamp = new Date(data.updated_at);
+        const localTimestampDate = localTimestamp ? new Date(localTimestamp) : null;
+        
+        // Use database data if it's newer than local data
+        if (!localTimestampDate || dbTimestamp > localTimestampDate) {
+          const dbData = data.section_data as unknown as PlanData;
+          setPlanData(dbData);
+          setLastSaved(dbTimestamp);
+          
+          // Update localStorage with newer database data
+          localStorage.setItem(localStorageKey, JSON.stringify(dbData));
+          localStorage.setItem(`${localStorageKey}-timestamp`, dbTimestamp.toISOString());
+        }
       }
     } catch (error) {
-      console.error('Error loading plan data:', error);
-      toast({
-        title: "Error loading plan",
-        description: "Something went wrong loading your plan.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, toast]);
-
-  // Save plan data to database immediately
-  const savePlanData = useCallback(async (data: PlanData) => {
-    if (!user) {
-      console.error('No user authenticated');
-      return false;
+      console.error('Error loading from database, using local data:', error);
     }
     
-    setIsSaving(true);
+    setIsLoading(false);
+  }, [user]);
+
+  // Save to localStorage immediately, sync to database in background
+  const saveToLocalStorage = useCallback((data: PlanData) => {
+    if (!user) return;
+    
+    const localStorageKey = `plan-data-${user.id}`;
+    const timestamp = new Date().toISOString();
+    
+    localStorage.setItem(localStorageKey, JSON.stringify(data));
+    localStorage.setItem(`${localStorageKey}-timestamp`, timestamp);
+    setLastSaved(new Date(timestamp));
+    setSaveStatus('saved');
+  }, [user]);
+
+  // Background sync to database
+  const syncToDatabase = useCallback(async (data: PlanData) => {
+    if (!user) return;
+    
+    setSaveStatus('syncing');
     try {
-      // First, check if a record exists for this user and section_order
-      const { data: existingRecord, error: queryError } = await supabase
+      // Simple approach: delete old records and insert new one
+      await supabase
         .from('plan_sections')
-        .select('id')
+        .delete()
         .eq('user_id', user.id)
-        .eq('section_order', 0)
-        .maybeSingle();
+        .eq('section_order', 0);
 
-      if (queryError) {
-        console.error('Query error:', queryError);
-        toast({
-          title: "Save failed",
-          description: `Database query failed: ${queryError.message}`,
-          variant: "destructive",
+      const { error } = await supabase
+        .from('plan_sections')
+        .insert({
+          user_id: user.id,
+          section_data: data as any,
+          section_order: 0,
+          updated_at: new Date().toISOString()
         });
-        return false;
-      }
-
-      // Prepare the data to save
-      const saveData = {
-        user_id: user.id,
-        section_data: data as any,
-        section_order: 0,
-        updated_at: new Date().toISOString()
-      };
-
-      let error;
-      if (existingRecord) {
-        // Update existing record
-        const { error: updateError } = await supabase
-          .from('plan_sections')
-          .update(saveData)
-          .eq('id', existingRecord.id);
-        error = updateError;
-      } else {
-        // Insert new record
-        const { error: insertError } = await supabase
-          .from('plan_sections')
-          .insert(saveData);
-        error = insertError;
-      }
 
       if (error) {
-        console.error('Save error:', error);
-        toast({
-          title: "Save failed",
-          description: `Database error: ${error.message}`,
-          variant: "destructive",
-        });
-        return false;
+        console.error('Database sync failed:', error);
+        setSaveStatus('local');
+      } else {
+        setSaveStatus('saved');
       }
-
-      return true;
     } catch (error) {
-      console.error('Save error:', error);
-      toast({
-        title: "Save failed", 
-        description: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsSaving(false);
+      console.error('Sync error:', error);
+      setSaveStatus('local');
     }
-  }, [user, toast]);
+  }, [user]);
 
-  // Update plan data and save to database
-  const updatePlanData = useCallback(async (updatedData: PlanData) => {
+  // Update plan data - save to localStorage immediately
+  const updatePlanData = useCallback((updatedData: PlanData) => {
     setPlanData(updatedData);
-    await savePlanData(updatedData);
-  }, [savePlanData]);
+    saveToLocalStorage(updatedData);
+  }, [saveToLocalStorage]);
+
+  // Auto-sync to database every 30 seconds
+  useEffect(() => {
+    if (!user || planData.months.length === 0) return;
+    
+    const interval = setInterval(() => {
+      syncToDatabase(planData);
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [user, planData, syncToDatabase]);
 
   useEffect(() => {
     loadPlanData();
   }, [loadPlanData]);
 
-  const addMonth = async () => {
+  const addMonth = () => {
     const newMonth: PlanMonthData = {
       id: crypto.randomUUID(),
       name: `Month ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
@@ -183,19 +175,19 @@ export const PlanTable: React.FC = () => {
       months: [...planData.months, newMonth],
     };
     
-    await updatePlanData(updatedData);
+    updatePlanData(updatedData);
   };
 
-  const deleteMonth = async (monthId: string) => {
+  const deleteMonth = (monthId: string) => {
     const updatedData = {
       ...planData,
       months: planData.months.filter(month => month.id !== monthId),
     };
     
-    await updatePlanData(updatedData);
+    updatePlanData(updatedData);
   };
 
-  const updateMonth = async (monthId: string, updates: Partial<PlanMonthData>) => {
+  const updateMonth = (monthId: string, updates: Partial<PlanMonthData>) => {
     const updatedData = {
       ...planData,
       months: planData.months.map(month =>
@@ -203,17 +195,11 @@ export const PlanTable: React.FC = () => {
       ),
     };
     
-    await updatePlanData(updatedData);
+    updatePlanData(updatedData);
   };
 
-  const manualSave = async () => {
-    const success = await savePlanData(planData);
-    if (success) {
-      toast({
-        title: "Plan saved",
-        description: "Your plan has been saved successfully.",
-      });
-    }
+  const manualSync = () => {
+    syncToDatabase(planData);
   };
 
   if (isLoading) {
@@ -240,23 +226,45 @@ export const PlanTable: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             {/* Save Status */}
-            {isSaving && (
-              <Badge variant="secondary" className="animate-pulse">
-                Saving...
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {saveStatus === 'saved' && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Saved
+                </Badge>
+              )}
+              {saveStatus === 'syncing' && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  Syncing
+                </Badge>
+              )}
+              {saveStatus === 'local' && (
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <CloudOff className="h-3 w-3" />
+                  Local Only
+                </Badge>
+              )}
+              {lastSaved && (
+                <span className="text-xs text-muted-foreground">
+                  {lastSaved.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
 
             <Button
-              onClick={manualSave}
-              disabled={isSaving}
+              onClick={manualSync}
+              disabled={saveStatus === 'syncing'}
+              variant="outline"
+              size="sm"
               className="flex items-center gap-2"
             >
-              {isSaving ? (
+              {saveStatus === 'syncing' ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              Save Plan
+              Sync
             </Button>
             <Button onClick={addMonth} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
