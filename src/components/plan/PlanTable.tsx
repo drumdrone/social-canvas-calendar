@@ -107,20 +107,15 @@ export const PlanTable: React.FC = () => {
     
     setSaveStatus('syncing');
     try {
-      // Simple approach: delete old records and insert new one
-      await supabase
-        .from('plan_sections')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('section_order', 0);
-
       const { error } = await supabase
         .from('plan_sections')
-        .insert({
+        .upsert({
           user_id: user.id,
           section_data: data as any,
           section_order: 0,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,section_order'
         });
 
       if (error) {
