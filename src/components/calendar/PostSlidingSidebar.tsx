@@ -343,28 +343,44 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       
       if (mentionedAuthor && mentionedAuthor.email) {
         try {
-          const response = await fetch('/functions/v1/send-mention-email', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+          const { data, error } = await supabase.functions.invoke('send-mention-email', {
+            body: {
               mentionedAuthorEmail: mentionedAuthor.email,
               mentionedAuthorName: mentionedAuthor.name,
               postTitle: title,
               commentText,
               commenterName,
-            }),
+            },
           });
 
-          if (!response.ok) {
-            console.error('Failed to send mention email:', await response.text());
+          if (error) {
+            console.error('Failed to send mention email:', error);
+            toast({
+              title: "Email notification failed",
+              description: `Could not send notification to ${mentionedAuthor.name}`,
+              variant: "destructive",
+            });
           } else {
             console.log(`Mention email sent to ${mentionedAuthor.email}`);
+            toast({
+              title: "Mention notification sent",
+              description: `${mentionedAuthor.name} has been notified`,
+            });
           }
         } catch (error) {
           console.error('Error sending mention email:', error);
+          toast({
+            title: "Email notification failed",
+            description: "Unable to send mention notification",
+            variant: "destructive",
+          });
         }
+      } else if (mentionedAuthor && !mentionedAuthor.email) {
+        toast({
+          title: "No email address",
+          description: `${mentionedAuthor.name} doesn't have an email address set`,
+          variant: "destructive",
+        });
       }
     }
   };
