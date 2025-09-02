@@ -156,7 +156,7 @@ export const PlanTable: React.FC = () => {
       id: crypto.randomUUID(),
       name: `Month ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
       color: '#6366f1',
-      weeks: Array.from({ length: 4 }, () => ({
+      weeks: Array.from({ length: 2 }, () => ({
         id: crypto.randomUUID(),
         title: '',
         pillar: '',

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { format, startOfYear, endOfYear, eachWeekOfInterval, startOfWeek, endOfWeek, getMonth, getWeek } from 'date-fns';
+import { format, startOfYear, endOfYear, eachWeekOfInterval, startOfWeek, endOfWeek, getMonth, getWeek, startOfQuarter, endOfQuarter } from 'date-fns';
 
 interface SocialPost {
   id: string;
@@ -27,6 +27,7 @@ interface AuthorStats {
 
 interface MatrixGridProps {
   currentYear: number;
+  currentQuarter: number;
 }
 
 const monthNames = [
@@ -34,20 +35,29 @@ const monthNames = [
   'ČERVENEC', 'SRPEN', 'ZÁŘÍ', 'ŘÍJEN', 'LISTOPAD', 'PROSINEC'
 ];
 
-export const MatrixGrid: React.FC<MatrixGridProps> = ({ currentYear }) => {
+const statusAbbreviations: Record<string, string> = {
+  'published': 'PUB',
+  'draft': 'DRA',
+  'scheduled': 'SCH',
+  'pending': 'PEN',
+  'review': 'REV'
+};
+
+export const MatrixGrid: React.FC<MatrixGridProps> = ({ currentYear, currentQuarter }) => {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [authorsData, setAuthorsData] = useState<Record<string, { initials: string; color: string }>>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchYearData();
-  }, [currentYear]);
+    fetchQuarterData();
+  }, [currentYear, currentQuarter]);
 
-  const fetchYearData = async () => {
+  const fetchQuarterData = async () => {
     setLoading(true);
     try {
-      const startDate = startOfYear(new Date(currentYear, 0, 1));
-      const endDate = endOfYear(new Date(currentYear, 0, 1));
+      const quarterStartMonth = (currentQuarter - 1) * 3;
+      const startDate = startOfQuarter(new Date(currentYear, quarterStartMonth, 1));
+      const endDate = endOfQuarter(new Date(currentYear, quarterStartMonth, 1));
       
       const { data, error } = await supabase
         .from('social_media_posts')
@@ -76,14 +86,15 @@ export const MatrixGrid: React.FC<MatrixGridProps> = ({ currentYear }) => {
         }
       }
     } catch (error) {
-      console.error('Error fetching year data:', error);
+      console.error('Error fetching quarter data:', error);
     }
     setLoading(false);
   };
 
-  const getWeeksInYear = () => {
-    const startDate = startOfYear(new Date(currentYear, 0, 1));
-    const endDate = endOfYear(new Date(currentYear, 0, 1));
+  const getWeeksInQuarter = () => {
+    const quarterStartMonth = (currentQuarter - 1) * 3;
+    const startDate = startOfQuarter(new Date(currentYear, quarterStartMonth, 1));
+    const endDate = endOfQuarter(new Date(currentYear, quarterStartMonth, 1));
     
     return eachWeekOfInterval({
       start: startDate,
@@ -91,8 +102,13 @@ export const MatrixGrid: React.FC<MatrixGridProps> = ({ currentYear }) => {
     });
   };
 
-  const getAuthorStatsForMonthWeek = (monthIndex: number, weekIndex: number): AuthorStats[] => {
-    const weeks = getWeeksInYear();
+  const getQuarterMonths = () => {
+    const startMonth = (currentQuarter - 1) * 3;
+    return [startMonth, startMonth + 1, startMonth + 2];
+  };
+
+  const getPostsForMonthWeek = (monthIndex: number, weekIndex: number): SocialPost[] => {
+    const weeks = getWeeksInQuarter();
     const targetWeek = weeks[weekIndex];
     
     if (!targetWeek) return [];
@@ -100,37 +116,17 @@ export const MatrixGrid: React.FC<MatrixGridProps> = ({ currentYear }) => {
     const weekStart = startOfWeek(targetWeek);
     const weekEnd = endOfWeek(targetWeek);
 
-    const weekPosts = posts.filter(post => {
+    return posts.filter(post => {
       const postDate = new Date(post.scheduled_date);
       const postMonth = getMonth(postDate);
       return postMonth === monthIndex && 
              postDate >= weekStart && 
-             postDate <= weekEnd &&
-             post.author;
+             postDate <= weekEnd;
     });
-
-    // Group by author
-    const authorGroups = weekPosts.reduce((acc, post) => {
-      const author = post.author!;
-      if (!acc[author]) {
-        acc[author] = [];
-      }
-      acc[author].push(post);
-      return acc;
-    }, {} as Record<string, SocialPost[]>);
-
-    // Convert to AuthorStats
-    return Object.entries(authorGroups).map(([author, posts]) => ({
-      author,
-      initials: authorsData[author]?.initials || author.substring(0, 3).toUpperCase(),
-      color: authorsData[author]?.color || '#3B82F6',
-      count: posts.length,
-      posts
-    }));
   };
 
-  const weeks = getWeeksInYear();
-  const maxWeeks = 53; // Maximum possible weeks in a year
+  const weeks = getWeeksInQuarter();
+  const quarterMonths = getQuarterMonths();
 
   if (loading) {
     return (
@@ -146,47 +142,78 @@ export const MatrixGrid: React.FC<MatrixGridProps> = ({ currentYear }) => {
         <div className="min-w-max">
           {/* Header row with week numbers */}
           <div className="flex sticky top-0 bg-muted z-10">
-            <div className="w-24 p-2 border-r border-border bg-muted">
-              <div className="text-xs font-medium text-center">Month</div>
+            <div className="w-32 p-3 border-r border-border bg-muted">
+              <div className="text-sm font-medium text-center">Month</div>
             </div>
-            {Array.from({ length: maxWeeks }, (_, i) => (
-              <div key={i} className="w-16 p-2 border-r border-border text-center">
-                <div className="text-xs font-medium">
-                  {i < weeks.length ? `W${getWeek(weeks[i])}` : ''}
+            {weeks.map((week, weekIndex) => (
+              <div key={weekIndex} className="w-48 p-3 border-r border-border text-center">
+                <div className="text-sm font-medium">
+                  Week {getWeek(week)}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Month rows */}
-          {monthNames.map((monthName, monthIndex) => (
+          {/* Quarter Month rows */}
+          {quarterMonths.map((monthIndex) => (
             <div key={monthIndex} className="flex border-b border-border">
-              <div className="w-24 p-2 border-r border-border bg-muted/30 flex items-center">
-                <div className="text-xs font-medium text-center w-full">
-                  {monthName}
+              <div className="w-32 p-3 border-r border-border bg-muted/30 flex items-center">
+                <div className="text-sm font-medium text-center w-full">
+                  {monthNames[monthIndex]}
                 </div>
               </div>
-              {Array.from({ length: maxWeeks }, (_, weekIndex) => {
-                const authorStats = getAuthorStatsForMonthWeek(monthIndex, weekIndex);
+              {weeks.map((_, weekIndex) => {
+                const weekPosts = getPostsForMonthWeek(monthIndex, weekIndex);
+                
+                // Group posts by author and status
+                const authors = [...new Set(weekPosts.map(p => p.author).filter(Boolean))];
+                const statusCounts = weekPosts.reduce((acc, post) => {
+                  const status = statusAbbreviations[post.status] || post.status.substring(0, 3).toUpperCase();
+                  acc[status] = (acc[status] || 0) + 1;
+                  return acc;
+                }, {} as Record<string, number>);
                 
                 return (
-                  <div key={weekIndex} className="w-16 p-1 border-r border-border min-h-[60px] relative">
-                    <div className="flex flex-wrap gap-1">
-                      {authorStats.map((stat, statIndex) => (
-                        <div
-                          key={`${stat.author}-${statIndex}`}
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[8px] font-bold relative"
-                          style={{ backgroundColor: stat.color }}
-                          title={`${stat.author}: ${stat.count} posts`}
-                        >
-                          {stat.initials}
-                          {stat.count > 1 && (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full text-[6px] text-primary-foreground flex items-center justify-center">
-                              {stat.count}
-                            </div>
-                          )}
+                  <div key={weekIndex} className="w-48 p-2 border-r border-border min-h-[120px] bg-background">
+                    <div className="space-y-2">
+                      {/* Authors row */}
+                      <div className="min-h-[40px]">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">AUTHORS</div>
+                        <div className="flex flex-wrap gap-1">
+                          {authors.map((author, authorIndex) => {
+                            const authorData = authorsData[author!];
+                            const initials = authorData?.initials || author!.substring(0, 3).toUpperCase();
+                            const color = authorData?.color || '#3B82F6';
+                            
+                            return (
+                              <div
+                                key={`${author}-${authorIndex}`}
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                                style={{ backgroundColor: color }}
+                                title={author}
+                              >
+                                {initials}
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
+                      </div>
+                      
+                      {/* Status row */}
+                      <div className="min-h-[40px]">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">STATUS</div>
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(statusCounts).map(([status, count]) => (
+                            <div
+                              key={status}
+                              className="px-2 py-1 rounded bg-primary/10 text-primary text-xs font-medium"
+                              title={`${status}: ${count} posts`}
+                            >
+                              {status} {count > 1 ? `(${count})` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
