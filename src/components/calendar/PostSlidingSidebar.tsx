@@ -550,9 +550,43 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       {/* Existing Comments Display */}
                       {comments && (
                         <div className="space-y-4">
-                          <Label className="text-sm font-medium">Existing Comments</Label>
-                          <div className="border rounded-lg p-4 bg-muted/50">
-                            <div className="whitespace-pre-wrap text-sm">{comments}</div>
+                          <Label className="text-sm font-medium">Comments</Label>
+                          <div className="space-y-3">
+                            {comments.split('\n\n').map((comment, index) => {
+                              // Parse comment format: [timestamp] Author Name (INITIALS): comment text
+                              const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
+                              if (match) {
+                                const [, timestamp, authorName, authorInitials, commentText] = match;
+                                const author = authorOptions.find(a => a.initials === authorInitials);
+                                
+                                return (
+                                  <div key={index} className="border rounded-lg p-4 bg-muted/30">
+                                    <div className="flex items-start gap-3">
+                                      <div 
+                                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5"
+                                        style={{ backgroundColor: author?.color || '#3B82F6' }}
+                                      >
+                                        {authorInitials}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <span className="font-medium text-sm">{authorName}</span>
+                                          <span className="text-xs text-muted-foreground">{timestamp}</span>
+                                        </div>
+                                        <div className="text-sm text-foreground whitespace-pre-wrap">{commentText}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              // Fallback for old format comments
+                              return (
+                                <div key={index} className="border rounded-lg p-4 bg-muted/30">
+                                  <div className="text-sm whitespace-pre-wrap">{comment}</div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
