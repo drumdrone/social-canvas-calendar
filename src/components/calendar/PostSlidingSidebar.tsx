@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History, Plus, MessageSquare } from 'lucide-react';
+import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History, Plus, MessageSquare, Edit3, Check, XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,6 +55,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [comments, setComments] = useState('');
   const [newComment, setNewComment] = useState('');
   const [selectedCommentAuthor, setSelectedCommentAuthor] = useState('');
+  const [editingCommentIndex, setEditingCommentIndex] = useState<number | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
   const [activeTab, setActiveTab] = useState('content');
   const { toast } = useToast();
 
@@ -268,6 +270,63 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         variant: 'destructive',
       });
     }
+  };
+
+  // Comment management functions
+  const handleEditComment = (index: number) => {
+    const commentArray = comments.split('\n\n').filter(comment => comment.trim());
+    const comment = commentArray[index];
+    const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
+    if (match) {
+      setEditingCommentText(match[4]); // Extract comment text
+    } else {
+      setEditingCommentText(comment); // Fallback for old format
+    }
+    setEditingCommentIndex(index);
+  };
+
+  const handleSaveEditComment = () => {
+    if (editingCommentIndex !== null && editingCommentText.trim()) {
+      const commentArray = comments.split('\n\n').filter(comment => comment.trim());
+      const comment = commentArray[editingCommentIndex];
+      const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
+      
+      if (match) {
+        const [, timestamp, authorName, authorInitials] = match;
+        const updatedComment = `[${timestamp}] ${authorName} (${authorInitials}): ${editingCommentText.trim()}`;
+        commentArray[editingCommentIndex] = updatedComment;
+      } else {
+        // Fallback for old format
+        commentArray[editingCommentIndex] = editingCommentText.trim();
+      }
+      
+      setComments(commentArray.join('\n\n'));
+      setEditingCommentIndex(null);
+      setEditingCommentText('');
+      
+      toast({
+        title: 'Comment Updated',
+        description: 'Comment has been updated successfully.',
+      });
+    }
+  };
+
+  const handleDeleteComment = (index: number) => {
+    if (confirm('Are you sure you want to delete this comment?')) {
+      const commentArray = comments.split('\n\n').filter(comment => comment.trim());
+      commentArray.splice(index, 1);
+      setComments(commentArray.join('\n\n'));
+      
+      toast({
+        title: 'Comment Deleted',
+        description: 'Comment has been deleted successfully.',
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentIndex(null);
+    setEditingCommentText('');
   };
 
   if (!isOpen) return null;
@@ -569,11 +628,63 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                                         {authorInitials}
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <span className="font-medium text-sm">{authorName}</span>
-                                          <span className="text-xs text-muted-foreground">{timestamp}</span>
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium text-sm">{authorName}</span>
+                                            <span className="text-xs text-muted-foreground">{timestamp}</span>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                              onClick={() => handleEditComment(index)}
+                                              title="Edit comment"
+                                            >
+                                              <Edit3 className="h-3 w-3" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                              onClick={() => handleDeleteComment(index)}
+                                              title="Delete comment"
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </div>
                                         </div>
-                                        <div className="text-sm text-foreground whitespace-pre-wrap">{commentText}</div>
+                                        {editingCommentIndex === index ? (
+                                          <div className="space-y-2">
+                                            <Textarea
+                                              value={editingCommentText}
+                                              onChange={(e) => setEditingCommentText(e.target.value)}
+                                              className="text-sm resize-none"
+                                              rows={2}
+                                            />
+                                            <div className="flex items-center gap-2">
+                                              <Button
+                                                size="sm"
+                                                className="h-6 px-2"
+                                                onClick={handleSaveEditComment}
+                                              >
+                                                <Check className="h-3 w-3 mr-1" />
+                                                Save
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 px-2"
+                                                onClick={handleCancelEdit}
+                                              >
+                                                <XIcon className="h-3 w-3 mr-1" />
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="text-sm text-foreground whitespace-pre-wrap">{commentText}</div>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
