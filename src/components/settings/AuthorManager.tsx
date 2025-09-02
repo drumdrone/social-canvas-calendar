@@ -28,6 +28,12 @@ export const AuthorManager: React.FC = () => {
     email: '',
     color: '#3B82F6'
   });
+  const [editingAuthor, setEditingAuthor] = useState({
+    name: '',
+    initials: '',
+    email: '',
+    color: '#3B82F6'
+  });
 
   const fetchAuthors = async () => {
     try {
@@ -135,6 +141,42 @@ export const AuthorManager: React.FC = () => {
     await handleUpdate(author.id, { is_active: !author.is_active });
   };
 
+  const startEditing = (author: Author) => {
+    setEditingId(author.id);
+    setEditingAuthor({
+      name: author.name,
+      initials: author.initials,
+      email: author.email || '',
+      color: author.color
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditingAuthor({ name: '', initials: '', email: '', color: '#3B82F6' });
+  };
+
+  const saveEdit = async () => {
+    if (!editingAuthor.name.trim() || !editingAuthor.initials.trim()) {
+      toast.error('Name and initials are required');
+      return;
+    }
+
+    if (editingAuthor.initials.length !== 3) {
+      toast.error('Initials must be exactly 3 characters');
+      return;
+    }
+
+    if (editingId) {
+      await handleUpdate(editingId, {
+        name: editingAuthor.name,
+        initials: editingAuthor.initials.toUpperCase(),
+        email: editingAuthor.email || null,
+        color: editingAuthor.color
+      });
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-4">Loading authors...</div>;
   }
@@ -218,37 +260,99 @@ export const AuthorManager: React.FC = () => {
         {authors.map((author) => (
           <Card key={author.id} className={!author.is_active ? 'opacity-50' : ''}>
             <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Badge 
-                    className="text-white font-bold text-xs rounded-full w-8 h-8 flex items-center justify-center"
-                    style={{ backgroundColor: author.color }}
-                  >
-                    {author.initials}
-                  </Badge>
+              {editingId === author.id ? (
+                // Edit mode
+                <div className="space-y-3">
                   <div>
-                    <span className="font-medium">{author.name}</span>
-                    <p className="text-xs text-muted-foreground">{author.initials}</p>
-                    {author.email && <p className="text-xs text-muted-foreground">{author.email}</p>}
+                    <Label htmlFor={`edit-name-${author.id}`}>Name</Label>
+                    <Input
+                      id={`edit-name-${author.id}`}
+                      value={editingAuthor.name}
+                      onChange={(e) => setEditingAuthor({ ...editingAuthor, name: e.target.value })}
+                      placeholder="e.g., John Doe"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`edit-initials-${author.id}`}>Initials (3 letters)</Label>
+                    <Input
+                      id={`edit-initials-${author.id}`}
+                      value={editingAuthor.initials}
+                      onChange={(e) => setEditingAuthor({ ...editingAuthor, initials: e.target.value.slice(0, 3) })}
+                      placeholder="e.g., JDO"
+                      maxLength={3}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`edit-email-${author.id}`}>Email (optional)</Label>
+                    <Input
+                      id={`edit-email-${author.id}`}
+                      type="email"
+                      value={editingAuthor.email}
+                      onChange={(e) => setEditingAuthor({ ...editingAuthor, email: e.target.value })}
+                      placeholder="e.g., john@example.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`edit-color-${author.id}`}>Color</Label>
+                    <Input
+                      id={`edit-color-${author.id}`}
+                      type="color"
+                      value={editingAuthor.color}
+                      onChange={(e) => setEditingAuthor({ ...editingAuthor, color: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={saveEdit}>
+                      <Save className="h-3 w-3 mr-1" />
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEditing}>
+                      <X className="h-3 w-3 mr-1" />
+                      Cancel
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant={author.is_active ? "default" : "outline"}
-                    onClick={() => toggleActive(author)}
-                  >
-                    {author.is_active ? 'Active' : 'Inactive'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDelete(author.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+              ) : (
+                // Display mode
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Badge 
+                      className="text-white font-bold text-xs rounded-full w-8 h-8 flex items-center justify-center"
+                      style={{ backgroundColor: author.color }}
+                    >
+                      {author.initials}
+                    </Badge>
+                    <div>
+                      <span className="font-medium">{author.name}</span>
+                      <p className="text-xs text-muted-foreground">{author.initials}</p>
+                      {author.email && <p className="text-xs text-muted-foreground">{author.email}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant={author.is_active ? "default" : "outline"}
+                      onClick={() => toggleActive(author)}
+                    >
+                      {author.is_active ? 'Active' : 'Inactive'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => startEditing(author)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(author.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         ))}
