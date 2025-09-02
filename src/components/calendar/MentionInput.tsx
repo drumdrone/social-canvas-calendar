@@ -54,9 +54,9 @@ export const MentionInput: React.FC<MentionInputProps> = ({
       
       if (mentionedAuthor) {
         mentions.push(mentionInitials);
-        highlighted += `<span class="mention-highlight" data-initials="${mentionInitials}" style="background-color: ${mentionedAuthor.color}20; color: ${mentionedAuthor.color}; font-weight: 600; padding: 1px 4px; border-radius: 4px; border: 1px solid ${mentionedAuthor.color}40;">@${mentionInitials}</span>`;
+        highlighted += `<span class="mention-highlight" data-initials="${mentionInitials}" style="background-color: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: 600; padding: 1px 4px; border-radius: 4px; border: 1px solid hsl(var(--primary) / 0.2);">@${mentionInitials}</span>`;
       } else {
-        highlighted += `<span class="mention-invalid" style="background-color: #ef444420; color: #ef4444; font-weight: 600; padding: 1px 4px; border-radius: 4px; border: 1px solid #ef444440;">@${mentionInitials}</span>`;
+        highlighted += `<span class="mention-invalid" style="background-color: hsl(var(--destructive) / 0.1); color: hsl(var(--destructive)); font-weight: 600; padding: 1px 4px; border-radius: 4px; border: 1px solid hsl(var(--destructive) / 0.2);">@${mentionInitials}</span>`;
       }
       
       lastIndex = match.index + match[0].length;
@@ -169,7 +169,12 @@ export const MentionInput: React.FC<MentionInputProps> = ({
         {/* Overlay for mention highlighting */}
         <div
           ref={overlayRef}
-          className="absolute inset-0 pointer-events-none overflow-hidden whitespace-pre-wrap break-words text-transparent z-0 p-3 border border-transparent rounded-md text-sm leading-5"
+          className="absolute inset-0 pointer-events-none overflow-hidden whitespace-pre-wrap break-words text-transparent z-0 p-3 border border-transparent rounded-md text-sm font-mono leading-[1.4]"
+          style={{
+            fontFamily: 'inherit',
+            fontSize: 'inherit',
+            lineHeight: 'inherit'
+          }}
           dangerouslySetInnerHTML={{
             __html: parseContent().highlighted.replace(/\n/g, '<br>')
           }}
