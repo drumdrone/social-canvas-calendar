@@ -572,6 +572,7 @@ export type Database = {
         Row: {
           author: string | null
           category: string
+          comments: string | null
           content: string | null
           created_at: string
           id: string
@@ -591,6 +592,7 @@ export type Database = {
         Insert: {
           author?: string | null
           category?: string
+          comments?: string | null
           content?: string | null
           created_at?: string
           id?: string
@@ -610,6 +612,7 @@ export type Database = {
         Update: {
           author?: string | null
           category?: string
+          comments?: string | null
           content?: string | null
           created_at?: string
           id?: string
