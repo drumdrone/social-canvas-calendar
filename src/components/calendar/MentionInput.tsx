@@ -75,16 +75,20 @@ export const MentionInput: React.FC<MentionInputProps> = ({
     
     onChange(newValue);
     
-    // Check for mention trigger
+    // Check for mention trigger - more flexible regex to catch any @ pattern
     const textBeforeCursor = newValue.slice(0, cursorPosition);
-    const mentionMatch = textBeforeCursor.match(/@([A-Z]*)$/);
+    const mentionMatch = textBeforeCursor.match(/@([A-Za-z]*)$/);
+    
+    console.log('Mention detection:', { textBeforeCursor, mentionMatch, authors });
     
     if (mentionMatch) {
-      const query = mentionMatch[1];
+      const query = mentionMatch[1].toUpperCase(); // Convert to uppercase for comparison
       const matchedAuthors = authors.filter(author =>
-        author.initials.startsWith(query) || 
+        author.initials.toUpperCase().startsWith(query) || 
         author.name.toLowerCase().includes(query.toLowerCase())
       );
+      
+      console.log('Matched authors:', { query, matchedAuthors });
       
       if (matchedAuthors.length > 0) {
         setSuggestions(matchedAuthors);
