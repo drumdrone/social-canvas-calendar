@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, KeyboardEvent } from "react";
+import React, { useState, useRef, KeyboardEvent } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -18,10 +18,6 @@ interface MentionInputProps {
   rows?: number;
 }
 
-interface MentionSuggestion {
-  author: Author;
-  position: number;
-}
 
 export const MentionInput: React.FC<MentionInputProps> = ({
   value,
@@ -167,22 +163,13 @@ export const MentionInput: React.FC<MentionInputProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           rows={rows}
-          className={cn("font-mono", className)}
-          style={{ position: 'relative', zIndex: 1, background: 'transparent' }}
+          className={cn("relative z-10 bg-transparent", className)}
         />
         
         {/* Overlay for mention highlighting */}
         <div
           ref={overlayRef}
-          className="absolute inset-0 pointer-events-none overflow-hidden font-mono text-transparent whitespace-pre-wrap break-words"
-          style={{
-            padding: '8px 12px',
-            border: '1px solid transparent',
-            borderRadius: '6px',
-            fontSize: '14px',
-            lineHeight: '1.4',
-            zIndex: 0,
-          }}
+          className="absolute inset-0 pointer-events-none overflow-hidden whitespace-pre-wrap break-words text-transparent z-0 p-3 border border-transparent rounded-md text-sm leading-5"
           dangerouslySetInnerHTML={{
             __html: parseContent().highlighted.replace(/\n/g, '<br>')
           }}
