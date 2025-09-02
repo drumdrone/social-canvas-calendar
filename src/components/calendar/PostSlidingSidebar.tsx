@@ -344,6 +344,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       
       if (mentionedAuthor && mentionedAuthor.email) {
         try {
+          console.log('=== FRONTEND: Attempting to send mention email ===');
+          console.log('Mentioned author:', mentionedAuthor);
+          console.log('Post title:', title);
+          console.log('Comment text:', commentText);
+          console.log('Commenter name:', commenterName);
+          
           const { data, error } = await supabase.functions.invoke('send-mention-email', {
             body: {
               mentionedAuthorEmail: mentionedAuthor.email,
@@ -354,25 +360,27 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
             },
           });
 
+          console.log('Supabase function response:', { data, error });
+
           if (error) {
             console.error('Failed to send mention email:', error);
             toast({
               title: "Email notification failed",
-              description: `Could not send notification to ${mentionedAuthor.name}`,
+              description: `Could not send notification to ${mentionedAuthor.name}: ${error.message}`,
               variant: "destructive",
             });
           } else {
-            console.log(`Mention email sent to ${mentionedAuthor.email}`);
+            console.log(`Mention email sent to ${mentionedAuthor.email}`, data);
             toast({
               title: "Mention notification sent",
-              description: `${mentionedAuthor.name} has been notified`,
+              description: `${mentionedAuthor.name} has been notified via ${mentionedAuthor.email}`,
             });
           }
         } catch (error) {
           console.error('Error sending mention email:', error);
           toast({
             title: "Email notification failed",
-            description: "Unable to send mention notification",
+            description: `Unable to send mention notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
             variant: "destructive",
           });
         }
