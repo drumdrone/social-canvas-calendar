@@ -35,7 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending mention email to:", mentionedAuthorEmail);
 
     const emailResponse = await resend.emails.send({
-      from: "Social Media Manager <onboarding@resend.dev>",
+      from: "Social Media Manager <noreply@mediate.cz>",
       to: [mentionedAuthorEmail],
       subject: `You were mentioned in "${postTitle}"`,
       html: `

@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
 import { MultiImageUpload } from './MultiImageUpload';
+import { MentionInput } from './MentionInput';
 
 interface PostSlidingSidebarProps {
   isOpen: boolean;
@@ -811,10 +812,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       </div>
                     </div>
                     
-                    <Textarea
+                    <MentionInput
                       value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add a comment... Use @username to mention team members"
+                      onChange={setNewComment}
+                      authors={authorOptions}
                       rows={4}
                       className="text-base resize-none"
                     />
