@@ -332,23 +332,46 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
   // Function to detect mentions and send emails
   const detectMentionsAndSendEmails = async (commentText: string, commenterName: string) => {
-    const mentionRegex = /@(\w+)/g;
+    console.log('=== MENTION DETECTION STARTED ===');
+    console.log('Comment text:', commentText);
+    console.log('Available authors:', authorOptions);
+    
+    // Use the same regex as MentionInput component for consistency
+    const mentionRegex = /@([A-Z]{2,4})/g;
     const mentions = [...commentText.matchAll(mentionRegex)];
+    
+    console.log('Mentions found with regex:', mentions);
+    
+    if (mentions.length === 0) {
+      console.log('No mentions detected in comment');
+      toast({
+        title: "No mentions found",
+        description: "No valid mentions (@INITIALS format) detected in comment",
+      });
+      return;
+    }
     
     for (const mention of mentions) {
       const mentionedInitials = mention[1].toUpperCase();
+      console.log('Processing mention for initials:', mentionedInitials);
+      
       const mentionedAuthor = authorOptions.find(a => 
-        a.initials.toLowerCase() === mentionedInitials.toLowerCase() ||
-        a.name.toLowerCase().includes(mentionedInitials.toLowerCase())
+        a.initials.toUpperCase() === mentionedInitials
       );
+      
+      console.log('Found author for initials:', mentionedAuthor);
       
       if (mentionedAuthor && mentionedAuthor.email) {
         try {
-          console.log('=== FRONTEND: Attempting to send mention email ===');
-          console.log('Mentioned author:', mentionedAuthor);
-          console.log('Post title:', title);
-          console.log('Comment text:', commentText);
-          console.log('Commenter name:', commenterName);
+          console.log('=== CALLING EDGE FUNCTION ===');
+          console.log('Sending email to:', mentionedAuthor.email);
+          console.log('Function parameters:', {
+            mentionedAuthorEmail: mentionedAuthor.email,
+            mentionedAuthorName: mentionedAuthor.name,
+            postTitle: title,
+            commentText,
+            commenterName,
+          });
           
           const { data, error } = await supabase.functions.invoke('send-mention-email', {
             body: {
@@ -360,24 +383,27 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
             },
           });
 
-          console.log('Supabase function response:', { data, error });
+          console.log('=== EDGE FUNCTION RESPONSE ===');
+          console.log('Data:', data);
+          console.log('Error:', error);
+          console.log('=== END EDGE FUNCTION RESPONSE ===');
 
           if (error) {
-            console.error('Failed to send mention email:', error);
+            console.error('Edge function returned error:', error);
             toast({
               title: "Email notification failed",
               description: `Could not send notification to ${mentionedAuthor.name}: ${error.message}`,
               variant: "destructive",
             });
           } else {
-            console.log(`Mention email sent to ${mentionedAuthor.email}`, data);
+            console.log(`SUCCESS: Mention email sent to ${mentionedAuthor.email}`);
             toast({
-              title: "Mention notification sent",
-              description: `${mentionedAuthor.name} has been notified via ${mentionedAuthor.email}`,
+              title: "Email sent successfully",
+              description: `${mentionedAuthor.name} has been notified at ${mentionedAuthor.email}`,
             });
           }
         } catch (error) {
-          console.error('Error sending mention email:', error);
+          console.error('Exception calling edge function:', error);
           toast({
             title: "Email notification failed",
             description: `Unable to send mention notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
