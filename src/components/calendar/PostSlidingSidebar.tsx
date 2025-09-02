@@ -552,7 +552,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                         <div className="space-y-4">
                           <Label className="text-sm font-medium">Comments</Label>
                           <div className="space-y-3">
-                            {comments.split('\n\n').map((comment, index) => {
+                            {comments.split('\n\n').filter(comment => comment.trim()).map((comment, index) => {
                               // Parse comment format: [timestamp] Author Name (INITIALS): comment text
                               const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
                               if (match) {
@@ -580,7 +580,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                                 );
                               }
                               
-                              // Fallback for old format comments
+                              // Fallback for old format comments or malformed comments
                               return (
                                 <div key={index} className="border rounded-lg p-4 bg-muted/30">
                                   <div className="text-sm whitespace-pre-wrap">{comment}</div>
