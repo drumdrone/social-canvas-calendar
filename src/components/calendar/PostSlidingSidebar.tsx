@@ -329,6 +329,69 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setEditingCommentText('');
   };
 
+  // Function to detect mentions and send emails
+  const detectMentionsAndSendEmails = async (commentText: string, commenterName: string) => {
+    const mentionRegex = /@(\w+)/g;
+    const mentions = [...commentText.matchAll(mentionRegex)];
+    
+    for (const mention of mentions) {
+      const mentionedInitials = mention[1].toUpperCase();
+      const mentionedAuthor = authorOptions.find(a => 
+        a.initials.toLowerCase() === mentionedInitials.toLowerCase() ||
+        a.name.toLowerCase().includes(mentionedInitials.toLowerCase())
+      );
+      
+      if (mentionedAuthor && mentionedAuthor.email) {
+        try {
+          const response = await fetch('/functions/v1/send-mention-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              mentionedAuthorEmail: mentionedAuthor.email,
+              mentionedAuthorName: mentionedAuthor.name,
+              postTitle: title,
+              commentText,
+              commenterName,
+            }),
+          });
+
+          if (!response.ok) {
+            console.error('Failed to send mention email:', await response.text());
+          } else {
+            console.log(`Mention email sent to ${mentionedAuthor.email}`);
+          }
+        } catch (error) {
+          console.error('Error sending mention email:', error);
+        }
+      }
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (newComment.trim() && selectedCommentAuthor) {
+      const selectedAuthor = authorOptions.find(a => a.initials === selectedCommentAuthor);
+      const timestamp = new Date().toLocaleString();
+      const commentEntry = `[${timestamp}] ${selectedAuthor?.name} (${selectedCommentAuthor}): ${newComment.trim()}`;
+      
+      setComments(prev => 
+        prev ? `${prev}\n\n${commentEntry}` : commentEntry
+      );
+      
+      // Detect mentions and send emails
+      await detectMentionsAndSendEmails(newComment.trim(), selectedAuthor?.name || selectedCommentAuthor);
+      
+      setNewComment('');
+      setSelectedCommentAuthor('');
+      
+      toast({
+        title: 'Comment Added',
+        description: 'Comment has been added to the post.',
+      });
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -735,30 +798,13 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     <Textarea
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add a comment..."
+                      placeholder="Add a comment... Use @username to mention team members"
                       rows={4}
                       className="text-base resize-none"
                     />
                     
                     <Button
-                      onClick={() => {
-                        if (newComment.trim() && selectedCommentAuthor) {
-                          const selectedAuthor = authorOptions.find(a => a.initials === selectedCommentAuthor);
-                          const timestamp = new Date().toLocaleString();
-                          const commentEntry = `[${timestamp}] ${selectedAuthor?.name} (${selectedCommentAuthor}): ${newComment.trim()}`;
-                          
-                          setComments(prev => 
-                            prev ? `${prev}\n\n${commentEntry}` : commentEntry
-                          );
-                          setNewComment('');
-                          setSelectedCommentAuthor('');
-                          
-                          toast({
-                            title: 'Comment Added',
-                            description: 'Comment has been added to the post.',
-                          });
-                        }
-                      }}
+                      onClick={handleAddComment}
                       disabled={!newComment.trim() || !selectedCommentAuthor}
                       size="sm"
                       className="self-start"
@@ -767,8 +813,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     </Button>
                     
                     <p className="text-xs text-muted-foreground">
-                      Comments are for internal team communication. {selectedCommentAuthor && authorOptions.find(a => a.initials === selectedCommentAuthor)?.email && 
-                        `Notifications will be sent to ${authorOptions.find(a => a.initials === selectedCommentAuthor)?.email}`}
+                      Comments are for internal team communication. Use @initials or @name to mention team members and send them email notifications.
                     </p>
                   </div>
                 </div>

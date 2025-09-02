@@ -13,6 +13,7 @@ interface Author {
   name: string;
   initials: string;
   color: string;
+  email?: string;
   is_active: boolean;
 }
 
@@ -24,6 +25,7 @@ export const AuthorManager: React.FC = () => {
   const [newAuthor, setNewAuthor] = useState({
     name: '',
     initials: '',
+    email: '',
     color: '#3B82F6'
   });
 
@@ -31,7 +33,7 @@ export const AuthorManager: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('authors')
-        .select('*')
+        .select('id, name, initials, color, email, is_active')
         .order('name');
       
       if (error) throw error;
@@ -65,6 +67,7 @@ export const AuthorManager: React.FC = () => {
         .insert([{
           name: newAuthor.name,
           initials: newAuthor.initials.toUpperCase(),
+          email: newAuthor.email || null,
           color: newAuthor.color
         }]);
 
@@ -72,7 +75,7 @@ export const AuthorManager: React.FC = () => {
 
       toast.success('Author created successfully!');
       setIsCreating(false);
-      setNewAuthor({ name: '', initials: '', color: '#3B82F6' });
+      setNewAuthor({ name: '', initials: '', email: '', color: '#3B82F6' });
       fetchAuthors();
       
       // Trigger refresh in other components
@@ -172,6 +175,16 @@ export const AuthorManager: React.FC = () => {
               />
             </div>
             <div>
+              <Label htmlFor="email">Email (optional)</Label>
+              <Input
+                id="email"
+                type="email"
+                value={newAuthor.email}
+                onChange={(e) => setNewAuthor({ ...newAuthor, email: e.target.value })}
+                placeholder="e.g., john@example.com"
+              />
+            </div>
+            <div>
               <Label htmlFor="color">Color</Label>
               <Input
                 id="color"
@@ -189,8 +202,8 @@ export const AuthorManager: React.FC = () => {
                 size="sm" 
                 variant="outline" 
                 onClick={() => {
-                  setIsCreating(false);
-                  setNewAuthor({ name: '', initials: '', color: '#3B82F6' });
+                setIsCreating(false);
+                  setNewAuthor({ name: '', initials: '', email: '', color: '#3B82F6' });
                 }}
               >
                 <X className="h-3 w-3 mr-1" />
@@ -216,6 +229,7 @@ export const AuthorManager: React.FC = () => {
                   <div>
                     <span className="font-medium">{author.name}</span>
                     <p className="text-xs text-muted-foreground">{author.initials}</p>
+                    {author.email && <p className="text-xs text-muted-foreground">{author.email}</p>}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
