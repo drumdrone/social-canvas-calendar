@@ -49,10 +49,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [pillarOptions, setPillarOptions] = useState<Array<{name: string, color: string}>>([]);
   const [productLineOptions, setProductLineOptions] = useState<Array<{name: string, color: string}>>([]);
   const [categoryOptions, setCategoryOptions] = useState<Array<{name: string, color: string, format: string}>>([]);
-  const [authorOptions, setAuthorOptions] = useState<Array<{initials: string, name: string, color: string}>>([]);
+  const [authorOptions, setAuthorOptions] = useState<Array<{initials: string, name: string, color: string, email?: string}>>([]);
   const [author, setAuthor] = useState<string>('');
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [comments, setComments] = useState('');
+  const [newComment, setNewComment] = useState('');
+  const [selectedCommentAuthor, setSelectedCommentAuthor] = useState('');
   const [activeTab, setActiveTab] = useState('content');
   const { toast } = useToast();
 
@@ -66,7 +68,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           supabase.from('pillars').select('name, color').eq('is_active', true).order('name'),
           supabase.from('product_lines').select('name, color').eq('is_active', true).order('name'),
           supabase.from('categories').select('name, color, format').eq('is_active', true).order('name'),
-          supabase.from('authors').select('initials, name, color').eq('is_active', true).order('name'),
+          supabase.from('authors').select('initials, name, color, email').eq('is_active', true).order('name'),
         ]);
         
         const platforms = platformsResult.data?.map(p => p.name) || [];
@@ -199,6 +201,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
         author: author || null,
+        comments: comments || null,
       };
 
       if (post) {
@@ -279,7 +282,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       
       {/* Sliding Sidebar */}
       <div className={cn(
-        "fixed top-0 right-0 h-screen w-1/3 min-w-[400px] max-w-[600px] bg-background border-l border-border shadow-2xl z-50 transition-transform duration-300 ease-out",
+        "fixed top-0 right-0 h-screen w-1/3 min-w-[500px] max-w-[800px] bg-background border-l border-border shadow-2xl z-50 transition-transform duration-300 ease-out",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}>
         <div className="flex flex-col h-full">
@@ -544,20 +547,82 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                 <TabsContent value="comments" className="flex-1 mt-0">
                   <ScrollArea className="h-full">
                     <div className="p-6 space-y-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="comments" className="text-sm font-medium">
-                          Comments & Notes
-                        </Label>
+                      {/* Existing Comments Display */}
+                      {comments && (
+                        <div className="space-y-4">
+                          <Label className="text-sm font-medium">Existing Comments</Label>
+                          <div className="border rounded-lg p-4 bg-muted/50">
+                            <div className="whitespace-pre-wrap text-sm">{comments}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* New Comment Section */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Add New Comment</Label>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground">Author:</Label>
+                            <Select value={selectedCommentAuthor} onValueChange={setSelectedCommentAuthor}>
+                              <SelectTrigger className="w-32 h-8">
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-background border border-border shadow-lg z-[60]">
+                                {authorOptions.map((author) => (
+                                  <SelectItem key={author.initials} value={author.initials}>
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                        style={{ backgroundColor: author.color }}
+                                      >
+                                        {author.initials}
+                                      </div>
+                                      {author.name}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
                         <Textarea
-                          id="comments"
-                          value={comments}
-                          onChange={(e) => setComments(e.target.value)}
-                          placeholder="Add your comments, notes, or ideas about this post..."
-                          rows={12}
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          placeholder="Add a comment..."
+                          rows={4}
                           className="text-base resize-none"
                         />
-                        <p className="text-sm text-muted-foreground">
-                          These comments are for your internal notes only and won't be posted publicly.
+                        
+                        <Button
+                          onClick={() => {
+                            if (newComment.trim() && selectedCommentAuthor) {
+                              const selectedAuthor = authorOptions.find(a => a.initials === selectedCommentAuthor);
+                              const timestamp = new Date().toLocaleString();
+                              const commentEntry = `[${timestamp}] ${selectedAuthor?.name} (${selectedCommentAuthor}): ${newComment.trim()}`;
+                              
+                              setComments(prev => 
+                                prev ? `${prev}\n\n${commentEntry}` : commentEntry
+                              );
+                              setNewComment('');
+                              setSelectedCommentAuthor('');
+                              
+                              toast({
+                                title: 'Comment Added',
+                                description: 'Comment has been added to the post.',
+                              });
+                            }
+                          }}
+                          disabled={!newComment.trim() || !selectedCommentAuthor}
+                          size="sm"
+                          className="self-start"
+                        >
+                          Add Comment
+                        </Button>
+                        
+                        <p className="text-xs text-muted-foreground">
+                          Comments are for internal team communication. {selectedCommentAuthor && authorOptions.find(a => a.initials === selectedCommentAuthor)?.email && 
+                            `Notifications will be sent to ${authorOptions.find(a => a.initials === selectedCommentAuthor)?.email}`}
                         </p>
                       </div>
                     </div>

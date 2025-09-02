@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string
+          email: string | null
           id: string
           initials: string
           is_active: boolean
@@ -27,6 +28,7 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string
+          email?: string | null
           id?: string
           initials: string
           is_active?: boolean
@@ -36,6 +38,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string
+          email?: string | null
           id?: string
           initials?: string
           is_active?: boolean
@@ -181,6 +184,36 @@ export type Database = {
           is_active?: boolean
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      monthly_goals: {
+        Row: {
+          created_at: string
+          goal_amount: number
+          id: string
+          month: number
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          goal_amount?: number
+          id?: string
+          month: number
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          goal_amount?: number
+          id?: string
+          month?: number
+          updated_at?: string
+          user_id?: string
+          year?: number
         }
         Relationships: []
       }
@@ -481,6 +514,30 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           created_at: string
@@ -627,29 +684,44 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          auto_sync_enabled: boolean | null
           created_at: string
+          csv_sync_url: string | null
           daily_hours_goal: number | null
+          export_url: string | null
           google_sheet_id: string | null
           hourly_rate: number | null
           id: string
+          last_sync_at: string | null
+          sync_interval_minutes: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          auto_sync_enabled?: boolean | null
           created_at?: string
+          csv_sync_url?: string | null
           daily_hours_goal?: number | null
+          export_url?: string | null
           google_sheet_id?: string | null
           hourly_rate?: number | null
           id?: string
+          last_sync_at?: string | null
+          sync_interval_minutes?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          auto_sync_enabled?: boolean | null
           created_at?: string
+          csv_sync_url?: string | null
           daily_hours_goal?: number | null
+          export_url?: string | null
           google_sheet_id?: string | null
           hourly_rate?: number | null
           id?: string
+          last_sync_at?: string | null
+          sync_interval_minutes?: number | null
           updated_at?: string
           user_id?: string
         }
