@@ -79,16 +79,12 @@ export const MentionInput: React.FC<MentionInputProps> = ({
     const textBeforeCursor = newValue.slice(0, cursorPosition);
     const mentionMatch = textBeforeCursor.match(/@([A-Za-z]*)$/);
     
-    console.log('Mention detection:', { textBeforeCursor, mentionMatch, authors });
-    
     if (mentionMatch) {
       const query = mentionMatch[1].toUpperCase(); // Convert to uppercase for comparison
       const matchedAuthors = authors.filter(author =>
         author.initials.toUpperCase().startsWith(query) || 
         author.name.toLowerCase().includes(query.toLowerCase())
       );
-      
-      console.log('Matched authors:', { query, matchedAuthors });
       
       if (matchedAuthors.length > 0) {
         setSuggestions(matchedAuthors);
