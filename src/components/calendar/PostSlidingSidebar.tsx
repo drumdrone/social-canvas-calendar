@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History, Plus, MessageSquare, Edit3, Check, XIcon } from 'lucide-react';
+import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History, Plus, MessageSquare, Edit3, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -677,7 +677,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                                                 className="h-6 px-2"
                                                 onClick={handleCancelEdit}
                                               >
-                                                <XIcon className="h-3 w-3 mr-1" />
+                                                <X className="h-3 w-3 mr-1" />
                                                 Cancel
                                               </Button>
                                             </div>
