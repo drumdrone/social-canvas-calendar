@@ -341,7 +341,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       
       {/* Sliding Sidebar */}
       <div className={cn(
-        "fixed top-0 right-0 h-screen w-1/3 min-w-[500px] max-w-[800px] bg-background border-l border-border shadow-2xl z-50 transition-transform duration-300 ease-out",
+        "fixed top-0 right-0 h-screen w-2/3 min-w-[800px] max-w-[1200px] bg-background border-l border-border shadow-2xl z-50 transition-transform duration-300 ease-out",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}>
         <div className="flex flex-col h-full">
@@ -382,427 +382,427 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
             </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-              <div className="px-6 pt-4 flex-shrink-0">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="content" className="flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4" />
-                    Content
-                  </TabsTrigger>
-                  <TabsTrigger value="comments" className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Comments
-                  </TabsTrigger>
-                </TabsList>
+          {/* Two Column Layout */}
+          <div className="flex-1 overflow-hidden flex">
+            {/* Left Column - Content */}
+            <div className="flex-1 bg-muted/20 border-r border-border flex flex-col">
+              <div className="px-4 py-3 border-b border-border bg-muted/40">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  Post Content
+                </h3>
               </div>
+              
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-6 pb-20">
+                  {/* Multi Image Upload */}
+                  <div className="space-y-2">
+                    <Label>Images</Label>
+                    <MultiImageUpload
+                      images={postImages}
+                      onImagesChange={setPostImages}
+                      maxImages={3}
+                    />
+                  </div>
 
-              <TabsContent value="content" className="flex-1 overflow-hidden mt-0">
-                <ScrollArea className="h-full">
-                  <div className="p-6 space-y-6 pb-20">
-                    {/* Multi Image Upload */}
+                  {/* Title */}
+                  <div className="space-y-2">
+                    <Label htmlFor="title" className="text-sm font-medium">
+                      Title *
+                    </Label>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Enter post title..."
+                      className="text-base"
+                    />
+                  </div>
+
+                  {/* Content */}
+                  <div className="space-y-2">
+                    <Label htmlFor="content" className="text-sm font-medium">
+                      Content
+                    </Label>
+                    <Textarea
+                      id="content"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Write your post content..."
+                      rows={6}
+                      className="text-base resize-none"
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Platform and Status */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Images</Label>
-                      <MultiImageUpload
-                        images={postImages}
-                        onImagesChange={setPostImages}
-                        maxImages={3}
-                      />
-                    </div>
-
-                    {/* Title */}
-                    <div className="space-y-2">
-                      <Label htmlFor="title" className="text-sm font-medium">
-                        Title *
-                      </Label>
-                      <Input
-                        id="title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Enter post title..."
-                        className="text-base"
-                      />
-                    </div>
-
-                    {/* Content */}
-                    <div className="space-y-2">
-                      <Label htmlFor="content" className="text-sm font-medium">
-                        Content
-                      </Label>
-                      <Textarea
-                        id="content"
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Write your post content..."
-                        rows={6}
-                        className="text-base resize-none"
-                      />
-                    </div>
-
-                    <Separator />
-
-                    {/* Platform and Status */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Platform</Label>
-                        <Select value={platform} onValueChange={setPlatform}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select platform" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {platformOptions.filter(p => p && p.trim() !== '').map((p) => (
-                              <SelectItem key={p} value={p}>
-                                {p}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Status</Label>
-                        <Select value={status} onValueChange={setStatus}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {statusOptions.filter(s => s && s.trim() !== '').map((s) => (
-                              <SelectItem key={s} value={s}>
-                                {s}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Category */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Category</Label>
-                      <Select value={category} onValueChange={setCategory}>
+                      <Label className="text-sm font-medium">Platform</Label>
+                      <Select value={platform} onValueChange={setPlatform}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue placeholder="Select platform" />
                         </SelectTrigger>
-                          <SelectContent>
-                            {categoryOptions.filter(c => c.name && c.name.trim() !== '').map((c) => (
-                              <SelectItem key={c.name} value={c.name}>
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Author */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Author</Label>
-                      <Select value={author} onValueChange={setAuthor}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select author" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background border border-border shadow-lg z-[60]">
-                          <SelectItem value="none">None</SelectItem>
-                          {authorOptions.filter(a => a.initials && a.initials.trim() !== '').map((a) => (
-                            <SelectItem key={a.initials} value={a.initials}>
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-3 h-3 rounded-full"
-                                  style={{ backgroundColor: a.color }}
-                                />
-                                {a.name} ({a.initials})
-                              </div>
+                        <SelectContent>
+                          {platformOptions.filter(p => p && p.trim() !== '').map((p) => (
+                            <SelectItem key={p} value={p}>
+                              {p}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {/* Pillar and Product Line */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Pillar</Label>
-                        <Select value={pillar} onValueChange={setPillar}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select pillar" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {pillarOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
-                              <SelectItem key={p.name} value={p.name}>
-                                {p.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Product Line</Label>
-                        <Select value={productLine} onValueChange={setProductLine}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select product line" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {productLineOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
-                              <SelectItem key={p.name} value={p.name}>
-                                {p.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Status</Label>
+                      <Select value={status} onValueChange={setStatus}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statusOptions.filter(s => s && s.trim() !== '').map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-
-                    <Separator />
-
-                    {/* Date and Time */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Scheduled Date</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !scheduledDate && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {scheduledDate ? format(scheduledDate, 'MMM d, yyyy') : "Pick a date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={scheduledDate}
-                              onSelect={(date) => date && setScheduledDate(date)}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Time</Label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="time"
-                            value={time}
-                            onChange={(e) => setTime(e.target.value)}
-                            className="pl-10"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
                   </div>
-                  </ScrollArea>
-                </TabsContent>
 
-                <TabsContent value="comments" className="flex-1 mt-0">
-                  <ScrollArea className="h-full">
-                    <div className="p-6 space-y-6">
-                      {/* Existing Comments Display */}
-                      {comments && (
-                        <div className="space-y-4">
-                          <Label className="text-sm font-medium">Comments</Label>
-                          <div className="space-y-3">
-                            {comments.split('\n\n').filter(comment => comment.trim()).map((comment, index) => {
-                              // Parse comment format: [timestamp] Author Name (INITIALS): comment text
-                              const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
-                              if (match) {
-                                const [, timestamp, authorName, authorInitials, commentText] = match;
-                                const author = authorOptions.find(a => a.initials === authorInitials);
-                                
-                                return (
-                                  <div key={index} className="border rounded-lg p-4 bg-muted/30">
-                                    <div className="flex items-start gap-3">
-                                      <div 
-                                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5"
-                                        style={{ backgroundColor: author?.color || '#3B82F6' }}
-                                      >
-                                        {authorInitials}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between mb-2">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-medium text-sm">{authorName}</span>
-                                            <span className="text-xs text-muted-foreground">{timestamp}</span>
-                                          </div>
-                                          <div className="flex items-center gap-1">
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                              onClick={() => handleEditComment(index)}
-                                              title="Edit comment"
-                                            >
-                                              <Edit3 className="h-3 w-3" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                              onClick={() => handleDeleteComment(index)}
-                                              title="Delete comment"
-                                            >
-                                              <Trash2 className="h-3 w-3" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                        {editingCommentIndex === index ? (
-                                          <div className="space-y-2">
-                                            <Textarea
-                                              value={editingCommentText}
-                                              onChange={(e) => setEditingCommentText(e.target.value)}
-                                              className="text-sm resize-none"
-                                              rows={2}
-                                            />
-                                            <div className="flex items-center gap-2">
-                                              <Button
-                                                size="sm"
-                                                className="h-6 px-2"
-                                                onClick={handleSaveEditComment}
-                                              >
-                                                <Check className="h-3 w-3 mr-1" />
-                                                Save
-                                              </Button>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-6 px-2"
-                                                onClick={handleCancelEdit}
-                                              >
-                                                <X className="h-3 w-3 mr-1" />
-                                                Cancel
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          <div className="text-sm text-foreground whitespace-pre-wrap">{commentText}</div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              
-                              // Fallback for old format comments or malformed comments
-                              return (
-                                <div key={index} className="border rounded-lg p-4 bg-muted/30">
-                                  <div className="text-sm whitespace-pre-wrap">{comment}</div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
+                  {/* Category */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Category</Label>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                        <SelectContent>
+                          {categoryOptions.filter(c => c.name && c.name.trim() !== '').map((c) => (
+                            <SelectItem key={c.name} value={c.name}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                      {/* New Comment Section */}
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium">Add New Comment</Label>
-                          <div className="flex items-center gap-2">
-                            <Label className="text-xs text-muted-foreground">Author:</Label>
-                            <Select value={selectedCommentAuthor} onValueChange={setSelectedCommentAuthor}>
-                              <SelectTrigger className="w-32 h-8">
-                                <SelectValue placeholder="Select" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-background border border-border shadow-lg z-[60]">
-                                {authorOptions.map((author) => (
-                                  <SelectItem key={author.initials} value={author.initials}>
-                                    <div className="flex items-center gap-2">
-                                      <div 
-                                        className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                                        style={{ backgroundColor: author.color }}
-                                      >
-                                        {author.initials}
-                                      </div>
-                                      {author.name}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        
-                        <Textarea
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          placeholder="Add a comment..."
-                          rows={4}
-                          className="text-base resize-none"
+                  {/* Author */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Author</Label>
+                    <Select value={author} onValueChange={setAuthor}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select author" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border border-border shadow-lg z-[60]">
+                        <SelectItem value="none">None</SelectItem>
+                        {authorOptions.filter(a => a.initials && a.initials.trim() !== '').map((a) => (
+                          <SelectItem key={a.initials} value={a.initials}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: a.color }}
+                              />
+                              {a.name} ({a.initials})
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Pillar and Product Line */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Pillar</Label>
+                      <Select value={pillar} onValueChange={setPillar}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select pillar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {pillarOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
+                            <SelectItem key={p.name} value={p.name}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Product Line</Label>
+                      <Select value={productLine} onValueChange={setProductLine}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select product line" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {productLineOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
+                            <SelectItem key={p.name} value={p.name}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Date and Time */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Scheduled Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !scheduledDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {scheduledDate ? format(scheduledDate, 'MMM d, yyyy') : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={scheduledDate}
+                            onSelect={(date) => date && setScheduledDate(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Time</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="time"
+                          value={time}
+                          onChange={(e) => setTime(e.target.value)}
+                          className="pl-10"
                         />
-                        
-                        <Button
-                          onClick={() => {
-                            if (newComment.trim() && selectedCommentAuthor) {
-                              const selectedAuthor = authorOptions.find(a => a.initials === selectedCommentAuthor);
-                              const timestamp = new Date().toLocaleString();
-                              const commentEntry = `[${timestamp}] ${selectedAuthor?.name} (${selectedCommentAuthor}): ${newComment.trim()}`;
-                              
-                              setComments(prev => 
-                                prev ? `${prev}\n\n${commentEntry}` : commentEntry
-                              );
-                              setNewComment('');
-                              setSelectedCommentAuthor('');
-                              
-                              toast({
-                                title: 'Comment Added',
-                                description: 'Comment has been added to the post.',
-                              });
-                            }
-                          }}
-                          disabled={!newComment.trim() || !selectedCommentAuthor}
-                          size="sm"
-                          className="self-start"
-                        >
-                          Add Comment
-                        </Button>
-                        
-                        <p className="text-xs text-muted-foreground">
-                          Comments are for internal team communication. {selectedCommentAuthor && authorOptions.find(a => a.initials === selectedCommentAuthor)?.email && 
-                            `Notifications will be sent to ${authorOptions.find(a => a.initials === selectedCommentAuthor)?.email}`}
-                        </p>
                       </div>
                     </div>
-                  </ScrollArea>
-                </TabsContent>
-              </Tabs>
+                  </div>
+                </div>
+              </ScrollArea>
             </div>
 
-            {/* Footer Actions */}
-            <div className="border-t border-border p-6">
-              <div className="flex gap-3">
-                <Button onClick={handleSave} disabled={uploading} className="flex-1">
-                  <Save className="h-4 w-4 mr-2" />
-                  {uploading ? 'Saving...' : (post ? 'Update Post' : 'Create Post')}
-                </Button>
-                {post && (
-                  <Button variant="destructive" onClick={handleDelete} size="default">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
+            {/* Right Column - Comments */}
+            <div className="flex-1 bg-accent/10 flex flex-col">
+              <div className="px-4 py-3 border-b border-border bg-accent/20">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Comments & Discussion
+                </h3>
               </div>
+              
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-6">
+                  {/* Existing Comments Display */}
+                  {comments && (
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium">Comments</Label>
+                      <div className="space-y-3">
+                        {comments.split('\n\n').filter(comment => comment.trim()).map((comment, index) => {
+                          // Parse comment format: [timestamp] Author Name (INITIALS): comment text
+                          const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
+                          if (match) {
+                            const [, timestamp, authorName, authorInitials, commentText] = match;
+                            const author = authorOptions.find(a => a.initials === authorInitials);
+                            
+                            return (
+                              <div key={index} className="border rounded-lg p-4 bg-muted/30">
+                                <div className="flex items-start gap-3">
+                                  <div 
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5"
+                                    style={{ backgroundColor: author?.color || '#3B82F6' }}
+                                  >
+                                    {authorInitials}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-sm">{authorName}</span>
+                                        <span className="text-xs text-muted-foreground">{timestamp}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                          onClick={() => handleEditComment(index)}
+                                          title="Edit comment"
+                                        >
+                                          <Edit3 className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                          onClick={() => handleDeleteComment(index)}
+                                          title="Delete comment"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    {editingCommentIndex === index ? (
+                                      <div className="space-y-2">
+                                        <Textarea
+                                          value={editingCommentText}
+                                          onChange={(e) => setEditingCommentText(e.target.value)}
+                                          className="text-sm resize-none"
+                                          rows={2}
+                                        />
+                                        <div className="flex items-center gap-2">
+                                          <Button
+                                            size="sm"
+                                            className="h-6 px-2"
+                                            onClick={handleSaveEditComment}
+                                          >
+                                            <Check className="h-3 w-3 mr-1" />
+                                            Save
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-2"
+                                            onClick={handleCancelEdit}
+                                          >
+                                            <X className="h-3 w-3 mr-1" />
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="text-sm text-foreground whitespace-pre-wrap">{commentText}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          // Fallback for old format comments or malformed comments
+                          return (
+                            <div key={index} className="border rounded-lg p-4 bg-muted/30">
+                              <div className="text-sm whitespace-pre-wrap">{comment}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Comment Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Add New Comment</Label>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground">Author:</Label>
+                        <Select value={selectedCommentAuthor} onValueChange={setSelectedCommentAuthor}>
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background border border-border shadow-lg z-[60]">
+                            {authorOptions.map((author) => (
+                              <SelectItem key={author.initials} value={author.initials}>
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                    style={{ backgroundColor: author.color }}
+                                  >
+                                    {author.initials}
+                                  </div>
+                                  {author.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <Textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Add a comment..."
+                      rows={4}
+                      className="text-base resize-none"
+                    />
+                    
+                    <Button
+                      onClick={() => {
+                        if (newComment.trim() && selectedCommentAuthor) {
+                          const selectedAuthor = authorOptions.find(a => a.initials === selectedCommentAuthor);
+                          const timestamp = new Date().toLocaleString();
+                          const commentEntry = `[${timestamp}] ${selectedAuthor?.name} (${selectedCommentAuthor}): ${newComment.trim()}`;
+                          
+                          setComments(prev => 
+                            prev ? `${prev}\n\n${commentEntry}` : commentEntry
+                          );
+                          setNewComment('');
+                          setSelectedCommentAuthor('');
+                          
+                          toast({
+                            title: 'Comment Added',
+                            description: 'Comment has been added to the post.',
+                          });
+                        }
+                      }}
+                      disabled={!newComment.trim() || !selectedCommentAuthor}
+                      size="sm"
+                      className="self-start"
+                    >
+                      Add Comment
+                    </Button>
+                    
+                    <p className="text-xs text-muted-foreground">
+                      Comments are for internal team communication. {selectedCommentAuthor && authorOptions.find(a => a.initials === selectedCommentAuthor)?.email && 
+                        `Notifications will be sent to ${authorOptions.find(a => a.initials === selectedCommentAuthor)?.email}`}
+                    </p>
+                  </div>
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="border-t border-border p-6">
+            <div className="flex gap-3">
+              <Button onClick={handleSave} disabled={uploading} className="flex-1">
+                <Save className="h-4 w-4 mr-2" />
+                {uploading ? 'Saving...' : (post ? 'Update Post' : 'Create Post')}
+              </Button>
+              {post && (
+                <Button variant="destructive" onClick={handleDelete} size="default">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Version History Modal */}
-        <PostVersionHistory
-          postId={post?.id || null}
-          isOpen={showVersionHistory}
-          onClose={() => setShowVersionHistory(false)}
-          onRestore={() => {
-            onSave();
-            onClose();
-          }}
-        />
-      </>
-    );
-  };
+      {/* Version History Modal */}
+      <PostVersionHistory
+        postId={post?.id || null}
+        isOpen={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        onRestore={() => {
+          onSave();
+          onClose();
+        }}
+      />
+    </>
+  );
+};
