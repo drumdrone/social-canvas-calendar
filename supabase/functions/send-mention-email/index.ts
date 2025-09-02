@@ -32,10 +32,18 @@ const handler = async (req: Request): Promise<Response> => {
       commenterName 
     }: MentionEmailRequest = await req.json();
 
-    console.log("Sending mention email to:", mentionedAuthorEmail);
+    console.log("=== MENTION EMAIL DEBUG ===");
+    console.log("Request data:", { 
+      mentionedAuthorEmail, 
+      mentionedAuthorName, 
+      postTitle, 
+      commentText, 
+      commenterName 
+    });
+    console.log("RESEND_API_KEY available:", !!Deno.env.get("RESEND_API_KEY"));
 
-    const emailResponse = await resend.emails.send({
-      from: "Social Media Manager <noreply@mediate.cz>",
+    const emailData = {
+      from: "Social Media Manager <onboarding@resend.dev>", // Using verified Resend domain
       to: [mentionedAuthorEmail],
       subject: `You were mentioned in "${postTitle}"`,
       html: `
@@ -47,11 +55,20 @@ const handler = async (req: Request): Promise<Response> => {
         <p>Please check the post to see the full context and respond if needed.</p>
         <p>Best regards,<br>Your Social Media Team</p>
       `,
-    });
+    };
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Email data to send:", emailData);
 
-    return new Response(JSON.stringify(emailResponse), {
+    const emailResponse = await resend.emails.send(emailData);
+
+    console.log("Resend API response:", emailResponse);
+    console.log("=== END MENTION EMAIL DEBUG ===");
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      emailId: emailResponse.data?.id,
+      message: `Email sent to ${mentionedAuthorEmail}` 
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
