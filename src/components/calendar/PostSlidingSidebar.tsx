@@ -312,6 +312,39 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     }
   };
 
+  const handleSaveEditComment = async () => {
+    if (editingCommentIndex !== null && editingCommentText.trim()) {
+      const commentArray = comments.split('\n\n').filter(comment => comment.trim());
+      const comment = commentArray[editingCommentIndex];
+      const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
+      
+      let authorName = '';
+      if (match) {
+        const [, timestamp, originalAuthorName, authorInitials] = match;
+        authorName = originalAuthorName;
+        const updatedComment = `[${timestamp}] ${originalAuthorName} (${authorInitials}): ${editingCommentText.trim()}`;
+        commentArray[editingCommentIndex] = updatedComment;
+      } else {
+        // Fallback for old format
+        commentArray[editingCommentIndex] = editingCommentText.trim();
+        authorName = 'Unknown User';
+      }
+      
+      setComments(commentArray.join('\n\n'));
+      
+      // Detect mentions and send emails for updated comment
+      await detectMentionsAndSendEmails(editingCommentText.trim(), authorName);
+      
+      setEditingCommentIndex(null);
+      setEditingCommentText('');
+      
+      toast({
+        title: 'Comment Updated',
+        description: 'Comment has been updated and mentions notified.',
+      });
+    }
+  };
+
   const handleDeleteComment = (index: number) => {
     if (confirm('Are you sure you want to delete this comment?')) {
       const commentArray = comments.split('\n\n').filter(comment => comment.trim());
