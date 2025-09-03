@@ -286,31 +286,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setEditingCommentIndex(index);
   };
 
-  const handleSaveEditComment = () => {
-    if (editingCommentIndex !== null && editingCommentText.trim()) {
-      const commentArray = comments.split('\n\n').filter(comment => comment.trim());
-      const comment = commentArray[editingCommentIndex];
-      const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
-      
-      if (match) {
-        const [, timestamp, authorName, authorInitials] = match;
-        const updatedComment = `[${timestamp}] ${authorName} (${authorInitials}): ${editingCommentText.trim()}`;
-        commentArray[editingCommentIndex] = updatedComment;
-      } else {
-        // Fallback for old format
-        commentArray[editingCommentIndex] = editingCommentText.trim();
-      }
-      
-      setComments(commentArray.join('\n\n'));
-      setEditingCommentIndex(null);
-      setEditingCommentText('');
-      
-      toast({
-        title: 'Comment Updated',
-        description: 'Comment has been updated successfully.',
-      });
-    }
-  };
 
   const handleSaveEditComment = async () => {
     if (editingCommentIndex !== null && editingCommentText.trim()) {
