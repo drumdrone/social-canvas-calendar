@@ -12,6 +12,9 @@ interface PlanWeekData {
   pillar: string;
   url: string;
   notes: string;
+  post1_done?: boolean;
+  post2_done?: boolean;
+  post3_done?: boolean;
 }
 
 interface PlanMonthData {
@@ -63,6 +66,9 @@ export const PlanMonth: React.FC<PlanMonthProps> = ({
         pillar: '',
         url: '',
         notes: '',
+        post1_done: false,
+        post2_done: false,
+        post3_done: false,
       });
     }
     return weeks.slice(0, 4); // Ensure max 4 weeks

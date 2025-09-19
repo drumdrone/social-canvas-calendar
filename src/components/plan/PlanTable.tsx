@@ -14,6 +14,9 @@ interface PlanWeek {
   pillar: string;
   url: string;
   notes: string;
+  post1_done?: boolean;
+  post2_done?: boolean;
+  post3_done?: boolean;
 }
 
 interface PlanMonthData {
@@ -162,6 +165,9 @@ export const PlanTable: React.FC = () => {
         pillar: '',
         url: '',
         notes: '',
+        post1_done: false,
+        post2_done: false,
+        post3_done: false,
       })),
     };
 

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -13,6 +14,9 @@ interface PlanWeekData {
   pillar: string;
   url: string;
   notes: string;
+  post1_done?: boolean;
+  post2_done?: boolean;
+  post3_done?: boolean;
 }
 
 interface PlanWeekProps {
@@ -119,6 +123,42 @@ export const PlanWeek: React.FC<PlanWeekProps> = ({
           rows={2}
           className="text-sm resize-none"
         />
+        
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">Post Progress</div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`post1-${week.id}`}
+                checked={week.post1_done || false}
+                onCheckedChange={(checked) => handleInputChange('post1_done', checked)}
+              />
+              <label htmlFor={`post1-${week.id}`} className="text-sm cursor-pointer">
+                Post 1 Done
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`post2-${week.id}`}
+                checked={week.post2_done || false}
+                onCheckedChange={(checked) => handleInputChange('post2_done', checked)}
+              />
+              <label htmlFor={`post2-${week.id}`} className="text-sm cursor-pointer">
+                Post 2 Done
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`post3-${week.id}`}
+                checked={week.post3_done || false}
+                onCheckedChange={(checked) => handleInputChange('post3_done', checked)}
+              />
+              <label htmlFor={`post3-${week.id}`} className="text-sm cursor-pointer">
+                Post 3 Done
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -202,6 +242,42 @@ export const PlanWeek: React.FC<PlanWeekProps> = ({
           rows={3}
           className="text-sm resize-none"
         />
+        
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">Post Progress</div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`post1-${week.id}`}
+                checked={week.post1_done || false}
+                onCheckedChange={(checked) => handleInputChange('post1_done', checked)}
+              />
+              <label htmlFor={`post1-${week.id}`} className="text-sm cursor-pointer">
+                Post 1 Done
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`post2-${week.id}`}
+                checked={week.post2_done || false}
+                onCheckedChange={(checked) => handleInputChange('post2_done', checked)}
+              />
+              <label htmlFor={`post2-${week.id}`} className="text-sm cursor-pointer">
+                Post 2 Done
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`post3-${week.id}`}
+                checked={week.post3_done || false}
+                onCheckedChange={(checked) => handleInputChange('post3_done', checked)}
+              />
+              <label htmlFor={`post3-${week.id}`} className="text-sm cursor-pointer">
+                Post 3 Done
+              </label>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
