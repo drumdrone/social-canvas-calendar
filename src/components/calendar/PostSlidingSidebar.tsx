@@ -343,9 +343,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     console.log('=== MENTION DETECTION STARTED ===');
     console.log('Comment text:', commentText);
     console.log('Available authors:', authorOptions);
-    
+
     // Use the same regex as MentionInput component for consistency
-    const mentionRegex = /@([A-Z]{2,4})/g;
+    const mentionRegex = /@([A-Z]{2,})/g;
     const mentions = [...commentText.matchAll(mentionRegex)];
     
     console.log('Mentions found with regex:', mentions);

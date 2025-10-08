@@ -1,12 +1,10 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
 interface MentionEmailRequest {
@@ -17,74 +15,146 @@ interface MentionEmailRequest {
   commenterName: string;
 }
 
-const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
 
   try {
-    const { 
-      mentionedAuthorEmail, 
-      mentionedAuthorName, 
-      postTitle, 
-      commentText, 
-      commenterName 
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY not configured");
+      return new Response(
+        JSON.stringify({
+          error: "Email service not configured. Please set up RESEND_API_KEY.",
+          success: false
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+        }
+      );
+    }
+
+    const resend = new Resend(resendApiKey);
+
+    const {
+      mentionedAuthorEmail,
+      mentionedAuthorName,
+      postTitle,
+      commentText,
+      commenterName
     }: MentionEmailRequest = await req.json();
 
     console.log("=== MENTION EMAIL DEBUG ===");
-    console.log("Request data:", { 
-      mentionedAuthorEmail, 
-      mentionedAuthorName, 
-      postTitle, 
-      commentText, 
-      commenterName 
+    console.log("Request data:", {
+      mentionedAuthorEmail,
+      mentionedAuthorName,
+      postTitle,
+      commentText,
+      commenterName
     });
-    console.log("RESEND_API_KEY available:", !!Deno.env.get("RESEND_API_KEY"));
+
+    if (!mentionedAuthorEmail || !mentionedAuthorName || !postTitle || !commentText || !commenterName) {
+      return new Response(
+        JSON.stringify({
+          error: "Missing required fields",
+          success: false
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+        }
+      );
+    }
 
     const emailData = {
-      from: "Social Media Manager <onboarding@resend.dev>", // Using verified Resend domain
+      from: "Social Media Manager <onboarding@resend.dev>",
       to: [mentionedAuthorEmail],
       subject: `You were mentioned in "${postTitle}"`,
       html: `
-        <h1>Hi ${mentionedAuthorName}!</h1>
-        <p>You were mentioned by <strong>${commenterName}</strong> in a comment on the post "<strong>${postTitle}</strong>":</p>
-        <blockquote style="border-left: 3px solid #ccc; padding-left: 16px; margin: 16px 0; font-style: italic;">
-          ${commentText}
-        </blockquote>
-        <p>Please check the post to see the full context and respond if needed.</p>
-        <p>Best regards,<br>Your Social Media Team</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #333;">Hi ${mentionedAuthorName}!</h1>
+          <p style="font-size: 16px; line-height: 1.5;">
+            You were mentioned by <strong>${commenterName}</strong> in a comment on the post "<strong>${postTitle}</strong>":
+          </p>
+          <blockquote style="border-left: 3px solid #3B82F6; padding-left: 16px; margin: 24px 0; font-style: italic; color: #555;">
+            ${commentText}
+          </blockquote>
+          <p style="font-size: 14px; color: #666;">
+            Please check the post to see the full context and respond if needed.
+          </p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+          <p style="font-size: 14px; color: #999;">
+            Best regards,<br>
+            Your Social Media Team
+          </p>
+        </div>
       `,
     };
 
-    console.log("Email data to send:", emailData);
+    console.log("Sending email to:", mentionedAuthorEmail);
 
     const emailResponse = await resend.emails.send(emailData);
 
     console.log("Resend API response:", emailResponse);
     console.log("=== END MENTION EMAIL DEBUG ===");
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      emailId: emailResponse.data?.id,
-      message: `Email sent to ${mentionedAuthorEmail}` 
-    }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-      },
-    });
+    if (emailResponse.error) {
+      console.error("Resend API error:", emailResponse.error);
+      return new Response(
+        JSON.stringify({
+          error: emailResponse.error.message || "Failed to send email",
+          success: false
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          },
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        emailId: emailResponse.data?.id,
+        message: `Email sent successfully to ${mentionedAuthorEmail}`
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      }
+    );
   } catch (error: any) {
     console.error("Error in send-mention-email function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({
+        error: error.message || "Unknown error occurred",
+        success: false
+      }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders
+        },
       }
     );
   }
-};
-
-serve(handler);
+});
