@@ -398,16 +398,39 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
           if (error) {
             console.error('Edge function returned error:', error);
+
+            // Check if it's a Resend domain verification issue
+            const isDomainIssue = error.message?.includes("verify a domain") ||
+                                  error.message?.includes("testing emails") ||
+                                  error.message?.includes("test mode");
+
             toast({
-              title: "Email notification failed",
-              description: `Could not send notification to ${mentionedAuthor.name}: ${error.message}`,
+              title: isDomainIssue ? "Email service not configured" : "Email notification failed",
+              description: isDomainIssue
+                ? "Resend is in test mode. Verify your domain at resend.com/domains to send emails to team members."
+                : `Could not send notification to ${mentionedAuthor.name}: ${error.message}`,
               variant: "destructive",
+              duration: isDomainIssue ? 10000 : 5000,
             });
-          } else {
+          } else if (data?.success) {
             console.log(`SUCCESS: Mention email sent to ${mentionedAuthor.email}`);
             toast({
               title: "Email sent successfully",
               description: `${mentionedAuthor.name} has been notified at ${mentionedAuthor.email}`,
+            });
+          } else if (data?.error) {
+            // Handle error in response data
+            const isDomainIssue = data.error.includes("verify a domain") ||
+                                  data.error.includes("testing emails") ||
+                                  data.error.includes("test mode");
+
+            toast({
+              title: isDomainIssue ? "Email service not configured" : "Email notification failed",
+              description: isDomainIssue
+                ? "Resend is in test mode. Verify your domain at resend.com/domains to send emails to team members."
+                : data.error,
+              variant: "destructive",
+              duration: isDomainIssue ? 10000 : 5000,
             });
           }
         } catch (error) {

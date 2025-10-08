@@ -112,13 +112,22 @@ Deno.serve(async (req: Request) => {
 
     if (emailResponse.error) {
       console.error("Resend API error:", emailResponse.error);
+
+      let errorMessage = emailResponse.error.message || "Failed to send email";
+
+      // Check if it's a domain verification issue
+      if (errorMessage.includes("verify a domain") || errorMessage.includes("testing emails")) {
+        errorMessage = "Email service is in test mode. To send emails to team members, please verify a domain at resend.com/domains and update the 'from' address in the edge function.";
+      }
+
       return new Response(
         JSON.stringify({
-          error: emailResponse.error.message || "Failed to send email",
-          success: false
+          error: errorMessage,
+          success: false,
+          resendError: emailResponse.error
         }),
         {
-          status: 500,
+          status: 400,
           headers: {
             "Content-Type": "application/json",
             ...corsHeaders
