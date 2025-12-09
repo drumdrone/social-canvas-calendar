@@ -34,6 +34,7 @@ interface RecurringActionCardProps {
   action: RecurringAction;
   onUpdate: (updates: Partial<RecurringAction>) => void;
   onDelete: () => void;
+  onPostClick?: (postId: string) => void;
 }
 
 interface Post {
@@ -46,6 +47,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   action,
   onUpdate,
   onDelete,
+  onPostClick,
 }) => {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -437,7 +439,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
             {posts.length > 0 && (
               <>
                 <Separator className="my-4" />
-                <PostsList posts={posts} onDelete={handleDeletePost} />
+                <PostsList posts={posts} onDelete={handleDeletePost} onPostClick={onPostClick} />
               </>
             )}
           </>

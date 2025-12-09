@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { RecurringActionCard, RecurringAction } from './RecurringActionCard';
 import { AddActionDialog } from './AddActionDialog';
+import { PostSlidingSidebar } from '../calendar/PostSlidingSidebar';
+import { SocialPost } from '../SocialCalendar';
 import { toast } from 'sonner';
 
 const MONTHS = [
@@ -21,6 +23,8 @@ export const RecurringActionsGrid: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingActionType, setPendingActionType] = useState<'monthly' | 'weekly' | 'quarterly' | null>(null);
   const [pendingMonth, setPendingMonth] = useState<string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
 
   const loadActions = useCallback(async () => {
     if (!user) return;
@@ -217,6 +221,38 @@ export const RecurringActionsGrid: React.FC = () => {
     setCurrentYear(prev => direction === 'next' ? prev + 1 : prev - 1);
   };
 
+  const handlePostClick = async (postId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('social_media_posts')
+        .select('*')
+        .eq('id', postId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        toast.error('Post nenalezen');
+        return;
+      }
+
+      setSidebarPost(data as SocialPost);
+      setShowSidebar(true);
+    } catch (error) {
+      console.error('Error loading post:', error);
+      toast.error('Chyba při načítání postu');
+    }
+  };
+
+  const handleCloseSidebar = () => {
+    setShowSidebar(false);
+    setSidebarPost(null);
+  };
+
+  const handleSidebarSave = () => {
+    loadActions();
+    handleCloseSidebar();
+  };
+
   const renderMonthSection = (monthName: string, monthIndex: number) => {
     const monthStr = `${monthName} ${currentYear}`;
     const monthActions = getActionsByMonth(monthStr);
@@ -272,6 +308,7 @@ export const RecurringActionsGrid: React.FC = () => {
                 action={action}
                 onUpdate={(updates) => updateAction(action.id, updates)}
                 onDelete={() => deleteAction(action.id)}
+                onPostClick={handlePostClick}
               />
             ))}
             {monthlyActions.length === 0 && (
@@ -295,6 +332,7 @@ export const RecurringActionsGrid: React.FC = () => {
                 action={action}
                 onUpdate={(updates) => updateAction(action.id, updates)}
                 onDelete={() => deleteAction(action.id)}
+                onPostClick={handlePostClick}
               />
             ))}
             {weeklyActions.length === 0 && (
@@ -318,6 +356,7 @@ export const RecurringActionsGrid: React.FC = () => {
                 action={action}
                 onUpdate={(updates) => updateAction(action.id, updates)}
                 onDelete={() => deleteAction(action.id)}
+                onPostClick={handlePostClick}
               />
             ))}
             {quarterlyActions.length === 0 && (
@@ -355,6 +394,14 @@ export const RecurringActionsGrid: React.FC = () => {
             addAction(pendingActionType, repeatFor12Months);
           }
         }}
+      />
+
+      <PostSlidingSidebar
+        isOpen={showSidebar}
+        onClose={handleCloseSidebar}
+        post={sidebarPost}
+        selectedDate={sidebarPost ? new Date(sidebarPost.scheduled_date) : null}
+        onSave={handleSidebarSave}
       />
 
       <div className="flex-1 p-6 overflow-auto">

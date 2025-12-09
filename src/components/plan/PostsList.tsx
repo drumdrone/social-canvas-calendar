@@ -13,9 +13,10 @@ interface Post {
 interface PostsListProps {
   posts: Post[];
   onDelete: (postId: string) => void;
+  onPostClick?: (postId: string) => void;
 }
 
-export const PostsList: React.FC<PostsListProps> = ({ posts, onDelete }) => {
+export const PostsList: React.FC<PostsListProps> = ({ posts, onDelete, onPostClick }) => {
   if (posts.length === 0) {
     return null;
   }
@@ -30,7 +31,10 @@ export const PostsList: React.FC<PostsListProps> = ({ posts, onDelete }) => {
           key={post.id}
           className="flex items-center justify-between gap-2 p-3 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-md border-l-4 border-blue-500 hover:shadow-sm transition-all"
         >
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div
+            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+            onClick={() => onPostClick?.(post.id)}
+          >
             <span className="text-xs font-bold text-blue-700 bg-white px-2 py-1 rounded whitespace-nowrap">
               {format(new Date(post.scheduled_date), 'd.M.yyyy', { locale: cs })}
             </span>
@@ -39,7 +43,10 @@ export const PostsList: React.FC<PostsListProps> = ({ posts, onDelete }) => {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => onDelete(post.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(post.id);
+            }}
             className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
           >
             <Trash2 className="h-4 w-4" />
