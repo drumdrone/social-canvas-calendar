@@ -186,25 +186,12 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
               <Badge variant="secondary" className="mb-2">
                 {posts.length} postů celkem
               </Badge>
-              <div className="space-y-3">
-                {Array.from({ length: weeksCount }, (_, weekIndex) => {
-                  const weekPosts = posts.filter((_: any, i: number) =>
-                    Math.floor(i / (posts.length / weeksCount)) === weekIndex
-                  );
-
-                  return (
-                    <div key={weekIndex} className="border-l-2 border-blue-400 pl-3">
-                      <div className="text-xs font-semibold text-blue-600 mb-1">
-                        Týden {weekIndex + 1}
-                      </div>
-                      {weekPosts.map((post: string, idx: number) => (
-                        <div key={idx} className="text-sm text-muted-foreground">
-                          {post}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
+              <div className="space-y-2">
+                {posts.map((post: string, idx: number) => (
+                  <div key={idx} className="text-sm text-muted-foreground border-l-2 border-blue-400 pl-3">
+                    {post}
+                  </div>
+                ))}
               </div>
             </>
           )}
