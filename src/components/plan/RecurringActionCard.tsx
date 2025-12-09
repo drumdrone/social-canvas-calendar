@@ -11,10 +11,12 @@ export interface RecurringAction {
   user_id: string;
   action_type: 'monthly' | 'weekly' | 'quarterly';
   title: string;
+  subtitle: string;
   description: string;
   data: Record<string, any>;
   color: string;
   order_index: number;
+  month: string;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +35,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     title: action.title,
+    subtitle: action.subtitle,
     description: action.description,
     data: action.data,
   });
@@ -45,6 +48,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   const handleCancel = () => {
     setEditData({
       title: action.title,
+      subtitle: action.subtitle,
       description: action.description,
       data: action.data,
     });
@@ -254,17 +258,30 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
             {isEditing ? (
-              <Input
-                value={editData.title}
-                onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                className="font-semibold mb-2"
-                placeholder="Název akce"
-              />
+              <div className="space-y-2">
+                <Input
+                  value={editData.title}
+                  onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                  className="font-semibold"
+                  placeholder="Nadpis (např. Recept 1)"
+                />
+                <Input
+                  value={editData.subtitle}
+                  onChange={(e) => setEditData({ ...editData, subtitle: e.target.value })}
+                  className="text-sm"
+                  placeholder="Podnadpis (např. Muffiny)"
+                />
+              </div>
             ) : (
-              <CardTitle className="text-lg flex items-center gap-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                {action.title || 'Bez názvu'}
-              </CardTitle>
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                  {action.title || 'Bez názvu'}
+                </CardTitle>
+                {action.subtitle && (
+                  <p className="text-sm text-muted-foreground mt-1 ml-6">{action.subtitle}</p>
+                )}
+              </div>
             )}
           </div>
           <div className="flex gap-1">

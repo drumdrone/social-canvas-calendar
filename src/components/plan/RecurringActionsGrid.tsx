@@ -1,16 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar, RefreshCw, Calendar1, CalendarDays, CalendarRange } from 'lucide-react';
+import { Plus, Calendar, RefreshCw, Calendar1, CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { RecurringActionCard, RecurringAction } from './RecurringActionCard';
 import { toast } from 'sonner';
 
+const MONTHS = [
+  'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
+  'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'
+];
+
 export const RecurringActionsGrid: React.FC = () => {
   const { user } = useAuth();
   const [actions, setActions] = useState<RecurringAction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  });
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   const loadActions = useCallback(async () => {
     if (!user) return;
@@ -21,6 +31,7 @@ export const RecurringActionsGrid: React.FC = () => {
         .from('recurring_actions')
         .select('*')
         .eq('user_id', user.id)
+        .eq('month', selectedMonth)
         .order('order_index', { ascending: true });
 
       if (error) throw error;
@@ -32,7 +43,7 @@ export const RecurringActionsGrid: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, selectedMonth]);
 
   useEffect(() => {
     loadActions();
@@ -44,16 +55,19 @@ export const RecurringActionsGrid: React.FC = () => {
     const defaultData = {
       monthly: {
         title: 'Nová měsíční akce',
+        subtitle: '',
         description: '',
         data: { theme: '', products: '', channels: '' }
       },
       weekly: {
         title: 'Nové týdenní posty',
+        subtitle: '',
         description: '',
         data: { weeks_count: 4, posts: [] }
       },
       quarterly: {
         title: 'Nová čtvrtletní kampaň',
+        subtitle: '',
         description: '',
         data: { hashtag: '', mechanics: '', prize: '', platforms: '', announcement_date: '' }
       }
@@ -68,8 +82,10 @@ export const RecurringActionsGrid: React.FC = () => {
           user_id: user.id,
           action_type: actionType,
           title: newAction.title,
+          subtitle: newAction.subtitle,
           description: newAction.description,
           data: newAction.data,
+          month: selectedMonth,
           order_index: actions.filter(a => a.action_type === actionType).length,
         })
         .select()
@@ -121,6 +137,25 @@ export const RecurringActionsGrid: React.FC = () => {
 
   const getActionsByType = (type: 'monthly' | 'weekly' | 'quarterly') => {
     return actions.filter(a => a.action_type === type);
+  };
+
+  const changeMonth = (direction: 'prev' | 'next') => {
+    const [monthName, yearStr] = selectedMonth.split(' ');
+    const monthIndex = MONTHS.indexOf(monthName);
+    const year = parseInt(yearStr);
+
+    let newMonthIndex = monthIndex;
+    let newYear = year;
+
+    if (direction === 'next') {
+      newMonthIndex = (monthIndex + 1) % 12;
+      if (newMonthIndex === 0) newYear++;
+    } else {
+      newMonthIndex = (monthIndex - 1 + 12) % 12;
+      if (newMonthIndex === 11) newYear--;
+    }
+
+    setSelectedMonth(`${MONTHS[newMonthIndex]} ${newYear}`);
   };
 
   const renderColumn = (
@@ -192,6 +227,31 @@ export const RecurringActionsGrid: React.FC = () => {
             <p className="text-muted-foreground">
               Organizujte měsíční, týdenní a čtvrtletní kampaně
             </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => changeMonth('prev')}
+              className="flex items-center gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg">
+              <Calendar className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-lg">{selectedMonth}</span>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => changeMonth('next')}
+              className="flex items-center gap-1"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
