@@ -23,6 +23,7 @@ export interface RecurringAction {
   color: string;
   order_index: number;
   month: string;
+  group_id?: string | null;
   created_at: string;
   updated_at: string;
 }

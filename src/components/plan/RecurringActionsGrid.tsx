@@ -98,6 +98,7 @@ export const RecurringActionsGrid: React.FC = () => {
     try {
       const actionsToInsert = [];
       let currentMonth = selectedMonth;
+      const groupId = repeatFor12Months ? crypto.randomUUID() : null;
 
       for (let i = 0; i < monthsToCreate; i++) {
         const actionTitle = repeatFor12Months
@@ -113,6 +114,7 @@ export const RecurringActionsGrid: React.FC = () => {
           data: newAction.data,
           month: currentMonth,
           order_index: 0,
+          group_id: groupId,
         });
 
         if (i < monthsToCreate - 1) {
@@ -143,15 +145,44 @@ export const RecurringActionsGrid: React.FC = () => {
 
   const updateAction = async (id: string, updates: Partial<RecurringAction>) => {
     try {
-      const { error } = await supabase
-        .from('recurring_actions')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id);
+      const currentAction = actions.find(a => a.id === id);
 
-      if (error) throw error;
+      if (updates.title && currentAction?.group_id) {
+        const { data: groupedActions, error: fetchError } = await supabase
+          .from('recurring_actions')
+          .select('id, month')
+          .eq('group_id', currentAction.group_id);
 
-      setActions(actions.map(a => a.id === id ? { ...a, ...updates } : a));
-      toast.success('Akce aktualizována');
+        if (fetchError) throw fetchError;
+
+        const baseTitleMatch = currentAction.title.match(/^(.+?)(?:\s*-\s*[A-Za-zÁ-Žá-ž]+\s+\d{4})?$/);
+        const baseTitle = baseTitleMatch ? baseTitleMatch[1].trim() : currentAction.title;
+
+        const newBaseTitle = updates.title.replace(/\s*-\s*[A-Za-zÁ-Žá-ž]+\s+\d{4}$/, '').trim();
+
+        for (const action of groupedActions || []) {
+          const newTitle = `${newBaseTitle} - ${action.month}`;
+          const { error: updateError } = await supabase
+            .from('recurring_actions')
+            .update({ title: newTitle, updated_at: new Date().toISOString() })
+            .eq('id', action.id);
+
+          if (updateError) throw updateError;
+        }
+
+        await loadActions();
+        toast.success('Název aktualizován pro všechny měsíce');
+      } else {
+        const { error } = await supabase
+          .from('recurring_actions')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        setActions(actions.map(a => a.id === id ? { ...a, ...updates } : a));
+        toast.success('Akce aktualizována');
+      }
     } catch (error) {
       console.error('Error updating action:', error);
       toast.error('Chyba při aktualizaci akce');
