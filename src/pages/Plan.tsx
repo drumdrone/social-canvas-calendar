@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { PlanTable } from '@/components/plan/PlanTable';
+import { RecurringActionsGrid } from '@/components/plan/RecurringActionsGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import Login from './Login';
 
@@ -14,7 +14,7 @@ const Plan = () => {
   return (
     <AppLayout>
       <div className="h-screen flex flex-col bg-background">
-        <PlanTable />
+        <RecurringActionsGrid />
       </div>
     </AppLayout>
   );
