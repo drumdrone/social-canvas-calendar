@@ -342,12 +342,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   };
 
   const getBackgroundColor = () => {
-    switch (action.action_type) {
-      case 'monthly': return 'bg-purple-50';
-      case 'weekly': return 'bg-blue-50';
-      case 'quarterly': return 'bg-orange-50';
-      default: return 'bg-gray-50';
-    }
+    return 'bg-white';
   };
 
   return (

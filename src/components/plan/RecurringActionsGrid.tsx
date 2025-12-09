@@ -260,7 +260,12 @@ export const RecurringActionsGrid: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="space-y-4">
+          <div className="bg-purple-200 p-4 rounded-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-purple-900">
+                📅 Měsíční akce {monthlyActions.length > 0 && `(${monthlyActions.length})`}
+              </h3>
+            </div>
             {monthlyActions.map(action => (
               <RecurringActionCard
                 key={action.id}
@@ -270,7 +275,7 @@ export const RecurringActionsGrid: React.FC = () => {
               />
             ))}
             {monthlyActions.length === 0 && (
-              <Card className="border-dashed">
+              <Card className="border-dashed bg-white/50">
                 <CardContent className="py-8 text-center text-muted-foreground text-sm">
                   Žádné měsíční akce
                 </CardContent>
@@ -278,7 +283,12 @@ export const RecurringActionsGrid: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="bg-blue-200 p-4 rounded-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-blue-900">
+                📱 Týdenní akce {weeklyActions.length > 0 && `(${weeklyActions.length})`}
+              </h3>
+            </div>
             {weeklyActions.map(action => (
               <RecurringActionCard
                 key={action.id}
@@ -288,7 +298,7 @@ export const RecurringActionsGrid: React.FC = () => {
               />
             ))}
             {weeklyActions.length === 0 && (
-              <Card className="border-dashed">
+              <Card className="border-dashed bg-white/50">
                 <CardContent className="py-8 text-center text-muted-foreground text-sm">
                   Žádné týdenní akce
                 </CardContent>
@@ -296,7 +306,12 @@ export const RecurringActionsGrid: React.FC = () => {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="bg-orange-200 p-4 rounded-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-orange-900">
+                🎁 Čtvrtletní akce {quarterlyActions.length > 0 && `(${quarterlyActions.length})`}
+              </h3>
+            </div>
             {quarterlyActions.map(action => (
               <RecurringActionCard
                 key={action.id}
@@ -306,7 +321,7 @@ export const RecurringActionsGrid: React.FC = () => {
               />
             ))}
             {quarterlyActions.length === 0 && (
-              <Card className="border-dashed">
+              <Card className="border-dashed bg-white/50">
                 <CardContent className="py-8 text-center text-muted-foreground text-sm">
                   Žádné čtvrtletní akce
                 </CardContent>
