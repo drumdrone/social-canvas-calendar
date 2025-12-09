@@ -6,4 +6,7 @@ export { RecurringActionCard } from './RecurringActionCard';
 export { AddActionDialog } from './AddActionDialog';
 export { PostQuickAdd } from './PostQuickAdd';
 export { PostsList } from './PostsList';
+export { ActionTemplatesManager } from './ActionTemplatesManager';
+export { ActionTemplateDialog } from './ActionTemplateDialog';
+export { ActionTemplateCard } from './ActionTemplateCard';
 export type { RecurringAction } from './RecurringActionCard';

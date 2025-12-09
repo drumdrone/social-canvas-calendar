@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Trash2, Edit2, Check, X, GripVertical, Plus } from 'lucide-react';
+import { Trash2, Edit2, Check, X, GripVertical, Plus, Unlink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -24,6 +24,8 @@ export interface RecurringAction {
   order_index: number;
   month: string;
   group_id?: string | null;
+  template_id?: string | null;
+  is_custom?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -130,6 +132,25 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       data: action.data,
     });
     setIsEditing(false);
+  };
+
+  const handleUnlinkFromTemplate = async () => {
+    if (!action.template_id) return;
+
+    try {
+      const { error } = await supabase
+        .from('recurring_actions')
+        .update({ is_custom: true })
+        .eq('id', action.id);
+
+      if (error) throw error;
+
+      onUpdate({ is_custom: true });
+      toast.success('Akce odvázána od šablony');
+    } catch (error) {
+      console.error('Error unlinking from template:', error);
+      toast.error('Chyba při odvazování od šablony');
+    }
   };
 
   const renderContent = () => {
@@ -354,6 +375,11 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                 <CardTitle className="text-lg flex items-center gap-2">
                   <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                   {action.title || 'Bez názvu'}
+                  {action.template_id && !action.is_custom && (
+                    <Badge variant="secondary" className="text-xs">
+                      Ze šablony
+                    </Badge>
+                  )}
                 </CardTitle>
                 {action.subtitle && (
                   <p className="text-sm text-muted-foreground mt-1 ml-6">{action.subtitle}</p>
@@ -376,6 +402,16 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                 <Button size="sm" variant="ghost" onClick={() => setIsAddingPost(true)} title="Přidat post">
                   <Plus className="h-4 w-4" />
                 </Button>
+                {action.template_id && !action.is_custom && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleUnlinkFromTemplate}
+                    title="Odvázat od šablony"
+                  >
+                    <Unlink className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button size="sm" variant="ghost" onClick={() => setIsEditing(true)}>
                   <Edit2 className="h-4 w-4" />
                 </Button>
