@@ -3,16 +3,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, CalendarIcon, X, Check } from 'lucide-react';
+import { CalendarIcon, X, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 interface PostQuickAddProps {
   onAdd: (title: string, date: Date) => Promise<void>;
+  onCancel: () => void;
 }
 
-export const PostQuickAdd: React.FC<PostQuickAddProps> = ({ onAdd }) => {
-  const [isAdding, setIsAdding] = useState(false);
+export const PostQuickAdd: React.FC<PostQuickAddProps> = ({ onAdd, onCancel }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState<Date>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,7 +25,6 @@ export const PostQuickAdd: React.FC<PostQuickAddProps> = ({ onAdd }) => {
       await onAdd(title, date);
       setTitle('');
       setDate(undefined);
-      setIsAdding(false);
     } catch (error) {
       console.error('Error adding post:', error);
     } finally {
@@ -36,22 +35,8 @@ export const PostQuickAdd: React.FC<PostQuickAddProps> = ({ onAdd }) => {
   const handleCancel = () => {
     setTitle('');
     setDate(undefined);
-    setIsAdding(false);
+    onCancel();
   };
-
-  if (!isAdding) {
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setIsAdding(true)}
-        className="w-full justify-start text-muted-foreground hover:text-foreground"
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Přidat post
-      </Button>
-    );
-  }
 
   return (
     <div className="flex items-center gap-2 p-2 border rounded-md bg-background">

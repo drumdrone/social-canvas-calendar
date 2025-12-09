@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Trash2, Edit2, Check, X, GripVertical } from 'lucide-react';
+import { Trash2, Edit2, Check, X, GripVertical, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -46,6 +46,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
 }) => {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [isAddingPost, setIsAddingPost] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [editData, setEditData] = useState({
     title: action.title,
@@ -90,6 +91,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       if (error) throw error;
 
       toast.success('Post přidán');
+      setIsAddingPost(false);
       await loadPosts();
     } catch (error) {
       console.error('Error adding post:', error);
@@ -370,6 +372,9 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
               </>
             ) : (
               <>
+                <Button size="sm" variant="ghost" onClick={() => setIsAddingPost(true)} title="Přidat post">
+                  <Plus className="h-4 w-4" />
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => setIsEditing(true)}>
                   <Edit2 className="h-4 w-4" />
                 </Button>
@@ -404,11 +409,18 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
 
         {!isEditing && (
           <>
-            <Separator className="my-4" />
-            <div className="space-y-2">
-              <PostQuickAdd onAdd={handleAddPost} />
-              <PostsList posts={posts} onDelete={handleDeletePost} />
-            </div>
+            {isAddingPost && (
+              <>
+                <Separator className="my-4" />
+                <PostQuickAdd onAdd={handleAddPost} onCancel={() => setIsAddingPost(false)} />
+              </>
+            )}
+            {posts.length > 0 && (
+              <>
+                <Separator className="my-4" />
+                <PostsList posts={posts} onDelete={handleDeletePost} />
+              </>
+            )}
           </>
         )}
       </CardContent>
