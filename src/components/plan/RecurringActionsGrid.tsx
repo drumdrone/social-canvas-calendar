@@ -17,24 +17,23 @@ export const RecurringActionsGrid: React.FC = () => {
   const { user } = useAuth();
   const [actions, setActions] = useState<RecurringAction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
-  });
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingActionType, setPendingActionType] = useState<'monthly' | 'weekly' | 'quarterly' | null>(null);
+  const [pendingMonth, setPendingMonth] = useState<string | null>(null);
 
   const loadActions = useCallback(async () => {
     if (!user) return;
 
     setIsLoading(true);
     try {
+      const monthsOfYear = MONTHS.map(month => `${month} ${currentYear}`);
+
       const { data, error } = await supabase
         .from('recurring_actions')
         .select('*')
         .eq('user_id', user.id)
-        .eq('month', selectedMonth)
+        .in('month', monthsOfYear)
         .order('order_index', { ascending: true });
 
       if (error) throw error;
@@ -46,7 +45,7 @@ export const RecurringActionsGrid: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, selectedMonth]);
+  }, [user, currentYear]);
 
   useEffect(() => {
     loadActions();
@@ -63,13 +62,14 @@ export const RecurringActionsGrid: React.FC = () => {
     return `${MONTHS[newMonthIndex]} ${newYear}`;
   };
 
-  const showAddDialog = (actionType: 'monthly' | 'weekly' | 'quarterly') => {
+  const showAddDialog = (actionType: 'monthly' | 'weekly' | 'quarterly', month: string) => {
     setPendingActionType(actionType);
+    setPendingMonth(month);
     setDialogOpen(true);
   };
 
   const addAction = async (actionType: 'monthly' | 'weekly' | 'quarterly', repeatFor12Months: boolean) => {
-    if (!user) return;
+    if (!user || !pendingMonth) return;
 
     const defaultData = {
       monthly: {
@@ -97,7 +97,7 @@ export const RecurringActionsGrid: React.FC = () => {
 
     try {
       const actionsToInsert = [];
-      let currentMonth = selectedMonth;
+      let currentMonth = pendingMonth;
       const groupId = repeatFor12Months ? crypto.randomUUID() : null;
 
       for (let i = 0; i < monthsToCreate; i++) {
@@ -129,8 +129,7 @@ export const RecurringActionsGrid: React.FC = () => {
 
       if (error) throw error;
 
-      const newActionsInCurrentMonth = data?.filter(a => a.month === selectedMonth) || [];
-      setActions([...actions, ...newActionsInCurrentMonth]);
+      setActions([...actions, ...(data || [])]);
 
       if (repeatFor12Months) {
         toast.success(`Vytvořeno ${monthsToCreate} akcí pro následujících 12 měsíců`);
@@ -206,73 +205,115 @@ export const RecurringActionsGrid: React.FC = () => {
     }
   };
 
-  const getActionsByType = (type: 'monthly' | 'weekly' | 'quarterly') => {
-    return actions.filter(a => a.action_type === type);
+  const getActionsByMonth = (month: string) => {
+    return actions.filter(a => a.month === month);
   };
 
-  const changeMonth = (direction: 'prev' | 'next') => {
-    const [monthName, yearStr] = selectedMonth.split(' ');
-    const monthIndex = MONTHS.indexOf(monthName);
-    const year = parseInt(yearStr);
-
-    let newMonthIndex = monthIndex;
-    let newYear = year;
-
-    if (direction === 'next') {
-      newMonthIndex = (monthIndex + 1) % 12;
-      if (newMonthIndex === 0) newYear++;
-    } else {
-      newMonthIndex = (monthIndex - 1 + 12) % 12;
-      if (newMonthIndex === 11) newYear--;
-    }
-
-    setSelectedMonth(`${MONTHS[newMonthIndex]} ${newYear}`);
+  const getActionsByMonthAndType = (month: string, type: 'monthly' | 'weekly' | 'quarterly') => {
+    return actions.filter(a => a.month === month && a.action_type === type);
   };
 
-  const renderColumn = (
-    type: 'monthly' | 'weekly' | 'quarterly',
-    title: string,
-    icon: React.ReactNode,
-    color: string
-  ) => {
-    const columnActions = getActionsByType(type);
+  const changeYear = (direction: 'prev' | 'next') => {
+    setCurrentYear(prev => direction === 'next' ? prev + 1 : prev - 1);
+  };
+
+  const renderMonthSection = (monthName: string, monthIndex: number) => {
+    const monthStr = `${monthName} ${currentYear}`;
+    const monthActions = getActionsByMonth(monthStr);
+    const monthlyActions = getActionsByMonthAndType(monthStr, 'monthly');
+    const weeklyActions = getActionsByMonthAndType(monthStr, 'weekly');
+    const quarterlyActions = getActionsByMonthAndType(monthStr, 'quarterly');
 
     return (
-      <div className="flex-1 min-w-0">
-        <Card className={`h-full border-t-4 ${color}`}>
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {icon}
-                <CardTitle className="text-lg">{title}</CardTitle>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => showAddDialog(type)}
-                className="flex items-center gap-1"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 max-h-[calc(100vh-250px)] overflow-y-auto">
-            {columnActions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                Žádné akce
-              </div>
-            ) : (
-              columnActions.map(action => (
-                <RecurringActionCard
-                  key={action.id}
-                  action={action}
-                  onUpdate={(updates) => updateAction(action.id, updates)}
-                  onDelete={() => deleteAction(action.id)}
-                />
-              ))
+      <div key={monthStr} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-bold text-foreground">{monthName}</h2>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => showAddDialog('monthly', monthStr)}
+              className="flex items-center gap-1"
+            >
+              <Calendar1 className="h-4 w-4 text-purple-600" />
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => showAddDialog('weekly', monthStr)}
+              className="flex items-center gap-1"
+            >
+              <CalendarDays className="h-4 w-4 text-blue-600" />
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => showAddDialog('quarterly', monthStr)}
+              className="flex items-center gap-1"
+            >
+              <CalendarRange className="h-4 w-4 text-orange-600" />
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="space-y-4">
+            {monthlyActions.map(action => (
+              <RecurringActionCard
+                key={action.id}
+                action={action}
+                onUpdate={(updates) => updateAction(action.id, updates)}
+                onDelete={() => deleteAction(action.id)}
+              />
+            ))}
+            {monthlyActions.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  Žádné měsíční akce
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+          </div>
+
+          <div className="space-y-4">
+            {weeklyActions.map(action => (
+              <RecurringActionCard
+                key={action.id}
+                action={action}
+                onUpdate={(updates) => updateAction(action.id, updates)}
+                onDelete={() => deleteAction(action.id)}
+              />
+            ))}
+            {weeklyActions.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  Žádné týdenní akce
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {quarterlyActions.map(action => (
+              <RecurringActionCard
+                key={action.id}
+                action={action}
+                onUpdate={(updates) => updateAction(action.id, updates)}
+                onDelete={() => deleteAction(action.id)}
+              />
+            ))}
+            {quarterlyActions.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  Žádné čtvrtletní akce
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -302,65 +343,46 @@ export const RecurringActionsGrid: React.FC = () => {
       />
 
       <div className="flex-1 p-6 overflow-auto">
-        <div className="max-w-[1800px] mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Plán pravidelných akcí</h1>
-            <p className="text-muted-foreground">
-              Organizujte měsíční, týdenní a čtvrtletní kampaně
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => changeMonth('prev')}
-              className="flex items-center gap-1"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg">
-              <Calendar className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-lg">{selectedMonth}</span>
+        <div className="max-w-[1800px] mx-auto space-y-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Plán pravidelných akcí</h1>
+              <p className="text-muted-foreground">
+                Organizujte měsíční, týdenní a čtvrtletní kampaně
+              </p>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => changeMonth('next')}
-              className="flex items-center gap-1"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => changeYear('prev')}
+                className="flex items-center gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg">
+                <Calendar className="h-5 w-5 text-primary" />
+                <span className="font-semibold text-lg">{currentYear}</span>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => changeYear('next')}
+                className="flex items-center gap-1"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-12">
+            {MONTHS.map((month, index) => renderMonthSection(month, index))}
           </div>
         </div>
-
-        {/* 3 Column Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {renderColumn(
-            'monthly',
-            'Měsíční akce',
-            <Calendar1 className="h-5 w-5 text-purple-600" />,
-            'border-t-purple-400'
-          )}
-          {renderColumn(
-            'weekly',
-            'Týdenní akce',
-            <CalendarDays className="h-5 w-5 text-blue-600" />,
-            'border-t-blue-400'
-          )}
-          {renderColumn(
-            'quarterly',
-            'Čtvrtletní akce',
-            <CalendarRange className="h-5 w-5 text-orange-600" />,
-            'border-t-orange-400'
-          )}
-        </div>
       </div>
-    </div>
     </>
   );
 };
