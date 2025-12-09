@@ -5,6 +5,7 @@ import { Plus, Calendar, RefreshCw, Calendar1, CalendarDays, CalendarRange, Chev
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { RecurringActionCard, RecurringAction } from './RecurringActionCard';
+import { AddActionDialog } from './AddActionDialog';
 import { toast } from 'sonner';
 
 const MONTHS = [
@@ -21,6 +22,8 @@ export const RecurringActionsGrid: React.FC = () => {
     return `${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
   });
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingActionType, setPendingActionType] = useState<'monthly' | 'weekly' | 'quarterly' | null>(null);
 
   const loadActions = useCallback(async () => {
     if (!user) return;
@@ -49,7 +52,23 @@ export const RecurringActionsGrid: React.FC = () => {
     loadActions();
   }, [loadActions]);
 
-  const addAction = async (actionType: 'monthly' | 'weekly' | 'quarterly') => {
+  const getNextMonth = (monthStr: string): string => {
+    const [monthName, yearStr] = monthStr.split(' ');
+    const monthIndex = MONTHS.indexOf(monthName);
+    const year = parseInt(yearStr);
+
+    const newMonthIndex = (monthIndex + 1) % 12;
+    const newYear = newMonthIndex === 0 ? year + 1 : year;
+
+    return `${MONTHS[newMonthIndex]} ${newYear}`;
+  };
+
+  const showAddDialog = (actionType: 'monthly' | 'weekly' | 'quarterly') => {
+    setPendingActionType(actionType);
+    setDialogOpen(true);
+  };
+
+  const addAction = async (actionType: 'monthly' | 'weekly' | 'quarterly', repeatFor12Months: boolean) => {
     if (!user) return;
 
     const defaultData = {
@@ -74,27 +93,44 @@ export const RecurringActionsGrid: React.FC = () => {
     };
 
     const newAction = defaultData[actionType];
+    const monthsToCreate = repeatFor12Months ? 12 : 1;
 
     try {
-      const { data, error } = await supabase
-        .from('recurring_actions')
-        .insert({
+      const actionsToInsert = [];
+      let currentMonth = selectedMonth;
+
+      for (let i = 0; i < monthsToCreate; i++) {
+        actionsToInsert.push({
           user_id: user.id,
           action_type: actionType,
           title: newAction.title,
           subtitle: newAction.subtitle,
           description: newAction.description,
           data: newAction.data,
-          month: selectedMonth,
-          order_index: actions.filter(a => a.action_type === actionType).length,
-        })
-        .select()
-        .single();
+          month: currentMonth,
+          order_index: 0,
+        });
+
+        if (i < monthsToCreate - 1) {
+          currentMonth = getNextMonth(currentMonth);
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('recurring_actions')
+        .insert(actionsToInsert)
+        .select();
 
       if (error) throw error;
 
-      setActions([...actions, data]);
-      toast.success('Akce vytvořena');
+      const newActionsInCurrentMonth = data?.filter(a => a.month === selectedMonth) || [];
+      setActions([...actions, ...newActionsInCurrentMonth]);
+
+      if (repeatFor12Months) {
+        toast.success(`Vytvořeno ${monthsToCreate} akcí pro následujících 12 měsíců`);
+      } else {
+        toast.success('Akce vytvořena');
+      }
     } catch (error) {
       console.error('Error creating action:', error);
       toast.error('Chyba při vytváření akce');
@@ -178,7 +214,7 @@ export const RecurringActionsGrid: React.FC = () => {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => addAction(type)}
+                onClick={() => showAddDialog(type)}
                 className="flex items-center gap-1"
               >
                 <Plus className="h-4 w-4" />
@@ -218,8 +254,20 @@ export const RecurringActionsGrid: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 p-6 overflow-auto">
-      <div className="max-w-[1800px] mx-auto space-y-6">
+    <>
+      <AddActionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        actionType={pendingActionType || 'monthly'}
+        onConfirm={(repeatFor12Months) => {
+          if (pendingActionType) {
+            addAction(pendingActionType, repeatFor12Months);
+          }
+        }}
+      />
+
+      <div className="flex-1 p-6 overflow-auto">
+        <div className="max-w-[1800px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -278,5 +326,6 @@ export const RecurringActionsGrid: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
