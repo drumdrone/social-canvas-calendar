@@ -100,10 +100,14 @@ export const RecurringActionsGrid: React.FC = () => {
       let currentMonth = selectedMonth;
 
       for (let i = 0; i < monthsToCreate; i++) {
+        const actionTitle = repeatFor12Months
+          ? `${newAction.title} - ${currentMonth}`
+          : newAction.title;
+
         actionsToInsert.push({
           user_id: user.id,
           action_type: actionType,
-          title: newAction.title,
+          title: actionTitle,
           subtitle: newAction.subtitle,
           description: newAction.description,
           data: newAction.data,
