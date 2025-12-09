@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Trash2, Edit2, Check, X, GripVertical } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { PostQuickAdd } from './PostQuickAdd';
+import { PostsList } from './PostsList';
 
 export interface RecurringAction {
   id: string;
@@ -27,18 +33,86 @@ interface RecurringActionCardProps {
   onDelete: () => void;
 }
 
+interface Post {
+  id: string;
+  title: string;
+  scheduled_date: string;
+}
+
 export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   action,
   onUpdate,
   onDelete,
 }) => {
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [editData, setEditData] = useState({
     title: action.title,
     subtitle: action.subtitle,
     description: action.description,
     data: action.data,
   });
+
+  useEffect(() => {
+    loadPosts();
+  }, [action.id]);
+
+  const loadPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('social_media_posts')
+        .select('id, title, scheduled_date')
+        .eq('recurring_action_id', action.id)
+        .order('scheduled_date', { ascending: true });
+
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (error) {
+      console.error('Error loading posts:', error);
+    }
+  };
+
+  const handleAddPost = async (title: string, date: Date) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('social_media_posts')
+        .insert({
+          user_id: user.id,
+          recurring_action_id: action.id,
+          title,
+          scheduled_date: date.toISOString(),
+          status: 'draft',
+        });
+
+      if (error) throw error;
+
+      toast.success('Post přidán');
+      await loadPosts();
+    } catch (error) {
+      console.error('Error adding post:', error);
+      toast.error('Chyba při přidávání postu');
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('social_media_posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      toast.success('Post smazán');
+      await loadPosts();
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Chyba při mazání postu');
+    }
+  };
 
   const handleSave = () => {
     onUpdate(editData);
@@ -327,6 +401,16 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       </CardHeader>
       <CardContent>
         {renderContent()}
+
+        {!isEditing && (
+          <>
+            <Separator className="my-4" />
+            <div className="space-y-2">
+              <PostQuickAdd onAdd={handleAddPost} />
+              <PostsList posts={posts} onDelete={handleDeletePost} />
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
