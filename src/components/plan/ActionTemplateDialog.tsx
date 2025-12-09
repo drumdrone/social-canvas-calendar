@@ -31,9 +31,10 @@ interface ActionTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   template?: ActionTemplate | null;
+  defaultFrequency?: string | null;
 }
 
-export function ActionTemplateDialog({ open, onOpenChange, template }: ActionTemplateDialogProps) {
+export function ActionTemplateDialog({ open, onOpenChange, template, defaultFrequency }: ActionTemplateDialogProps) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     title: "",
@@ -61,13 +62,13 @@ export function ActionTemplateDialog({ open, onOpenChange, template }: ActionTem
         title: "",
         subtitle: "",
         description: "",
-        frequency: "monthly",
+        frequency: defaultFrequency || "monthly",
         times_per_period: 1,
         color: "#3b82f6",
         status: "active",
       });
     }
-  }, [template, open]);
+  }, [template, open, defaultFrequency]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {

@@ -21,13 +21,6 @@ interface ActionTemplateCardProps {
   onGenerateInstances: (id: string) => void;
 }
 
-const frequencyLabels: Record<string, string> = {
-  weekly: "Týdenní",
-  monthly: "Měsíční",
-  quarterly: "Čtvrtletní",
-  yearly: "Roční",
-};
-
 export function ActionTemplateCard({
   template,
   onEdit,
@@ -58,13 +51,8 @@ export function ActionTemplateCard({
           <p className="text-sm text-muted-foreground line-clamp-2">{template.description}</p>
         )}
 
-        <div className="flex items-center gap-2 text-sm">
-          <Badge variant="outline">
-            {frequencyLabels[template.frequency] || template.frequency}
-          </Badge>
-          <span className="text-muted-foreground">
-            {template.times_per_period}x za období
-          </span>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {template.times_per_period}x za období
         </div>
 
         <div className="flex gap-2 pt-2">
