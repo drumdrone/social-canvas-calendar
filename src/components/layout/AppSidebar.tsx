@@ -21,6 +21,11 @@ import {
 
 const navigation = [
   {
+    name: 'Plan',
+    href: '/plan',
+    icon: FileText,
+  },
+  {
     name: 'Calendar',
     href: '/',
     icon: Calendar,
@@ -29,11 +34,6 @@ const navigation = [
     name: 'Mood Board',
     href: '/dashboard',
     icon: LayoutDashboard,
-  },
-  {
-    name: 'Plan',
-    href: '/plan',
-    icon: FileText,
   },
   {
     name: 'Matrix',

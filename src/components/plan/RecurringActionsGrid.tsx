@@ -55,6 +55,18 @@ export const RecurringActionsGrid: React.FC = () => {
     loadActions();
   }, [loadActions]);
 
+  useEffect(() => {
+    if (!isLoading && actions.length > 0) {
+      const currentMonth = new Date().getMonth();
+      const monthElement = document.getElementById(`month-${currentMonth}`);
+      if (monthElement) {
+        setTimeout(() => {
+          monthElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+  }, [isLoading, actions]);
+
   const getNextMonth = (monthStr: string): string => {
     const [monthName, yearStr] = monthStr.split(' ');
     const monthIndex = MONTHS.indexOf(monthName);
@@ -261,7 +273,7 @@ export const RecurringActionsGrid: React.FC = () => {
     const quarterlyActions = getActionsByMonthAndType(monthStr, 'quarterly');
 
     return (
-      <div key={monthStr} className="space-y-4 p-6 rounded-lg shadow-md bg-background">
+      <div id={`month-${monthIndex}`} key={monthStr} className="space-y-4 p-6 rounded-lg shadow-md bg-background">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold text-foreground">{monthStr}</h2>
           <div className="flex gap-2">
