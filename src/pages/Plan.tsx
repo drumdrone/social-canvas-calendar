@@ -16,7 +16,7 @@ const Plan = () => {
   return (
     <AppLayout>
       <div className="min-h-screen flex flex-col bg-background p-6">
-        <Tabs defaultValue="templates" className="w-full">
+        <Tabs defaultValue="instances" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="templates">Šablony akcí</TabsTrigger>
             <TabsTrigger value="instances">Instance akcí</TabsTrigger>
