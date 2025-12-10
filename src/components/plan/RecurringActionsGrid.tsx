@@ -263,7 +263,7 @@ export const RecurringActionsGrid: React.FC = () => {
     return (
       <div key={monthStr} className="space-y-4 p-6 rounded-lg shadow-md bg-background">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-foreground">{monthName}</h2>
+          <h2 className="text-3xl font-bold text-foreground">{monthStr}</h2>
           <div className="flex gap-2">
             <Button
               size="sm"
