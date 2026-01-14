@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Trash2, Edit2, Check, X, GripVertical, Plus, Unlink } from 'lucide-react';
+import { Trash2, Edit2, Check, X, GripVertical, Plus, Unlink, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -383,8 +383,14 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
               </>
             ) : (
               <>
-                <Button size="sm" variant="ghost" onClick={() => setIsAddingPost(true)} title="Přidat post">
-                  <Plus className="h-4 w-4" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIsAddingPost(true)}
+                  title="Naplánovat do kalendáře"
+                  className="text-primary hover:text-primary"
+                >
+                  <Calendar className="h-4 w-4" />
                 </Button>
                 {action.template_id && !action.is_custom && (
                   <Button
