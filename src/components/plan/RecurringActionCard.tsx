@@ -185,12 +185,12 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
             </>
           ) : (
             <>
-              <Badge variant="secondary" className="mb-2">
-                {posts.length} postů celkem
+              <Badge variant="secondary" className="mb-2 font-normal">
+                {posts.length} postů
               </Badge>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {posts.map((post: string, idx: number) => (
-                  <div key={idx} className="text-sm text-muted-foreground border-l-2 border-blue-400 pl-3">
+                  <div key={idx} className="text-sm text-muted-foreground border-l-2 border-gray-300 pl-3">
                     {post}
                   </div>
                 ))}
@@ -321,30 +321,17 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     return null;
   };
 
-  const getBorderColor = () => {
-    switch (action.action_type) {
-      case 'monthly': return 'border-purple-400';
-      case 'weekly': return 'border-blue-400';
-      case 'quarterly': return 'border-orange-400';
-      default: return 'border-gray-400';
-    }
-  };
-
-  const getBackgroundColor = () => {
-    return 'bg-white';
-  };
-
   return (
-    <Card className={`${getBorderColor()} border-l-4 ${getBackgroundColor()}`}>
-      <CardHeader className="pb-3">
+    <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3 px-4 pt-4">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {isEditing ? (
               <div className="space-y-2">
                 <Input
                   value={editData.title}
                   onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                  className="font-semibold"
+                  className="font-medium"
                   placeholder="Nadpis (např. Recept 1)"
                 />
                 <Input
@@ -356,35 +343,34 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
               </div>
             ) : (
               <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                <CardTitle className="text-base font-medium flex items-center gap-2">
                   {action.title || 'Bez názvu'}
                   {action.template_id && !action.is_custom && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs font-normal">
                       Ze šablony
                     </Badge>
                   )}
                 </CardTitle>
                 {action.subtitle && (
-                  <p className="text-sm text-muted-foreground mt-1 ml-6">{action.subtitle}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{action.subtitle}</p>
                 )}
               </div>
             )}
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-0.5 flex-shrink-0">
             {isEditing ? (
               <>
-                <Button size="sm" variant="ghost" onClick={handleSave}>
-                  <Check className="h-4 w-4" />
+                <Button size="sm" variant="ghost" onClick={handleSave} className="h-8 w-8 p-0">
+                  <Check className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={handleCancel}>
-                  <X className="h-4 w-4" />
+                <Button size="sm" variant="ghost" onClick={handleCancel} className="h-8 w-8 p-0">
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               </>
             ) : (
               <>
-                <Button size="sm" variant="ghost" onClick={() => setIsAddingPost(true)} title="Přidat post">
-                  <Plus className="h-4 w-4" />
+                <Button size="sm" variant="ghost" onClick={() => setIsAddingPost(true)} title="Přidat post" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
+                  <Plus className="h-3.5 w-3.5" />
                 </Button>
                 {action.template_id && !action.is_custom && (
                   <Button
@@ -392,20 +378,21 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                     variant="ghost"
                     onClick={handleUnlinkFromTemplate}
                     title="Odvázat od šablony"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                   >
-                    <Unlink className="h-4 w-4" />
+                    <Unlink className="h-3.5 w-3.5" />
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => setIsEditing(true)}>
-                  <Edit2 className="h-4 w-4" />
+                <Button size="sm" variant="ghost" onClick={() => setIsEditing(true)} className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
+                  <Edit2 className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={onDelete}
-                  className="text-destructive hover:text-destructive"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </>
             )}
@@ -417,28 +404,28 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
             onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             placeholder="Popis"
             rows={2}
-            className="text-sm"
+            className="text-sm mt-2"
           />
         ) : (
           action.description && (
-            <p className="text-sm text-muted-foreground mt-1">{action.description}</p>
+            <p className="text-sm text-muted-foreground mt-2">{action.description}</p>
           )
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 pb-4">
         {renderContent()}
 
         {!isEditing && (
           <>
             {isAddingPost && (
               <>
-                <Separator className="my-4" />
+                <Separator className="my-3" />
                 <PostQuickAdd onAdd={handleAddPost} onCancel={() => setIsAddingPost(false)} />
               </>
             )}
             {posts.length > 0 && (
               <>
-                <Separator className="my-4" />
+                <Separator className="my-3" />
                 <PostsList posts={posts} onDelete={handleDeletePost} onPostClick={onPostClick} />
               </>
             )}

@@ -104,48 +104,42 @@ export function ActionTemplatesManager() {
   const renderColumn = (
     frequency: string,
     title: string,
-    icon: React.ReactNode,
-    color: string
+    icon: React.ReactNode
   ) => {
     const columnTemplates = getTemplatesByFrequency(frequency);
 
     return (
-      <div className="flex-1 min-w-0">
-        <Card className={`h-full border-t-4 ${color}`}>
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {icon}
-                <CardTitle className="text-lg">{title}</CardTitle>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => handleAddTemplate(frequency)}
-                className="flex items-center gap-1"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+      <div className="flex-1 min-w-0 space-y-3">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            {title} {columnTemplates.length > 0 && `(${columnTemplates.length})`}
+          </h3>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handleAddTemplate(frequency)}
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <div className="space-y-3">
+          {columnTemplates.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-sm border border-dashed border-gray-200 rounded-lg">
+              Žádné šablony
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4 max-h-[calc(100vh-250px)] overflow-y-auto">
-            {columnTemplates.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                Žádné šablony
-              </div>
-            ) : (
-              columnTemplates.map((template) => (
-                <ActionTemplateCard
-                  key={template.id}
-                  template={template}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onGenerateInstances={handleGenerateInstances}
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
+          ) : (
+            columnTemplates.map((template) => (
+              <ActionTemplateCard
+                key={template.id}
+                template={template}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onGenerateInstances={handleGenerateInstances}
+              />
+            ))
+          )}
+        </div>
       </div>
     );
   };
@@ -163,35 +157,34 @@ export function ActionTemplatesManager() {
 
   return (
     <>
-      <div className="max-w-[1800px] mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Šablony akcí</h1>
-            <p className="text-muted-foreground">
-              Vytvořte šablony pro měsíční, týdenní a čtvrtletní kampaně
-            </p>
+      <div className="flex-1 overflow-auto bg-gray-50">
+        <div className="max-w-[1600px] mx-auto px-8 py-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground mb-1">Šablony akcí</h1>
+              <p className="text-sm text-muted-foreground">
+                Vytvořte šablony pro měsíční, týdenní a čtvrtletní kampaně
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {renderColumn(
-            'monthly',
-            'Měsíční šablony',
-            <Calendar1 className="h-5 w-5 text-purple-600" />,
-            'border-t-purple-400'
-          )}
-          {renderColumn(
-            'weekly',
-            'Týdenní šablony',
-            <CalendarDays className="h-5 w-5 text-blue-600" />,
-            'border-t-blue-400'
-          )}
-          {renderColumn(
-            'quarterly',
-            'Čtvrtletní šablony',
-            <CalendarRange className="h-5 w-5 text-orange-600" />,
-            'border-t-orange-400'
-          )}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {renderColumn(
+              'monthly',
+              'Měsíční šablony',
+              <Calendar1 className="h-4 w-4" />
+            )}
+            {renderColumn(
+              'weekly',
+              'Týdenní šablony',
+              <CalendarDays className="h-4 w-4" />
+            )}
+            {renderColumn(
+              'quarterly',
+              'Čtvrtletní šablony',
+              <CalendarRange className="h-4 w-4" />
+            )}
+          </div>
         </div>
       </div>
 
