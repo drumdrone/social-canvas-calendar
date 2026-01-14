@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar, RefreshCw, Calendar1, CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Calendar, RefreshCw, Calendar1, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { RecurringActionCard, RecurringAction } from './RecurringActionCard';
@@ -9,6 +9,16 @@ import { AddActionDialog } from './AddActionDialog';
 import { PostSlidingSidebar } from '../calendar/PostSlidingSidebar';
 import { SocialPost } from '../SocialCalendar';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const MONTHS = [
   'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
@@ -25,6 +35,7 @@ export const RecurringActionsGrid: React.FC = () => {
   const [pendingMonth, setPendingMonth] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
+  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
 
   const loadActions = useCallback(async () => {
     if (!user) return;
@@ -218,6 +229,26 @@ export const RecurringActionsGrid: React.FC = () => {
     } catch (error) {
       console.error('Error deleting action:', error);
       toast.error('Chyba při mazání akce');
+    }
+  };
+
+  const deleteAllActions = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('recurring_actions')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setActions([]);
+      toast.success('Všechny akce byly smazány');
+      setShowDeleteAllDialog(false);
+    } catch (error) {
+      console.error('Error deleting all actions:', error);
+      toast.error('Chyba při mazání akcí');
     }
   };
 
@@ -416,6 +447,24 @@ export const RecurringActionsGrid: React.FC = () => {
         onSave={handleSidebarSave}
       />
 
+      <AlertDialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat všechny akce?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Opravdu chcete smazat všechny akce z roku {currentYear}? Tato akce je nevratná.
+              Všechny posty spojené s těmito akcemi zůstanou zachovány.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteAllActions} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Smazat vše
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex-1 p-6 overflow-auto">
         <div className="max-w-[1800px] mx-auto space-y-8">
           <div className="flex items-center justify-between">
@@ -427,6 +476,17 @@ export const RecurringActionsGrid: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              {actions.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDeleteAllDialog(true)}
+                  className="flex items-center gap-2 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Smazat všechny
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
