@@ -273,45 +273,45 @@ export const RecurringActionsGrid: React.FC = () => {
     const quarterlyActions = getActionsByMonthAndType(monthStr, 'quarterly');
 
     return (
-      <div id={`month-${monthIndex}`} key={monthStr} className="space-y-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold text-foreground">{monthStr}</h2>
+      <div id={`month-${monthIndex}`} key={monthStr} className="space-y-4 p-6 rounded-lg shadow-md bg-background">
+        <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-bold text-foreground">{monthStr}</h2>
           <div className="flex gap-2">
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={() => showAddDialog('monthly', monthStr)}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1"
             >
-              <Calendar1 className="h-4 w-4" />
+              <Calendar1 className="h-4 w-4 text-purple-600" />
               <Plus className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={() => showAddDialog('weekly', monthStr)}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1"
             >
-              <CalendarDays className="h-4 w-4" />
+              <CalendarDays className="h-4 w-4 text-blue-600" />
               <Plus className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={() => showAddDialog('quarterly', monthStr)}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1"
             >
-              <CalendarRange className="h-4 w-4" />
+              <CalendarRange className="h-4 w-4 text-orange-600" />
               <Plus className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Měsíční akce {monthlyActions.length > 0 && `(${monthlyActions.length})`}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="bg-purple-200 p-4 rounded-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-purple-900">
+                📅 Měsíční akce {monthlyActions.length > 0 && `(${monthlyActions.length})`}
               </h3>
             </div>
             {monthlyActions.map(action => (
@@ -324,16 +324,18 @@ export const RecurringActionsGrid: React.FC = () => {
               />
             ))}
             {monthlyActions.length === 0 && (
-              <div className="py-12 text-center text-muted-foreground text-sm border border-dashed border-gray-200 rounded-lg">
-                Žádné akce
-              </div>
+              <Card className="border-dashed bg-white/50">
+                <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  Žádné měsíční akce
+                </CardContent>
+              </Card>
             )}
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Týdenní akce {weeklyActions.length > 0 && `(${weeklyActions.length})`}
+          <div className="bg-blue-200 p-4 rounded-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-blue-900">
+                📱 Týdenní akce {weeklyActions.length > 0 && `(${weeklyActions.length})`}
               </h3>
             </div>
             {weeklyActions.map(action => (
@@ -346,16 +348,18 @@ export const RecurringActionsGrid: React.FC = () => {
               />
             ))}
             {weeklyActions.length === 0 && (
-              <div className="py-12 text-center text-muted-foreground text-sm border border-dashed border-gray-200 rounded-lg">
-                Žádné akce
-              </div>
+              <Card className="border-dashed bg-white/50">
+                <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  Žádné týdenní akce
+                </CardContent>
+              </Card>
             )}
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Čtvrtletní akce {quarterlyActions.length > 0 && `(${quarterlyActions.length})`}
+          <div className="bg-orange-200 p-4 rounded-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-orange-900">
+                🎁 Čtvrtletní akce {quarterlyActions.length > 0 && `(${quarterlyActions.length})`}
               </h3>
             </div>
             {quarterlyActions.map(action => (
@@ -368,13 +372,14 @@ export const RecurringActionsGrid: React.FC = () => {
               />
             ))}
             {quarterlyActions.length === 0 && (
-              <div className="py-12 text-center text-muted-foreground text-sm border border-dashed border-gray-200 rounded-lg">
-                Žádné akce
-              </div>
+              <Card className="border-dashed bg-white/50">
+                <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  Žádné čtvrtletní akce
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
-        <div className="border-b border-gray-200 mt-8"></div>
       </div>
     );
   };
@@ -411,42 +416,43 @@ export const RecurringActionsGrid: React.FC = () => {
         onSave={handleSidebarSave}
       />
 
-      <div className="flex-1 overflow-auto bg-gray-50">
-        <div className="max-w-[1600px] mx-auto px-8 py-8">
-          <div className="flex items-center justify-between mb-8">
+      <div className="flex-1 p-6 overflow-auto">
+        <div className="max-w-[1800px] mx-auto space-y-8">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-foreground mb-1">Plán pravidelných akcí</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-3xl font-bold text-foreground">Plán pravidelných akcí</h1>
+              <p className="text-muted-foreground">
                 Organizujte měsíční, týdenní a čtvrtletní kampaně
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => changeYear('prev')}
-                className="h-9 w-9 p-0"
+                className="flex items-center gap-1"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
 
-              <div className="flex items-center gap-2 px-4 py-2">
-                <span className="font-medium text-base">{currentYear}</span>
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg">
+                <Calendar className="h-5 w-5 text-primary" />
+                <span className="font-semibold text-lg">{currentYear}</span>
               </div>
 
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => changeYear('next')}
-                className="h-9 w-9 p-0"
+                className="flex items-center gap-1"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          <div>
+          <div className="space-y-12">
             {MONTHS.map((month, index) => renderMonthSection(month, index))}
           </div>
         </div>

@@ -7,24 +7,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const Plan = () => {
   return (
     <AppLayout>
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Tabs defaultValue="instances" className="w-full h-full flex flex-col">
-          <div className="border-b bg-white px-8">
-            <TabsList className="h-12 bg-transparent border-b-0">
-              <TabsTrigger value="templates" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                Šablony akcí
-              </TabsTrigger>
-              <TabsTrigger value="instances" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
-                Instance akcí
-              </TabsTrigger>
-            </TabsList>
-          </div>
+      <div className="min-h-screen flex flex-col bg-background p-6">
+        <Tabs defaultValue="instances" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="templates">Šablony akcí</TabsTrigger>
+            <TabsTrigger value="instances">Instance akcí</TabsTrigger>
+          </TabsList>
 
-          <TabsContent value="templates" className="flex-1 m-0">
+          <TabsContent value="templates" className="space-y-6">
             <ActionTemplatesManager />
           </TabsContent>
 
-          <TabsContent value="instances" className="flex-1 m-0">
+          <TabsContent value="instances" className="space-y-6">
             <RecurringActionsGrid />
           </TabsContent>
         </Tabs>
