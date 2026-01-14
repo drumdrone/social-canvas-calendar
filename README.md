@@ -71,3 +71,8 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Development Stages
+
+### Stage 1: Database Features
+- [x] **Cascade Delete for Unmodified Posts** - Added automatic deletion of unmodified generated social media posts when recurring action is deleted. Only posts with unchanged titles (unmodified) are removed, edited posts are preserved.
