@@ -4,16 +4,9 @@ import { Button } from '@/components/ui/button';
 import { SocialCalendar } from '@/components/SocialCalendar';
 import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useAuth } from '@/contexts/AuthContext';
-import Login from './Login';
 
 const Index = () => {
-  const { isAuthenticated } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
-
-  if (!isAuthenticated) {
-    return <Login />;
-  }
 
   return (
     <AppLayout>

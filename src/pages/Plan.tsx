@@ -2,17 +2,9 @@ import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RecurringActionsGrid } from '@/components/plan/RecurringActionsGrid';
 import { ActionTemplatesManager } from '@/components/plan/ActionTemplatesManager';
-import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import Login from './Login';
 
 const Plan = () => {
-  const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Login />;
-  }
-
   return (
     <AppLayout>
       <div className="min-h-screen flex flex-col bg-background p-6">
