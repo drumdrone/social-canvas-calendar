@@ -115,8 +115,12 @@ export const PostDataManager: React.FC<PostDataManagerProps> = ({ onImportComple
         
         for (const post of batch) {
           try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Not authenticated');
+
             // Clean and validate post data
             const cleanPost = {
+              user_id: user.id,
               title: post.title || 'Imported Post',
               content: post.content || null,
               platform: post.platform || 'facebook',
@@ -126,7 +130,6 @@ export const PostDataManager: React.FC<PostDataManagerProps> = ({ onImportComple
               status: post.status || 'draft',
               scheduled_date: post.scheduled_date || new Date().toISOString(),
               image_url: post.image_url || null,
-              // Don't import user_id - will be set by trigger
             };
 
             const { error } = await supabase

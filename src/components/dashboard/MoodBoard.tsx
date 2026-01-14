@@ -43,10 +43,13 @@ export const MoodBoard: React.FC = () => {
   const loadMoodBoardData = async () => {
     try {
       setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
       const { data, error } = await supabase
         .from('mood_board_items')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -65,10 +68,14 @@ export const MoodBoard: React.FC = () => {
 
   const saveItem = async (item: MoodBoardItem) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
       const { error } = await supabase
         .from('mood_board_items')
         .upsert({
           id: item.id,
+          user_id: user.id,
           napad: item.napad,
           text: item.text,
           popis: item.popis,

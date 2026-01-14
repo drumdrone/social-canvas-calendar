@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Save, Calendar, RefreshCw, CloudOff, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { PlanMonth } from './PlanMonth';
 
 interface PlanWeek {
@@ -30,6 +31,7 @@ interface PlanData {
 }
 
 export const PlanTable: React.FC = () => {
+  const { user } = useAuth();
   const [planData, setPlanData] = useState<PlanData>({ months: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'syncing' | 'local'>('saved');
@@ -37,10 +39,12 @@ export const PlanTable: React.FC = () => {
 
   // Load plan data from localStorage and database
   const loadPlanData = useCallback(async () => {
+    if (!user) return;
+
     setIsLoading(true);
 
     // First, load from localStorage for immediate UI update
-    const localStorageKey = `plan-data-public`;
+    const localStorageKey = `plan-data-${user.id}`;
     const localData = localStorage.getItem(localStorageKey);
     const localTimestamp = localStorage.getItem(`${localStorageKey}-timestamp`);
 
@@ -59,6 +63,7 @@ export const PlanTable: React.FC = () => {
       const { data, error } = await supabase
         .from('plan_sections')
         .select('section_data, updated_at')
+        .eq('user_id', user.id)
         .eq('section_order', 0)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -84,31 +89,36 @@ export const PlanTable: React.FC = () => {
     }
 
     setIsLoading(false);
-  }, []);
+  }, [user]);
 
   // Save to localStorage immediately, sync to database in background
   const saveToLocalStorage = useCallback((data: PlanData) => {
-    const localStorageKey = `plan-data-public`;
+    if (!user) return;
+
+    const localStorageKey = `plan-data-${user.id}`;
     const timestamp = new Date().toISOString();
 
     localStorage.setItem(localStorageKey, JSON.stringify(data));
     localStorage.setItem(`${localStorageKey}-timestamp`, timestamp);
     setLastSaved(new Date(timestamp));
     setSaveStatus('saved');
-  }, []);
+  }, [user]);
 
   // Background sync to database
   const syncToDatabase = useCallback(async (data: PlanData) => {
+    if (!user) return;
+
     setSaveStatus('syncing');
     try {
       const { error } = await supabase
         .from('plan_sections')
         .upsert({
+          user_id: user.id,
           section_data: data as any,
           section_order: 0,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'section_order'
+          onConflict: 'user_id,section_order'
         });
 
       if (error) {
@@ -121,7 +131,7 @@ export const PlanTable: React.FC = () => {
       console.error('Sync error:', error);
       setSaveStatus('local');
     }
-  }, []);
+  }, [user]);
 
   // Update plan data - save to localStorage immediately
   const updatePlanData = useCallback((updatedData: PlanData) => {
@@ -131,14 +141,14 @@ export const PlanTable: React.FC = () => {
 
   // Auto-sync to database every 30 seconds
   useEffect(() => {
-    if (planData.months.length === 0) return;
+    if (!user || planData.months.length === 0) return;
 
     const interval = setInterval(() => {
       syncToDatabase(planData);
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, [planData, syncToDatabase]);
+  }, [user, planData, syncToDatabase]);
 
   useEffect(() => {
     loadPlanData();
