@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Calendar, RefreshCw, Calendar1, CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { RecurringActionCard, RecurringAction } from './RecurringActionCard';
 import { AddActionDialog } from './AddActionDialog';
 import { PostSlidingSidebar } from '../calendar/PostSlidingSidebar';
@@ -16,7 +15,6 @@ const MONTHS = [
 ];
 
 export const RecurringActionsGrid: React.FC = () => {
-  const { user } = useAuth();
   const [actions, setActions] = useState<RecurringAction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -27,8 +25,6 @@ export const RecurringActionsGrid: React.FC = () => {
   const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
 
   const loadActions = useCallback(async () => {
-    if (!user) return;
-
     setIsLoading(true);
     try {
       const monthsOfYear = MONTHS.map(month => `${month} ${currentYear}`);
@@ -36,7 +32,6 @@ export const RecurringActionsGrid: React.FC = () => {
       const { data, error } = await supabase
         .from('recurring_actions')
         .select('*')
-        .eq('user_id', user.id)
         .in('month', monthsOfYear)
         .order('order_index', { ascending: true });
 
@@ -49,7 +44,7 @@ export const RecurringActionsGrid: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, currentYear]);
+  }, [currentYear]);
 
   useEffect(() => {
     loadActions();
@@ -85,7 +80,7 @@ export const RecurringActionsGrid: React.FC = () => {
   };
 
   const addAction = async (actionType: 'monthly' | 'weekly' | 'quarterly', repeatFor12Months: boolean) => {
-    if (!user || !pendingMonth) return;
+    if (!pendingMonth) return;
 
     const defaultData = {
       monthly: {
@@ -122,7 +117,6 @@ export const RecurringActionsGrid: React.FC = () => {
           : newAction.title;
 
         actionsToInsert.push({
-          user_id: user.id,
           action_type: actionType,
           title: actionTitle,
           subtitle: newAction.subtitle,

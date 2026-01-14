@@ -72,11 +72,6 @@ export function ActionTemplateDialog({ open, onOpenChange, template, defaultFreq
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Nepřihlášen");
-
       if (template) {
         const { error } = await supabase
           .from("action_templates")
@@ -86,7 +81,7 @@ export function ActionTemplateDialog({ open, onOpenChange, template, defaultFreq
       } else {
         const { error } = await supabase
           .from("action_templates")
-          .insert({ ...data, user_id: user.id });
+          .insert(data);
         if (error) throw error;
       }
     },
