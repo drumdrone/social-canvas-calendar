@@ -52,6 +52,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [categoryOptions, setCategoryOptions] = useState<Array<{name: string, color: string, format: string}>>([]);
   const [authorOptions, setAuthorOptions] = useState<Array<{initials: string, name: string, color: string, email?: string}>>([]);
   const [author, setAuthor] = useState<string>('');
+  const [recurringActionId, setRecurringActionId] = useState<string>('none');
+  const [recurringActions, setRecurringActions] = useState<Array<{id: string, title: string, action_type: string}>>([]);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [comments, setComments] = useState('');
   const [newComment, setNewComment] = useState('');
@@ -65,13 +67,14 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [platformsResult, statusesResult, pillarsResult, productLinesResult, categoriesResult, authorsResult] = await Promise.all([
+        const [platformsResult, statusesResult, pillarsResult, productLinesResult, categoriesResult, authorsResult, actionsResult] = await Promise.all([
           supabase.from('platforms').select('name').eq('is_active', true).order('name'),
           supabase.from('post_statuses').select('name').eq('is_active', true).order('name'),
           supabase.from('pillars').select('name, color').eq('is_active', true).order('name'),
           supabase.from('product_lines').select('name, color').eq('is_active', true).order('name'),
           supabase.from('categories').select('name, color, format').eq('is_active', true).order('name'),
           supabase.from('authors').select('initials, name, color, email').eq('is_active', true).order('name'),
+          supabase.from('recurring_actions').select('id, title, action_type').order('title'),
         ]);
         
         const platforms = platformsResult.data?.map(p => p.name) || [];
@@ -83,6 +86,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         setProductLineOptions(productLinesResult.data || []);
         setCategoryOptions(categoriesResult.data || []);
         setAuthorOptions(authorsResult.data || []);
+        setRecurringActions(actionsResult.data || []);
 
         // Set defaults for new posts
         if (!post) {
@@ -123,6 +127,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setPillar((post as any).pillar || 'none');
       setProductLine((post as any).product_line || 'none');
       setAuthor(post.author || '');
+      setRecurringActionId((post as any).recurring_action_id || 'none');
       setComments((post as any).comments || '');
       
       // Set existing images
@@ -144,6 +149,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setPillar('none');
       setProductLine('none');
       setAuthor('');
+      setRecurringActionId('none');
       setScheduledDate(selectedDate);
       setTime('12:00');
       setPostImages([null, null, null]);
@@ -204,6 +210,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
         author: author || null,
+        recurring_action_id: recurringActionId && recurringActionId !== 'none' ? recurringActionId : null,
         comments: comments || null,
       };
 
@@ -746,7 +753,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                         {authorOptions.filter(a => a.initials && a.initials.trim() !== '').map((a) => (
                           <SelectItem key={a.initials} value={a.initials}>
                             <div className="flex items-center gap-2">
-                              <div 
+                              <div
                                 className="w-3 h-3 rounded-full"
                                 style={{ backgroundColor: a.color }}
                               />
@@ -757,6 +764,58 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Recurring Action */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Pravidelná akce</Label>
+                    <Select value={recurringActionId} onValueChange={setRecurringActionId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Vyberte akci" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border border-border shadow-lg z-[60]">
+                        <SelectItem value="none">Žádná</SelectItem>
+                        <SelectItem value="_" disabled className="text-xs font-semibold opacity-50">📅 Měsíční</SelectItem>
+                        {recurringActions.filter(a => a.action_type === 'monthly').map((a) => (
+                          <SelectItem key={a.id} value={a.id} className="pl-6">
+                            {a.title}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__" disabled className="text-xs font-semibold opacity-50">📱 Týdenní</SelectItem>
+                        {recurringActions.filter(a => a.action_type === 'weekly').map((a) => (
+                          <SelectItem key={a.id} value={a.id} className="pl-6">
+                            {a.title}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="___" disabled className="text-xs font-semibold opacity-50">🎁 Čtvrtletní</SelectItem>
+                        {recurringActions.filter(a => a.action_type === 'quarterly').map((a) => (
+                          <SelectItem key={a.id} value={a.id} className="pl-6">
+                            {a.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Action Status Indicators */}
+                  {recurringActionId && recurringActionId !== 'none' && (
+                    <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
+                      <Label className="text-xs font-medium text-muted-foreground">Status akcí</Label>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-3 w-3 rounded-full ${recurringActions.find(a => a.id === recurringActionId)?.action_type === 'monthly' ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <span className="text-xs">Měsíční</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className={`h-3 w-3 rounded-full ${recurringActions.find(a => a.id === recurringActionId)?.action_type === 'weekly' ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <span className="text-xs">Týdenní</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className={`h-3 w-3 rounded-full ${recurringActions.find(a => a.id === recurringActionId)?.action_type === 'quarterly' ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <span className="text-xs">Čtvrtletní</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Product Line */}
                   <div className="space-y-2">
