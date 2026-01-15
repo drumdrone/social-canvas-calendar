@@ -292,7 +292,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       const commentArray = comments.split('\n\n').filter(comment => comment.trim());
       const comment = commentArray[editingCommentIndex];
       const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
-      
+
       let authorName = '';
       if (match) {
         const [, timestamp, originalAuthorName, authorInitials] = match;
@@ -304,31 +304,73 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         commentArray[editingCommentIndex] = editingCommentText.trim();
         authorName = 'Unknown User';
       }
-      
-      setComments(commentArray.join('\n\n'));
-      
+
+      const updatedComments = commentArray.join('\n\n');
+      setComments(updatedComments);
+
+      // Save updated comments to database if post exists
+      if (post?.id) {
+        try {
+          const { error } = await supabase
+            .from('social_media_posts')
+            .update({ comments: updatedComments })
+            .eq('id', post.id);
+
+          if (error) throw error;
+        } catch (error) {
+          console.error('Error saving updated comment to database:', error);
+          toast({
+            title: 'Warning',
+            description: 'Comment updated but not saved to database.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
       // Detect mentions and send emails for updated comment
       await detectMentionsAndSendEmails(editingCommentText.trim(), authorName);
-      
+
       setEditingCommentIndex(null);
       setEditingCommentText('');
-      
+
       toast({
         title: 'Comment Updated',
-        description: 'Comment has been updated and mentions notified.',
+        description: post?.id ? 'Comment has been saved and mentions notified.' : 'Comment updated. Save the post to persist it.',
       });
     }
   };
 
-  const handleDeleteComment = (index: number) => {
+  const handleDeleteComment = async (index: number) => {
     if (confirm('Are you sure you want to delete this comment?')) {
       const commentArray = comments.split('\n\n').filter(comment => comment.trim());
       commentArray.splice(index, 1);
-      setComments(commentArray.join('\n\n'));
-      
+      const updatedComments = commentArray.join('\n\n');
+      setComments(updatedComments);
+
+      // Save updated comments to database if post exists
+      if (post?.id) {
+        try {
+          const { error } = await supabase
+            .from('social_media_posts')
+            .update({ comments: updatedComments })
+            .eq('id', post.id);
+
+          if (error) throw error;
+        } catch (error) {
+          console.error('Error deleting comment from database:', error);
+          toast({
+            title: 'Warning',
+            description: 'Comment deleted but not saved to database.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
       toast({
         title: 'Comment Deleted',
-        description: 'Comment has been deleted successfully.',
+        description: post?.id ? 'Comment has been deleted and saved.' : 'Comment deleted. Save the post to persist changes.',
       });
     }
   };
@@ -456,20 +498,39 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       const selectedAuthor = authorOptions.find(a => a.initials === selectedCommentAuthor);
       const timestamp = new Date().toLocaleString();
       const commentEntry = `[${timestamp}] ${selectedAuthor?.name} (${selectedCommentAuthor}): ${newComment.trim()}`;
-      
-      setComments(prev => 
-        prev ? `${prev}\n\n${commentEntry}` : commentEntry
-      );
-      
+
+      const updatedComments = comments ? `${comments}\n\n${commentEntry}` : commentEntry;
+      setComments(updatedComments);
+
+      // Save comment to database if post exists
+      if (post?.id) {
+        try {
+          const { error } = await supabase
+            .from('social_media_posts')
+            .update({ comments: updatedComments })
+            .eq('id', post.id);
+
+          if (error) throw error;
+        } catch (error) {
+          console.error('Error saving comment to database:', error);
+          toast({
+            title: 'Warning',
+            description: 'Comment added but not saved to database. Please save the post manually.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
       // Detect mentions and send emails
       await detectMentionsAndSendEmails(newComment.trim(), selectedAuthor?.name || selectedCommentAuthor);
-      
+
       setNewComment('');
       setSelectedCommentAuthor('');
-      
+
       toast({
         title: 'Comment Added',
-        description: 'Comment has been added to the post.',
+        description: post?.id ? 'Comment has been saved.' : 'Comment added. Save the post to persist it.',
       });
     }
   };
