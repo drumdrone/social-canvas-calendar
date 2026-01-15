@@ -95,7 +95,7 @@ export const RecurringActionsGrid: React.FC = () => {
     setDialogOpen(true);
   };
 
-  const addAction = async (actionType: 'monthly' | 'weekly' | 'quarterly', repeatFor12Months: boolean) => {
+  const addAction = async (actionType: 'monthly' | 'weekly' | 'quarterly', monthsCount: number) => {
     if (!user || !pendingMonth) return;
 
     const defaultData = {
@@ -120,15 +120,14 @@ export const RecurringActionsGrid: React.FC = () => {
     };
 
     const newAction = defaultData[actionType];
-    const monthsToCreate = repeatFor12Months ? 12 : 1;
 
     try {
       const actionsToInsert = [];
       let currentMonth = pendingMonth;
-      const groupId = repeatFor12Months ? crypto.randomUUID() : null;
+      const groupId = monthsCount > 1 ? crypto.randomUUID() : null;
 
-      for (let i = 0; i < monthsToCreate; i++) {
-        const actionTitle = repeatFor12Months
+      for (let i = 0; i < monthsCount; i++) {
+        const actionTitle = monthsCount > 1
           ? `${newAction.title} - ${currentMonth}`
           : newAction.title;
 
@@ -144,7 +143,7 @@ export const RecurringActionsGrid: React.FC = () => {
           group_id: groupId,
         });
 
-        if (i < monthsToCreate - 1) {
+        if (i < monthsCount - 1) {
           currentMonth = getNextMonth(currentMonth);
         }
       }
@@ -158,8 +157,8 @@ export const RecurringActionsGrid: React.FC = () => {
 
       setActions([...actions, ...(data || [])]);
 
-      if (repeatFor12Months) {
-        toast.success(`Vytvořeno ${monthsToCreate} akcí pro následujících 12 měsíců`);
+      if (monthsCount > 1) {
+        toast.success(`Vytvořeno ${monthsCount} akcí pro následujících ${monthsCount} měsíců`);
       } else {
         toast.success('Akce vytvořena');
       }
@@ -432,9 +431,9 @@ export const RecurringActionsGrid: React.FC = () => {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         actionType={pendingActionType || 'monthly'}
-        onConfirm={(repeatFor12Months) => {
+        onConfirm={(monthsCount) => {
           if (pendingActionType) {
-            addAction(pendingActionType, repeatFor12Months);
+            addAction(pendingActionType, monthsCount);
           }
         }}
       />
