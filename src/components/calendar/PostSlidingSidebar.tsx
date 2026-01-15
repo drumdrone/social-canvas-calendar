@@ -579,6 +579,46 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     />
                   </div>
 
+                  {/* Pillar Tags */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Pillar</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant={pillar === 'none' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPillar('none')}
+                        className="h-8"
+                      >
+                        None
+                      </Button>
+                      {pillarOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
+                        <Button
+                          key={p.name}
+                          type="button"
+                          variant={pillar === p.name ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setPillar(p.name)}
+                          className="h-8"
+                          style={
+                            pillar === p.name
+                              ? {
+                                  backgroundColor: p.color,
+                                  borderColor: p.color,
+                                  color: '#fff',
+                                }
+                              : {
+                                  borderColor: p.color,
+                                  color: p.color,
+                                }
+                          }
+                        >
+                          {p.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
                   <Separator />
 
                   {/* Platform and Status */}
@@ -657,41 +697,22 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     </Select>
                   </div>
 
-                  {/* Pillar and Product Line */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Pillar</Label>
-                      <Select value={pillar} onValueChange={setPillar}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select pillar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {pillarOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
-                            <SelectItem key={p.name} value={p.name}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Product Line</Label>
-                      <Select value={productLine} onValueChange={setProductLine}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select product line" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {productLineOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
-                            <SelectItem key={p.name} value={p.name}>
-                              {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  {/* Product Line */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Product Line</Label>
+                    <Select value={productLine} onValueChange={setProductLine}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select product line" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {productLineOptions.filter(p => p.name && p.name.trim() !== '').map((p) => (
+                          <SelectItem key={p.name} value={p.name}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <Separator />
