@@ -7,6 +7,7 @@ import { Plus, Calendar1, CalendarDays, CalendarRange, RefreshCw } from "lucide-
 import { toast } from "sonner";
 import { ActionTemplateDialog } from "./ActionTemplateDialog";
 import { ActionTemplateCard } from "./ActionTemplateCard";
+import { GenerateInstancesDialog } from "./GenerateInstancesDialog";
 
 interface ActionTemplate {
   id: string;
@@ -25,6 +26,8 @@ export function ActionTemplatesManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ActionTemplate | null>(null);
   const [pendingFrequency, setPendingFrequency] = useState<string | null>(null);
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: templates = [], isLoading } = useQuery({
@@ -41,9 +44,10 @@ export function ActionTemplatesManager() {
   });
 
   const createInstancesMutation = useMutation({
-    mutationFn: async (templateId: string) => {
+    mutationFn: async ({ templateId, monthsCount }: { templateId: string; monthsCount: number }) => {
       const { data, error } = await supabase.rpc("generate_instances_from_template", {
         p_template_id: templateId,
+        p_months_count: monthsCount,
       });
       if (error) throw error;
       return data;
@@ -83,7 +87,15 @@ export function ActionTemplatesManager() {
   };
 
   const handleGenerateInstances = (templateId: string) => {
-    createInstancesMutation.mutate(templateId);
+    setPendingTemplateId(templateId);
+    setIsGenerateDialogOpen(true);
+  };
+
+  const confirmGenerateInstances = (monthsCount: number) => {
+    if (pendingTemplateId) {
+      createInstancesMutation.mutate({ templateId: pendingTemplateId, monthsCount });
+      setPendingTemplateId(null);
+    }
   };
 
   const handleCloseDialog = () => {
@@ -200,6 +212,12 @@ export function ActionTemplatesManager() {
         onOpenChange={handleCloseDialog}
         template={editingTemplate}
         defaultFrequency={pendingFrequency}
+      />
+
+      <GenerateInstancesDialog
+        open={isGenerateDialogOpen}
+        onOpenChange={setIsGenerateDialogOpen}
+        onConfirm={confirmGenerateInstances}
       />
     </>
   );

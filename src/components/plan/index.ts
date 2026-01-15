@@ -9,4 +9,5 @@ export { PostsList } from './PostsList';
 export { ActionTemplatesManager } from './ActionTemplatesManager';
 export { ActionTemplateDialog } from './ActionTemplateDialog';
 export { ActionTemplateCard } from './ActionTemplateCard';
+export { GenerateInstancesDialog } from './GenerateInstancesDialog';
 export type { RecurringAction } from './RecurringActionCard';
