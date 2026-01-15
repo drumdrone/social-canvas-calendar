@@ -46,6 +46,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
   const [loading, setLoading] = useState(true);
   const [availableFormats, setAvailableFormats] = useState<any[]>([]);
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
+  const [availablePillars, setAvailablePillars] = useState<Array<{name: string, color: string}>>([]);
   const [editingField, setEditingField] = useState<EditingField | null>(null);
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -61,6 +62,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     platform: 'facebook' as Platform,
     status: 'draft' as PostStatus,
     category: 'Image' as Category,
+    pillar: null as string | null,
     scheduled_date: format(new Date(), 'yyyy-MM-dd'),
     time: '12:00',
     image: null as File | null,
@@ -105,13 +107,15 @@ export const PostsTable: React.FC<PostsTableProps> = ({
 
   const fetchDynamicData = async () => {
     try {
-      const [formatsResult, categoriesResult] = await Promise.all([
+      const [formatsResult, categoriesResult, pillarsResult] = await Promise.all([
         supabase.from('formats').select('*').eq('is_active', true).order('name'),
-        supabase.from('categories').select('*').eq('is_active', true).order('name')
+        supabase.from('categories').select('*').eq('is_active', true).order('name'),
+        supabase.from('pillars').select('name, color').eq('is_active', true).order('name')
       ]);
-      
+
       if (formatsResult.data) setAvailableFormats(formatsResult.data);
       if (categoriesResult.data) setAvailableCategories(categoriesResult.data);
+      if (pillarsResult.data) setAvailablePillars(pillarsResult.data);
     } catch (error) {
       console.error('Error fetching dynamic data:', error);
     }
@@ -342,6 +346,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           platform: newPost.platform,
           status: newPost.status,
           category: newPost.category,
+          pillar: newPost.pillar,
           scheduled_date: scheduledDateTime.toISOString(),
           image_url: imageUrl,
           user_id: user.id,
@@ -357,6 +362,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         platform: 'facebook',
         status: 'draft',
         category: 'Image',
+        pillar: null,
         scheduled_date: format(new Date(), 'yyyy-MM-dd'),
         time: '12:00',
         image: null,
@@ -421,8 +427,8 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         case 'select':
           if (field === 'category') {
             return (
-              <Select 
-                value={value} 
+              <Select
+                value={value}
                 onValueChange={(newValue) => {
                   updatePost(post.id, field, newValue);
                   handleSaveField(post.id, field, newValue);
@@ -435,6 +441,36 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                   {availableFormats.map((f) => (
                     <SelectItem key={f.id} value={f.name}>
                       <span className="capitalize">{f.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            );
+          }
+          if (field === 'pillar') {
+            return (
+              <Select
+                value={value || 'none'}
+                onValueChange={(newValue) => {
+                  const pillarValue = newValue === 'none' ? null : newValue;
+                  updatePost(post.id, field, pillarValue);
+                  handleSaveField(post.id, field, pillarValue);
+                }}
+              >
+                <SelectTrigger className="min-w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {availablePillars.map((p) => (
+                    <SelectItem key={p.name} value={p.name}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: p.color }}
+                        />
+                        {p.name}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -515,7 +551,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
     }
 
     return (
-      <div 
+      <div
         onClick={() => handleEdit(post.id, field)}
         className="cursor-pointer hover:bg-muted/50 p-1 rounded min-h-[32px] flex items-center"
       >
@@ -525,6 +561,17 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           <div className="flex items-center gap-2">
             <span className="capitalize">{value}</span>
           </div>
+        ) : type === 'select' && field === 'pillar' ? (
+          value ? (
+            <Badge
+              className="text-white font-medium text-xs"
+              style={{ backgroundColor: availablePillars.find(p => p.name === value)?.color || '#3B82F6' }}
+            >
+              {value}
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">None</span>
+          )
         ) : type === 'date' ? (
           <div className="text-sm">{format(new Date(value), 'MMM d, yyyy')}</div>
         ) : type === 'time' ? (
@@ -569,6 +616,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
               <TableHead className="w-[200px]">Title</TableHead>
               <TableHead className="w-[250px]">Content</TableHead>
               <TableHead className="w-[120px]">Format</TableHead>
+              <TableHead className="w-[120px]">Pillar</TableHead>
               <TableHead className="w-[150px]">Scheduled Date</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
@@ -637,6 +685,27 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                   </Select>
                 </TableCell>
                 <TableCell>
+                  <Select value={newPost.pillar || 'none'} onValueChange={(value: string) => setNewPost({...newPost, pillar: value === 'none' ? null : value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {availablePillars.map((p) => (
+                        <SelectItem key={p.name} value={p.name}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: p.color }}
+                            />
+                            {p.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell>
                   <div className="space-y-2">
                     <Input
                       type="date"
@@ -671,7 +740,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                 <React.Fragment key={monthKey}>
                   {/* Month Header */}
                   <TableRow>
-                    <TableCell colSpan={6} className="bg-muted/50 font-semibold text-foreground py-3">
+                    <TableCell colSpan={7} className="bg-muted/50 font-semibold text-foreground py-3">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         {format(monthDate, 'MMMM yyyy')}
@@ -750,6 +819,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                 </TableCell>
                 <TableCell>
                   {renderEditableCell(post, 'category', post.category, 'select')}
+                </TableCell>
+                <TableCell>
+                  {renderEditableCell(post, 'pillar', (post as any).pillar, 'select')}
                 </TableCell>
           <TableCell>
             <div className="space-y-1">
@@ -844,7 +916,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
             
             {sortedMonths.length === 0 && !isCreating && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No posts found. Create your first post!
                 </TableCell>
               </TableRow>
