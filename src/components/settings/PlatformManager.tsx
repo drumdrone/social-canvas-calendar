@@ -61,9 +61,13 @@ export const PlatformManager: React.FC = () => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('platforms')
         .insert([{
+          user_id: user.id,
           name: newPlatform.name.toLowerCase(),
           icon_name: newPlatform.icon_name,
           color: newPlatform.color
@@ -75,8 +79,7 @@ export const PlatformManager: React.FC = () => {
       setIsCreating(false);
       setNewPlatform({ name: '', icon_name: 'Share2', color: '#1877F2' });
       fetchPlatforms();
-      
-      // Trigger refresh in other components
+
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating platform:', error);

@@ -52,9 +52,13 @@ export const StatusManager: React.FC = () => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('post_statuses')
         .insert([{
+          user_id: user.id,
           name: newStatus.name.toLowerCase(),
           color: newStatus.color
         }]);
@@ -65,8 +69,7 @@ export const StatusManager: React.FC = () => {
       setIsCreating(false);
       setNewStatus({ name: '', color: '#6B7280' });
       fetchStatuses();
-      
-      // Trigger refresh in other components
+
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating status:', error);

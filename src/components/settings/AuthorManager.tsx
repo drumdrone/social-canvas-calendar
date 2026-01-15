@@ -68,9 +68,13 @@ export const AuthorManager: React.FC = () => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('authors')
         .insert([{
+          user_id: user.id,
           name: newAuthor.name,
           initials: newAuthor.initials.toUpperCase(),
           email: newAuthor.email || null,
@@ -83,8 +87,7 @@ export const AuthorManager: React.FC = () => {
       setIsCreating(false);
       setNewAuthor({ name: '', initials: '', email: '', color: '#3B82F6' });
       fetchAuthors();
-      
-      // Trigger refresh in other components
+
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating author:', error);

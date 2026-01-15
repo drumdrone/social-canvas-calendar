@@ -54,9 +54,13 @@ export const CategoryManager: React.FC = () => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('categories')
         .insert([{
+          user_id: user.id,
           name: newCategory.name.toLowerCase(),
           color: newCategory.color,
           format: newCategory.format
@@ -68,8 +72,7 @@ export const CategoryManager: React.FC = () => {
       setIsCreating(false);
       setNewCategory({ name: '', color: '#3B82F6', format: 'text' });
       fetchCategories();
-      
-      // Trigger refresh in other components
+
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating category:', error);

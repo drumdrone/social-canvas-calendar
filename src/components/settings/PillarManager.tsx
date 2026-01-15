@@ -52,9 +52,13 @@ export const PillarManager: React.FC = () => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('pillars')
         .insert([{
+          user_id: user.id,
           name: newPillar.name.trim(),
           color: newPillar.color
         }]);
@@ -65,8 +69,7 @@ export const PillarManager: React.FC = () => {
       setIsCreating(false);
       setNewPillar({ name: '', color: '#3B82F6' });
       fetchPillars();
-      
-      // Trigger refresh in other components
+
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating pillar:', error);

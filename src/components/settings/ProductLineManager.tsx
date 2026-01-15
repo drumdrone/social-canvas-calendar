@@ -52,9 +52,13 @@ export const ProductLineManager: React.FC = () => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('product_lines')
         .insert([{
+          user_id: user.id,
           name: newProductLine.name.trim(),
           color: newProductLine.color
         }]);
@@ -65,8 +69,7 @@ export const ProductLineManager: React.FC = () => {
       setIsCreating(false);
       setNewProductLine({ name: '', color: '#3B82F6' });
       fetchProductLines();
-      
-      // Trigger refresh in other components
+
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating product line:', error);

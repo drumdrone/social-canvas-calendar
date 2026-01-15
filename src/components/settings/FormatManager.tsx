@@ -52,9 +52,13 @@ export const FormatManager: React.FC = () => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('formats')
         .insert([{
+          user_id: user.id,
           name: newFormat.name.toLowerCase(),
           color: newFormat.color
         }]);
@@ -65,8 +69,7 @@ export const FormatManager: React.FC = () => {
       setIsCreating(false);
       setNewFormat({ name: '', color: '#3B82F6' });
       fetchFormats();
-      
-      // Trigger refresh in other components
+
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating format:', error);
