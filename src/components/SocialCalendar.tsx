@@ -215,6 +215,7 @@ export const SocialCalendar: React.FC = () => {
       <div className="flex-1 overflow-hidden">
         {viewMode === 'list' ? (
           <CalendarList
+            key={refreshKey}
             currentDate={currentDate}
             selectedPlatforms={selectedPlatforms}
             selectedStatuses={selectedStatuses}
@@ -223,12 +224,14 @@ export const SocialCalendar: React.FC = () => {
           />
         ) : viewMode === 'table' ? (
           <PostsTable
+            key={refreshKey}
             selectedPlatforms={selectedPlatforms}
             selectedStatuses={selectedStatuses}
             currentDate={currentDate}
           />
         ) : viewMode === 'week' ? (
           <FacebookPostPreview
+            key={refreshKey}
             selectedPlatforms={selectedPlatforms}
             selectedStatuses={selectedStatuses}
             currentDate={currentDate}
