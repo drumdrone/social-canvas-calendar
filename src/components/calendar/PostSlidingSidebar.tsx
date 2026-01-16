@@ -824,9 +824,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
                   {/* Recurring Action */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Pravidelná akce</Label>
+                    <Label className={`text-sm font-medium ${recurringActionId === 'none' ? 'text-amber-600' : ''}`}>
+                      Pravidelná akce {recurringActionId === 'none' && <span className="text-amber-600">⚠</span>}
+                    </Label>
                     <Select value={recurringActionId} onValueChange={setRecurringActionId}>
-                      <SelectTrigger>
+                      <SelectTrigger className={recurringActionId === 'none' ? 'border-amber-500/50 bg-amber-50/5' : ''}>
                         <SelectValue placeholder="Vyberte akci" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border border-border shadow-lg z-[60]">
@@ -851,6 +853,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
+                    {recurringActionId === 'none' && (
+                      <p className="text-xs text-amber-600">
+                        Pro sledování v plánování vyberte akci, ke které tento příspěvek patří
+                      </p>
+                    )}
                   </div>
 
                   {/* Action Status Indicators */}
