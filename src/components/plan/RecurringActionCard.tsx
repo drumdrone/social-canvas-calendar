@@ -3,10 +3,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit2, Check, X, Circle } from 'lucide-react';
+import { Trash2, Edit2, Check, X, Circle, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { format } from 'date-fns';
+import { cs } from 'date-fns/locale';
 
 export interface RecurringAction {
   id: string;
@@ -27,6 +29,12 @@ interface RecurringActionCardProps {
   onUpdate: (updates: Partial<RecurringAction>) => void;
   onDelete: () => void;
   onRefresh: () => void;
+}
+
+interface Post {
+  id: string;
+  title: string;
+  scheduled_date: string;
 }
 
 const FREQUENCY_OPTIONS = {
@@ -56,29 +64,30 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   onRefresh,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [hasAssignedPost, setHasAssignedPost] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [editData, setEditData] = useState({
     title: action.title,
     frequency: action.frequency || '1x',
   });
 
   useEffect(() => {
-    checkAssignedPosts();
+    loadPosts();
   }, [action.id]);
 
-  const checkAssignedPosts = async () => {
+  const loadPosts = async () => {
     try {
       const { data, error } = await supabase
         .from('social_media_posts')
-        .select('id')
+        .select('id, title, scheduled_date')
         .eq('recurring_action_id', action.id)
         .not('scheduled_date', 'is', null)
-        .limit(1);
+        .order('scheduled_date', { ascending: true });
 
       if (error) throw error;
-      setHasAssignedPost((data || []).length > 0);
+      setPosts(data || []);
     } catch (error) {
-      console.error('Error checking posts:', error);
+      console.error('Error loading posts:', error);
     }
   };
 
@@ -103,6 +112,15 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       (opt) => opt.value === action.frequency
     );
     return option?.label || action.frequency;
+  };
+
+  const formatPostDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, 'd.M.yyyy', { locale: cs });
+    } catch {
+      return dateString;
+    }
   };
 
   if (isEditing) {
@@ -156,12 +174,12 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   return (
     <Card className="bg-white hover:shadow-md transition-shadow">
       <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Circle
                 className={`h-3 w-3 flex-shrink-0 ${
-                  hasAssignedPost
+                  posts.length > 0
                     ? 'fill-green-500 text-green-500'
                     : 'fill-gray-300 text-gray-300'
                 }`}
@@ -192,6 +210,58 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
             </Button>
           </div>
         </div>
+
+        {posts.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium">
+                  Příspěvky ({posts.length})
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="h-6 w-6 p-0"
+              >
+                {isExpanded ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+              </Button>
+            </div>
+
+            {isExpanded && (
+              <div className="space-y-1.5 mt-2">
+                {posts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="flex items-center gap-2 text-xs p-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
+                  >
+                    <span className="font-medium text-muted-foreground min-w-[70px]">
+                      {formatPostDate(post.scheduled_date)}
+                    </span>
+                    <span className="truncate flex-1">{post.title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!isExpanded && posts.length > 0 && (
+              <div className="text-xs text-muted-foreground mt-1">
+                {formatPostDate(posts[0].scheduled_date)} - {posts[0].title}
+                {posts.length > 1 && (
+                  <span className="ml-1">
+                    (+{posts.length - 1} další)
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
