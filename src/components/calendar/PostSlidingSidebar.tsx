@@ -213,6 +213,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         comments: comments || null,
       };
 
+      console.log('=== SAVING POST DATA ===');
+      console.log('Post ID:', post?.id);
+      console.log('Status value:', status);
+      console.log('Status type:', typeof status);
+      console.log('All postData:', postData);
+
       if (post) {
         // Update existing post - preserve user_id
         const updateData = {
@@ -220,10 +226,16 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           user_id: post.user_id || null,
         };
 
-        const { error } = await supabase
+        console.log('Updating with data:', updateData);
+
+        const { error, data } = await supabase
           .from('social_media_posts')
           .update(updateData)
-          .eq('id', post.id);
+          .eq('id', post.id)
+          .select();
+
+        console.log('Update result - data:', data);
+        console.log('Update result - error:', error);
 
         if (error) {
           console.error('Update error details:', error);
@@ -723,7 +735,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                             type="button"
                             variant={status === s.name ? 'default' : 'outline'}
                             size="sm"
-                            onClick={() => setStatus(s.name)}
+                            onClick={() => {
+                              console.log('Status button clicked:', s.name);
+                              console.log('Previous status:', status);
+                              setStatus(s.name);
+                              console.log('Status after setState:', s.name);
+                            }}
                             className="h-8"
                             style={
                               status === s.name
