@@ -257,10 +257,18 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           description: 'Post updated successfully!',
         });
       } else {
-        // Create new post
+        // Create new post - must include user_id for RLS
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+
         const { error } = await supabase
           .from('social_media_posts')
-          .insert([postData]);
+          .insert([{
+            ...postData,
+            user_id: user.id,
+          }]);
 
         if (error) throw error;
         toast({
