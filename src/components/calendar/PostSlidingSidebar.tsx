@@ -238,7 +238,13 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         console.log('Update result - error:', error);
 
         if (error) {
-          console.error('Update error details:', error);
+          console.error('Update error details:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            fullError: error
+          });
           throw error;
         }
 
