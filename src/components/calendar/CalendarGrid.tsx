@@ -31,6 +31,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     const fetchPosts = async () => {
       setLoading(true);
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log('Current user ID:', user?.id);
+
         const { data, error } = await supabase
           .from('social_media_posts')
           .select('*')
@@ -39,6 +42,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         if (error) {
           console.error('Error fetching posts:', error);
         } else {
+          console.log('Loaded posts:', data?.length || 0, data);
           setPosts((data as SocialPost[]) || []);
         }
       } catch (error) {
