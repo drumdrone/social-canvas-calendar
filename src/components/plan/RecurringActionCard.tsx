@@ -354,10 +354,25 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
               {periodStatuses.map((status, index) => (
-                <div key={index} className="flex flex-col items-center gap-1">
-                  <Circle
-                    className={`h-3 w-3 flex-shrink-0 ${getStatusColor(status.status)}`}
-                  />
+                <div key={index} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                  <div className="w-full flex gap-0.5">
+                    {Array.from({ length: status.requiredCount }).map((_, segmentIndex) => {
+                      let segmentColor = 'bg-gray-200';
+
+                      if (segmentIndex < status.publishedCount) {
+                        segmentColor = 'bg-green-500';
+                      } else if (segmentIndex < status.publishedCount + status.inProgressCount) {
+                        segmentColor = 'bg-orange-500';
+                      }
+
+                      return (
+                        <div
+                          key={segmentIndex}
+                          className={`h-2 flex-1 rounded-sm ${segmentColor}`}
+                        />
+                      );
+                    })}
+                  </div>
                   <span className="text-[10px] font-medium text-muted-foreground">
                     {status.label}
                   </span>
