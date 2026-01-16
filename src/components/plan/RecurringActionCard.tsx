@@ -35,13 +35,16 @@ interface Post {
   id: string;
   title: string;
   scheduled_date: string;
+  status: string;
 }
 
 interface PeriodStatus {
   label: string;
-  isFulfilled: boolean;
+  status: 'none' | 'draft' | 'in-progress' | 'published';
   requiredCount: number;
   actualCount: number;
+  publishedCount: number;
+  inProgressCount: number;
 }
 
 const FREQUENCY_OPTIONS = {
@@ -88,17 +91,43 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     return match ? parseInt(match[1]) : 1;
   };
 
+  const getStatusCategory = (status: string): 'none' | 'draft' | 'in-progress' | 'published' => {
+    const statusLower = status.toLowerCase();
+    if (statusLower === 'published') return 'published';
+    if (statusLower === 'ready' || statusLower === 'scheduled') return 'in-progress';
+    if (statusLower === 'draft') return 'draft';
+    return 'none';
+  };
+
   const checkPeriodStatus = (posts: Post[], startDate: Date, endDate: Date, requiredCount: number): PeriodStatus => {
     const postsInPeriod = posts.filter(post => {
       const postDate = new Date(post.scheduled_date);
       return postDate >= startDate && postDate <= endDate;
     });
 
+    const publishedCount = postsInPeriod.filter(p => getStatusCategory(p.status) === 'published').length;
+    const inProgressCount = postsInPeriod.filter(p => getStatusCategory(p.status) === 'in-progress').length;
+    const draftCount = postsInPeriod.filter(p => getStatusCategory(p.status) === 'draft').length;
+
+    let overallStatus: 'none' | 'draft' | 'in-progress' | 'published' = 'none';
+
+    if (publishedCount >= requiredCount) {
+      overallStatus = 'published';
+    } else if (publishedCount > 0 || inProgressCount >= requiredCount) {
+      overallStatus = 'in-progress';
+    } else if (inProgressCount > 0 || draftCount > 0) {
+      overallStatus = 'in-progress';
+    } else if (postsInPeriod.length > 0) {
+      overallStatus = 'draft';
+    }
+
     return {
       label: format(startDate, 'MMM', { locale: cs }).toUpperCase(),
-      isFulfilled: postsInPeriod.length >= requiredCount,
+      status: overallStatus,
       requiredCount,
       actualCount: postsInPeriod.length,
+      publishedCount,
+      inProgressCount,
     };
   };
 
@@ -143,7 +172,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     try {
       const { data, error } = await supabase
         .from('social_media_posts')
-        .select('id, title, scheduled_date')
+        .select('id, title, scheduled_date, status')
         .eq('recurring_action_id', action.id)
         .not('scheduled_date', 'is', null)
         .order('scheduled_date', { ascending: true });
@@ -186,6 +215,19 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       return format(date, 'd.M.yyyy', { locale: cs });
     } catch {
       return dateString;
+    }
+  };
+
+  const getStatusColor = (status: 'none' | 'draft' | 'in-progress' | 'published') => {
+    switch (status) {
+      case 'published':
+        return 'fill-green-500 text-green-500';
+      case 'in-progress':
+        return 'fill-orange-500 text-orange-500';
+      case 'draft':
+        return 'fill-gray-400 text-gray-400';
+      default:
+        return 'fill-gray-300 text-gray-300';
     }
   };
 
@@ -246,11 +288,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
               {periodStatuses.map((status, index) => (
                 <div key={index} className="flex flex-col items-center gap-1">
                   <Circle
-                    className={`h-3 w-3 flex-shrink-0 ${
-                      status.isFulfilled
-                        ? 'fill-green-500 text-green-500'
-                        : 'fill-gray-300 text-gray-300'
-                    }`}
+                    className={`h-3 w-3 flex-shrink-0 ${getStatusColor(status.status)}`}
                   />
                   <span className="text-[10px] font-medium text-muted-foreground">
                     {status.label}
@@ -314,10 +352,14 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                     key={post.id}
                     className="flex items-center gap-2 text-xs p-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
                   >
+                    <Circle
+                      className={`h-2 w-2 flex-shrink-0 ${getStatusColor(getStatusCategory(post.status))}`}
+                    />
                     <span className="font-medium text-muted-foreground min-w-[70px]">
                       {formatPostDate(post.scheduled_date)}
                     </span>
                     <span className="truncate flex-1">{post.title}</span>
+                    <span className="text-[10px] text-muted-foreground">{post.status}</span>
                   </div>
                 ))}
               </div>
