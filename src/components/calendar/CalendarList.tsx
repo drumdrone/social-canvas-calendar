@@ -79,9 +79,23 @@ export const CalendarList: React.FC<CalendarListProps> = ({
 
   const filterPosts = (posts: SocialPost[]) => {
     return posts.filter((post) => {
-      const platformOk = selectedPlatforms.length === 0 || selectedPlatforms.includes(post.platform);
-      const statusOk = selectedStatuses.length === 0 || selectedStatuses.includes(post.status);
-      return platformOk && statusOk;
+      // If no filters selected, show all posts
+      if (selectedPlatforms.length === 0 && selectedStatuses.length === 0) {
+        return true;
+      }
+
+      // Show posts that match ANY of the selected filters (OR logic)
+      const platformMatch = selectedPlatforms.length === 0 || selectedPlatforms.includes(post.platform);
+      const statusMatch = selectedStatuses.length === 0 || selectedStatuses.includes(post.status);
+
+      // Post must match at least one filter category if that category has selections
+      if (selectedPlatforms.length > 0 && selectedStatuses.length > 0) {
+        // Both filters active: match either platform OR status
+        return platformMatch || statusMatch;
+      }
+
+      // Only one filter active: must match that filter
+      return platformMatch && statusMatch;
     });
   };
 

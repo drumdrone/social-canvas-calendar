@@ -44,7 +44,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [uploading, setUploading] = useState(false);
   const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
   const [platformOptions, setPlatformOptions] = useState<string[]>([]);
-  const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  const [statusOptions, setStatusOptions] = useState<Array<{name: string, color: string}>>([]);
   const [pillar, setPillar] = useState<string>('none');
   const [productLine, setProductLine] = useState<string>('none');
   const [pillarOptions, setPillarOptions] = useState<Array<{name: string, color: string}>>([]);
@@ -69,7 +69,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       try {
         const [platformsResult, statusesResult, pillarsResult, productLinesResult, categoriesResult, authorsResult, actionsResult] = await Promise.all([
           supabase.from('platforms').select('name').eq('is_active', true).order('name'),
-          supabase.from('post_statuses').select('name').eq('is_active', true).order('name'),
+          supabase.from('post_statuses').select('name, color').eq('is_active', true).order('name'),
           supabase.from('pillars').select('name, color').eq('is_active', true).order('name'),
           supabase.from('product_lines').select('name, color').eq('is_active', true).order('name'),
           supabase.from('categories').select('name, color, format').eq('is_active', true).order('name'),
@@ -78,10 +78,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         ]);
         
         const platforms = platformsResult.data?.map(p => p.name) || [];
-        const statuses = statusesResult.data?.map(s => s.name) || [];
-        
+
         setPlatformOptions(platforms);
-        setStatusOptions(statuses);
+        setStatusOptions(statusesResult.data || []);
         setPillarOptions(pillarsResult.data || []);
         setProductLineOptions(productLinesResult.data || []);
         setCategoryOptions(categoriesResult.data || []);
@@ -91,7 +90,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         // Set defaults for new posts
         if (!post) {
           if (platforms.length && !platform) setPlatform(platforms[0]);
-          if (statuses.length && !status) setStatus(statuses[0]);
+          if (statusesResult.data && statusesResult.data.length && !status) setStatus(statusesResult.data[0].name);
           if (!category) setCategory('Image');
         }
       } catch (error) {
@@ -215,13 +214,21 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       };
 
       if (post) {
-        // Update existing post
+        // Update existing post - preserve user_id
+        const updateData = {
+          ...postData,
+          user_id: post.user_id || null,
+        };
+
         const { error } = await supabase
           .from('social_media_posts')
-          .update(postData)
+          .update(updateData)
           .eq('id', post.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error details:', error);
+          throw error;
+        }
         toast({
           title: 'Success',
           description: 'Post updated successfully!',
@@ -709,18 +716,32 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Status</Label>
-                      <Select value={status} onValueChange={setStatus}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {statusOptions.filter(s => s && s.trim() !== '').map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex flex-wrap gap-2">
+                        {statusOptions.filter(s => s.name && s.name.trim() !== '').map((s) => (
+                          <Button
+                            key={s.name}
+                            type="button"
+                            variant={status === s.name ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setStatus(s.name)}
+                            className="h-8"
+                            style={
+                              status === s.name
+                                ? {
+                                    backgroundColor: s.color,
+                                    borderColor: s.color,
+                                    color: '#fff',
+                                  }
+                                : {
+                                    borderColor: s.color,
+                                    color: s.color,
+                                  }
+                            }
+                          >
+                            {s.name}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
