@@ -7,7 +7,7 @@ import { Trash2, Edit2, Check, X, Circle, Calendar, ChevronDown, ChevronUp } fro
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, addMonths } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 export interface RecurringAction {
@@ -35,6 +35,13 @@ interface Post {
   id: string;
   title: string;
   scheduled_date: string;
+}
+
+interface PeriodStatus {
+  label: string;
+  isFulfilled: boolean;
+  requiredCount: number;
+  actualCount: number;
 }
 
 const FREQUENCY_OPTIONS = {
@@ -66,6 +73,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [periodStatuses, setPeriodStatuses] = useState<PeriodStatus[]>([]);
   const [editData, setEditData] = useState({
     title: action.title,
     frequency: action.frequency || '1x',
@@ -74,6 +82,62 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   useEffect(() => {
     loadPosts();
   }, [action.id]);
+
+  const getRequiredCount = (frequency: string): number => {
+    const match = frequency.match(/(\d+)x/);
+    return match ? parseInt(match[1]) : 1;
+  };
+
+  const checkPeriodStatus = (posts: Post[], startDate: Date, endDate: Date, requiredCount: number): PeriodStatus => {
+    const postsInPeriod = posts.filter(post => {
+      const postDate = new Date(post.scheduled_date);
+      return postDate >= startDate && postDate <= endDate;
+    });
+
+    return {
+      label: format(startDate, 'MMM', { locale: cs }).toUpperCase(),
+      isFulfilled: postsInPeriod.length >= requiredCount,
+      requiredCount,
+      actualCount: postsInPeriod.length,
+    };
+  };
+
+  const calculatePeriodStatuses = (posts: Post[]) => {
+    const now = new Date();
+    const requiredCount = getRequiredCount(action.frequency);
+    const statuses: PeriodStatus[] = [];
+
+    if (action.action_type === 'monthly') {
+      for (let i = 0; i < 3; i++) {
+        const monthDate = addMonths(now, i);
+        const start = startOfMonth(monthDate);
+        const end = endOfMonth(monthDate);
+        statuses.push(checkPeriodStatus(posts, start, end, requiredCount));
+      }
+    } else if (action.action_type === 'weekly') {
+      for (let i = 0; i < 4; i++) {
+        const weekDate = addMonths(now, Math.floor(i / 4));
+        const start = startOfWeek(weekDate, { locale: cs });
+        const end = endOfWeek(weekDate, { locale: cs });
+        statuses.push({
+          label: `T${i + 1}`,
+          ...checkPeriodStatus(posts, start, end, requiredCount),
+        });
+      }
+    } else if (action.action_type === 'quarterly') {
+      for (let i = 0; i < 2; i++) {
+        const quarterDate = addMonths(now, i * 3);
+        const start = startOfQuarter(quarterDate);
+        const end = endOfQuarter(quarterDate);
+        statuses.push({
+          label: `Q${Math.floor(quarterDate.getMonth() / 3) + 1}`,
+          ...checkPeriodStatus(posts, start, end, requiredCount),
+        });
+      }
+    }
+
+    return statuses;
+  };
 
   const loadPosts = async () => {
     try {
@@ -85,7 +149,9 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
         .order('scheduled_date', { ascending: true });
 
       if (error) throw error;
-      setPosts(data || []);
+      const postData = data || [];
+      setPosts(postData);
+      setPeriodStatuses(calculatePeriodStatuses(postData));
     } catch (error) {
       console.error('Error loading posts:', error);
     }
@@ -176,16 +242,23 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Circle
-                className={`h-3 w-3 flex-shrink-0 ${
-                  posts.length > 0
-                    ? 'fill-green-500 text-green-500'
-                    : 'fill-gray-300 text-gray-300'
-                }`}
-              />
-              <h3 className="font-semibold text-sm truncate">{action.title}</h3>
+            <div className="flex items-center gap-3 mb-2">
+              {periodStatuses.map((status, index) => (
+                <div key={index} className="flex flex-col items-center gap-1">
+                  <Circle
+                    className={`h-3 w-3 flex-shrink-0 ${
+                      status.isFulfilled
+                        ? 'fill-green-500 text-green-500'
+                        : 'fill-gray-300 text-gray-300'
+                    }`}
+                  />
+                  <span className="text-[10px] font-medium text-muted-foreground">
+                    {status.label}
+                  </span>
+                </div>
+              ))}
             </div>
+            <h3 className="font-semibold text-sm mb-1">{action.title}</h3>
             <Badge variant="outline" className="text-xs">
               {getFrequencyLabel()}
             </Badge>
