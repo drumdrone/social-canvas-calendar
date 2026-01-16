@@ -7,7 +7,7 @@ import { Trash2, Edit2, Check, X, Circle, Calendar, ChevronDown, ChevronUp } fro
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, addMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, addMonths, addWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
 export interface RecurringAction {
@@ -102,6 +102,29 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     }
   }, [statusConfigs, posts]);
 
+  useEffect(() => {
+    const subscription = supabase
+      .channel(`recurring_action_${action.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'social_media_posts',
+          filter: `recurring_action_id=eq.${action.id}`,
+        },
+        (payload) => {
+          console.log('Post changed for action:', action.id, payload);
+          loadPosts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [action.id]);
+
   const loadStatuses = async () => {
     try {
       const { data, error } = await supabase
@@ -117,7 +140,8 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   };
 
   const getRequiredCount = (frequency: string): number => {
-    const match = frequency.match(/(\d+)x/);
+    if (!frequency) return 1;
+    const match = frequency.match(/(\d+)x/i);
     return match ? parseInt(match[1]) : 1;
   };
 
@@ -141,7 +165,10 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       return postDate >= startDate && postDate <= endDate;
     });
 
-    const publishedCount = postsInPeriod.filter(p => getStatusCategory(p.status) === 'published').length;
+    const publishedCount = postsInPeriod.filter(p => {
+      const category = getStatusCategory(p.status);
+      return category === 'published';
+    }).length;
     const inProgressCount = postsInPeriod.filter(p => getStatusCategory(p.status) === 'in-progress').length;
     const draftCount = postsInPeriod.filter(p => getStatusCategory(p.status) === 'draft').length;
 
@@ -181,7 +208,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       }
     } else if (action.action_type === 'weekly') {
       for (let i = 0; i < 4; i++) {
-        const weekDate = addMonths(now, Math.floor(i / 4));
+        const weekDate = addWeeks(now, i);
         const start = startOfWeek(weekDate, { locale: cs });
         const end = endOfWeek(weekDate, { locale: cs });
         statuses.push({
