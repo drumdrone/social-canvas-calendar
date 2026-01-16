@@ -104,7 +104,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   }, [action.id]);
 
   useEffect(() => {
-    if (statusConfigs.length > 0 && posts.length > 0) {
+    if (statusConfigs.length > 0) {
       setPeriodStatuses(calculatePeriodStatuses(posts));
     }
   }, [statusConfigs, posts]);
