@@ -241,6 +241,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           console.error('Update error details:', error);
           throw error;
         }
+
+        if (data && data.length > 0) {
+          console.log('Successfully updated post. New data:', data[0]);
+        }
+
         toast({
           title: 'Success',
           description: 'Post updated successfully!',
@@ -258,8 +263,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         });
       }
 
+      // Trigger refresh which will also handle closing
       onSave();
-      onClose();
     } catch (error) {
       console.error('Error saving post:', error);
       toast({
