@@ -47,6 +47,11 @@ interface PeriodStatus {
   inProgressCount: number;
 }
 
+interface StatusConfig {
+  name: string;
+  color: string;
+}
+
 const FREQUENCY_OPTIONS = {
   monthly: [
     { value: '1x', label: '1x měsíčně' },
@@ -77,14 +82,30 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [periodStatuses, setPeriodStatuses] = useState<PeriodStatus[]>([]);
+  const [statusConfigs, setStatusConfigs] = useState<StatusConfig[]>([]);
   const [editData, setEditData] = useState({
     title: action.title,
     frequency: action.frequency || '1x',
   });
 
   useEffect(() => {
+    loadStatuses();
     loadPosts();
   }, [action.id]);
+
+  const loadStatuses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('post_statuses')
+        .select('name, color')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setStatusConfigs(data || []);
+    } catch (error) {
+      console.error('Error loading statuses:', error);
+    }
+  };
 
   const getRequiredCount = (frequency: string): number => {
     const match = frequency.match(/(\d+)x/);
@@ -92,11 +113,17 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   };
 
   const getStatusCategory = (status: string): 'none' | 'draft' | 'in-progress' | 'published' => {
+    if (!status) return 'none';
+
+    const config = statusConfigs.find(s => s.name === status);
+    if (!config) return 'none';
+
     const statusLower = status.toLowerCase();
-    if (statusLower === 'published') return 'published';
-    if (statusLower === 'ready' || statusLower === 'scheduled') return 'in-progress';
-    if (statusLower === 'draft') return 'draft';
-    return 'none';
+    if (statusLower.includes('publikov') || statusLower === 'published') return 'published';
+    if (statusLower.includes('proces') || statusLower.includes('ready') || statusLower === 'scheduled') return 'in-progress';
+    if (statusLower.includes('draft') || statusLower.includes('nezahájeno')) return 'draft';
+
+    return 'draft';
   };
 
   const checkPeriodStatus = (posts: Post[], startDate: Date, endDate: Date, requiredCount: number): PeriodStatus => {
@@ -216,6 +243,11 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     } catch {
       return dateString;
     }
+  };
+
+  const getStatusColorFromDb = (statusName: string): string => {
+    const config = statusConfigs.find(s => s.name === statusName);
+    return config?.color || '#9CA3AF';
   };
 
   const getStatusColor = (status: 'none' | 'draft' | 'in-progress' | 'published') => {
@@ -353,7 +385,8 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                     className="flex items-center gap-2 text-xs p-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
                   >
                     <Circle
-                      className={`h-2 w-2 flex-shrink-0 ${getStatusColor(getStatusCategory(post.status))}`}
+                      className="h-2 w-2 flex-shrink-0"
+                      style={{ fill: getStatusColorFromDb(post.status), color: getStatusColorFromDb(post.status) }}
                     />
                     <span className="font-medium text-muted-foreground min-w-[70px]">
                       {formatPostDate(post.scheduled_date)}
