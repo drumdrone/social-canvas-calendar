@@ -225,13 +225,13 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
           requiredCount: number;
         }> = [];
 
-        let currentWeekStart = startOfWeek(monthStart, { locale: cs });
-        while (currentWeekStart <= monthEnd) {
-          const currentWeekEnd = endOfWeek(currentWeekStart, { locale: cs });
+        for (let weekIndex = 0; weekIndex < 4; weekIndex++) {
+          const weekStart = addWeeks(monthStart, weekIndex);
+          const weekEnd = addWeeks(weekStart, 1);
 
           const weekPosts = posts.filter(post => {
             const postDate = new Date(post.scheduled_date);
-            return postDate >= currentWeekStart && postDate <= currentWeekEnd && postDate >= monthStart && postDate <= monthEnd;
+            return postDate >= weekStart && postDate < weekEnd && postDate >= monthStart && postDate <= monthEnd;
           });
 
           const publishedCount = weekPosts.filter(p => getStatusCategory(p.status) === 'published').length;
@@ -242,11 +242,9 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
             inProgressCount,
             requiredCount,
           });
-
-          currentWeekStart = addWeeks(currentWeekStart, 1);
         }
 
-        const monthStatus = checkPeriodStatus(posts, monthStart, monthEnd, requiredCount * weeklyBreakdown.length);
+        const monthStatus = checkPeriodStatus(posts, monthStart, monthEnd, requiredCount * 4);
         statuses.push({
           ...monthStatus,
           weeklyBreakdown,
