@@ -3,12 +3,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit2, Check, X, Circle, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Edit2, Check, X, Circle, Calendar, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, addMonths, addWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 export interface RecurringAction {
   id: string;
@@ -78,6 +79,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   onDelete,
   onRefresh,
 }) => {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -416,30 +418,44 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                 {posts.map((post) => (
                   <div
                     key={post.id}
-                    className="flex items-center gap-2 text-xs p-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors"
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2 text-xs p-2 rounded bg-muted/30 hover:bg-muted/70 transition-colors cursor-pointer group"
                   >
-                    <Circle
-                      className="h-2 w-2 flex-shrink-0"
-                      style={{ fill: getStatusColorFromDb(post.status), color: getStatusColorFromDb(post.status) }}
+                    <div
+                      className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: getStatusColorFromDb(post.status) }}
                     />
                     <span className="font-medium text-muted-foreground min-w-[70px]">
                       {formatPostDate(post.scheduled_date)}
                     </span>
-                    <span className="truncate flex-1">{post.title}</span>
-                    <span className="text-[10px] text-muted-foreground">{post.status}</span>
+                    <span className="truncate flex-1 group-hover:text-foreground transition-colors">{post.title}</span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0" style={{ borderColor: getStatusColorFromDb(post.status), color: getStatusColorFromDb(post.status) }}>
+                      {post.status}
+                    </Badge>
+                    <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 ))}
               </div>
             )}
 
             {!isExpanded && posts.length > 0 && (
-              <div className="text-xs text-muted-foreground mt-1">
-                {formatPostDate(posts[0].scheduled_date)} - {posts[0].title}
-                {posts.length > 1 && (
-                  <span className="ml-1">
-                    (+{posts.length - 1} další)
-                  </span>
-                )}
+              <div
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 text-xs text-muted-foreground mt-1 p-1.5 rounded hover:bg-muted/30 cursor-pointer transition-colors group"
+              >
+                <div
+                  className="h-2 w-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: getStatusColorFromDb(posts[0].status) }}
+                />
+                <span className="group-hover:text-foreground transition-colors">
+                  {formatPostDate(posts[0].scheduled_date)} - {posts[0].title}
+                  {posts.length > 1 && (
+                    <span className="ml-1">
+                      (+{posts.length - 1} další)
+                    </span>
+                  )}
+                </span>
+                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
               </div>
             )}
           </div>
