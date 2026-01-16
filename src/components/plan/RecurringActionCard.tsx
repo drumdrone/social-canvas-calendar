@@ -46,6 +46,11 @@ interface PeriodStatus {
   actualCount: number;
   publishedCount: number;
   inProgressCount: number;
+  weeklyBreakdown?: Array<{
+    publishedCount: number;
+    inProgressCount: number;
+    requiredCount: number;
+  }>;
 }
 
 interface StatusConfig {
@@ -209,13 +214,42 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
         statuses.push(checkPeriodStatus(posts, start, end, requiredCount));
       }
     } else if (action.action_type === 'weekly') {
-      for (let i = 0; i < 4; i++) {
-        const weekDate = addWeeks(now, i);
-        const start = startOfWeek(weekDate, { locale: cs });
-        const end = endOfWeek(weekDate, { locale: cs });
+      for (let i = 0; i < 3; i++) {
+        const monthDate = addMonths(now, i);
+        const monthStart = startOfMonth(monthDate);
+        const monthEnd = endOfMonth(monthDate);
+
+        const weeklyBreakdown: Array<{
+          publishedCount: number;
+          inProgressCount: number;
+          requiredCount: number;
+        }> = [];
+
+        let currentWeekStart = startOfWeek(monthStart, { locale: cs });
+        while (currentWeekStart <= monthEnd) {
+          const currentWeekEnd = endOfWeek(currentWeekStart, { locale: cs });
+
+          const weekPosts = posts.filter(post => {
+            const postDate = new Date(post.scheduled_date);
+            return postDate >= currentWeekStart && postDate <= currentWeekEnd && postDate >= monthStart && postDate <= monthEnd;
+          });
+
+          const publishedCount = weekPosts.filter(p => getStatusCategory(p.status) === 'published').length;
+          const inProgressCount = weekPosts.filter(p => getStatusCategory(p.status) === 'in-progress').length;
+
+          weeklyBreakdown.push({
+            publishedCount,
+            inProgressCount,
+            requiredCount,
+          });
+
+          currentWeekStart = addWeeks(currentWeekStart, 1);
+        }
+
+        const monthStatus = checkPeriodStatus(posts, monthStart, monthEnd, requiredCount * weeklyBreakdown.length);
         statuses.push({
-          label: `T${i + 1}`,
-          ...checkPeriodStatus(posts, start, end, requiredCount),
+          ...monthStatus,
+          weeklyBreakdown,
         });
       }
     } else if (action.action_type === 'quarterly') {
@@ -356,22 +390,46 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
               {periodStatuses.map((status, index) => (
                 <div key={index} className="flex flex-col items-center gap-1 flex-1 min-w-0">
                   <div className="w-full flex gap-0.5">
-                    {Array.from({ length: status.requiredCount }).map((_, segmentIndex) => {
-                      let segmentColor = 'bg-gray-200';
-
-                      if (segmentIndex < status.publishedCount) {
-                        segmentColor = 'bg-green-500';
-                      } else if (segmentIndex < status.publishedCount + status.inProgressCount) {
-                        segmentColor = 'bg-orange-500';
-                      }
-
-                      return (
-                        <div
-                          key={segmentIndex}
-                          className={`h-2 flex-1 rounded-sm ${segmentColor}`}
-                        />
-                      );
-                    })}
+                    {status.weeklyBreakdown ? (
+                      status.weeklyBreakdown.map((week, weekIndex) => (
+                        <React.Fragment key={weekIndex}>
+                          {weekIndex > 0 && (
+                            <div className="w-[1px] h-2 bg-gray-400 mx-0.5" />
+                          )}
+                          <div className="flex-1 flex gap-0.5">
+                            {Array.from({ length: week.requiredCount }).map((_, segmentIndex) => {
+                              let segmentColor = 'bg-gray-200';
+                              if (segmentIndex < week.publishedCount) {
+                                segmentColor = 'bg-green-500';
+                              } else if (segmentIndex < week.publishedCount + week.inProgressCount) {
+                                segmentColor = 'bg-orange-500';
+                              }
+                              return (
+                                <div
+                                  key={segmentIndex}
+                                  className={`h-2 flex-1 rounded-sm ${segmentColor}`}
+                                />
+                              );
+                            })}
+                          </div>
+                        </React.Fragment>
+                      ))
+                    ) : (
+                      Array.from({ length: status.requiredCount }).map((_, segmentIndex) => {
+                        let segmentColor = 'bg-gray-200';
+                        if (segmentIndex < status.publishedCount) {
+                          segmentColor = 'bg-green-500';
+                        } else if (segmentIndex < status.publishedCount + status.inProgressCount) {
+                          segmentColor = 'bg-orange-500';
+                        }
+                        return (
+                          <div
+                            key={segmentIndex}
+                            className={`h-2 flex-1 rounded-sm ${segmentColor}`}
+                          />
+                        );
+                      })
+                    )}
                   </div>
                   <span className="text-[10px] font-medium text-muted-foreground">
                     {status.label}
