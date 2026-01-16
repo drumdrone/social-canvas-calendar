@@ -89,9 +89,18 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   });
 
   useEffect(() => {
-    loadStatuses();
-    loadPosts();
+    const loadData = async () => {
+      await loadStatuses();
+      await loadPosts();
+    };
+    loadData();
   }, [action.id]);
+
+  useEffect(() => {
+    if (statusConfigs.length > 0 && posts.length > 0) {
+      setPeriodStatuses(calculatePeriodStatuses(posts));
+    }
+  }, [statusConfigs, posts]);
 
   const loadStatuses = async () => {
     try {
@@ -205,9 +214,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
         .order('scheduled_date', { ascending: true });
 
       if (error) throw error;
-      const postData = data || [];
-      setPosts(postData);
-      setPeriodStatuses(calculatePeriodStatuses(postData));
+      setPosts(data || []);
     } catch (error) {
       console.error('Error loading posts:', error);
     }
