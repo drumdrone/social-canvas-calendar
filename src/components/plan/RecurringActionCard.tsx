@@ -491,7 +491,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                 {posts.map((post) => (
                   <div
                     key={post.id}
-                    onClick={() => navigate('/')}
+                    onClick={() => navigate('/calendar')}
                     className="flex items-center gap-2 text-xs p-2 rounded bg-muted/30 hover:bg-muted/70 transition-colors cursor-pointer group"
                   >
                     <div
@@ -513,7 +513,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
 
             {!isExpanded && posts.length > 0 && (
               <div
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/calendar')}
                 className="flex items-center gap-2 text-xs text-muted-foreground mt-1 p-1.5 rounded hover:bg-muted/30 cursor-pointer transition-colors group"
               >
                 <div

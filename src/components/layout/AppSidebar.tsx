@@ -23,7 +23,7 @@ const navigation = [
   },
   {
     name: 'Calendar',
-    href: '/',
+    href: '/calendar',
     icon: Calendar,
   },
   {
