@@ -310,5 +310,3 @@ export const BackupManager: React.FC = () => {
     </div>
   );
 };
-
-export default BackupManager;
