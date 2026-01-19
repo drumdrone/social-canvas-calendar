@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,12 +14,14 @@ const Login = () => {
   const { login, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      const from = (location.state as any)?.from?.pathname || '/';
+      navigate(from, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +34,8 @@ const Login = () => {
           title: 'Success',
           description: 'Logged in successfully!',
         });
-        navigate('/', { replace: true });
+        const from = (location.state as any)?.from?.pathname || '/';
+        navigate(from, { replace: true });
       } else {
         toast({
           title: 'Error',
