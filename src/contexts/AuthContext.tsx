@@ -49,11 +49,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       setSessionExpiresAt(session?.expires_at ? new Date(session.expires_at * 1000) : null);
       setIsLoading(false);
-      
+
       if (refreshTimer) {
         clearTimeout(refreshTimer);
       }
-      
+
       if (session) {
         scheduleRefresh(session.expires_at);
       }

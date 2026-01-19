@@ -102,7 +102,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       console.log('PostSlidingSidebar opened, loading options...');
       loadOptions();
     }
-  }, [isOpen, post, platform, status, category]);
+  }, [isOpen]);
 
   // Pre-fill form when post changes
   useEffect(() => {
