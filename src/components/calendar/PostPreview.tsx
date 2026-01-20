@@ -28,24 +28,19 @@ const platformColors = {
   linkedin: 'border-social-linkedin bg-social-linkedin/10',
 };
 
-const statusColors = {
-  draft: 'bg-status-draft/20 text-status-draft',
-  published: 'bg-status-published/20 text-status-published',
-  scheduled: 'bg-status-scheduled/20 text-status-scheduled',
-};
-
 export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact = false }) => {
   const Icon = platformIcons[post.platform];
   const [authorData, setAuthorData] = useState<{ initials: string; color: string } | null>(null);
-  
+  const [statusColor, setStatusColor] = useState<string>('#6B7280');
+
   const postImages = [
     post.image_url_1 || post.image_url,
     post.image_url_2,
     post.image_url_3
   ].filter(Boolean) as string[];
-  
+
   const { currentImage, setIsHovering, hasMultipleImages } = useImageHover(postImages);
-  
+
   useEffect(() => {
     const fetchAuthorData = async () => {
       if (post.author) {
@@ -55,7 +50,7 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
             .select('initials, color')
             .eq('initials', post.author)
             .maybeSingle();
-          
+
           if (data) {
             setAuthorData(data);
           }
@@ -67,6 +62,26 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
 
     fetchAuthorData();
   }, [post.author]);
+
+  useEffect(() => {
+    const fetchStatusColor = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('post_statuses')
+          .select('color')
+          .eq('name', post.status)
+          .maybeSingle();
+
+        if (data) {
+          setStatusColor(data.color);
+        }
+      } catch (error) {
+        console.error('Error fetching status color:', error);
+      }
+    };
+
+    fetchStatusColor();
+  }, [post.status]);
   
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -96,17 +111,17 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
         {/* Right side with author badge and status */}
         <div className="flex items-center gap-1 absolute top-0 right-0 bg-background/90 rounded-md p-1">
           {post.author && authorData && (
-            <div 
+            <div
               className="rounded-full w-7 h-7 flex items-center justify-center text-white font-bold text-xs shadow-md p-1"
               style={{ backgroundColor: authorData.color }}
             >
               {authorData.initials.slice(0, 3)}
             </div>
           )}
-          <span className={cn(
-            "px-1.5 py-0.5 rounded-full font-medium text-xs",
-            statusColors[post.status]
-          )}>
+          <span
+            className="px-1.5 py-0.5 rounded-full font-medium text-xs text-white"
+            style={{ backgroundColor: statusColor }}
+          >
             {post.status.charAt(0).toUpperCase()}
           </span>
           {!compact && (

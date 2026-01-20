@@ -127,7 +127,7 @@ export const PostDataManager: React.FC<PostDataManagerProps> = ({ onImportComple
               category: post.category || 'Image',
               pillar: post.pillar || null,
               product_line: post.product_line || null,
-              status: post.status || 'draft',
+              status: post.status || 'nezahájeno',
               scheduled_date: post.scheduled_date || new Date().toISOString(),
               image_url: post.image_url || null,
             };
