@@ -225,13 +225,24 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
           requiredCount: number;
         }> = [];
 
-        for (let weekIndex = 0; weekIndex < 4; weekIndex++) {
-          const weekStart = addWeeks(monthStart, weekIndex);
-          const weekEnd = addWeeks(weekStart, 1);
+        let currentWeekStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+        const weeks: Array<{ start: Date; end: Date }> = [];
 
+        while (currentWeekStart <= monthEnd) {
+          const currentWeekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+          if (currentWeekEnd >= monthStart) {
+            weeks.push({
+              start: currentWeekStart > monthStart ? currentWeekStart : monthStart,
+              end: currentWeekEnd < monthEnd ? currentWeekEnd : monthEnd
+            });
+          }
+          currentWeekStart = addWeeks(currentWeekStart, 1);
+        }
+
+        for (const week of weeks.slice(0, 4)) {
           const weekPosts = posts.filter(post => {
             const postDate = new Date(post.scheduled_date);
-            return postDate >= weekStart && postDate < weekEnd && postDate >= monthStart && postDate <= monthEnd;
+            return postDate >= week.start && postDate <= week.end;
           });
 
           const publishedCount = weekPosts.filter(p => getStatusCategory(p.status) === 'published').length;
@@ -240,6 +251,14 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
           weeklyBreakdown.push({
             publishedCount,
             inProgressCount,
+            requiredCount,
+          });
+        }
+
+        while (weeklyBreakdown.length < 4) {
+          weeklyBreakdown.push({
+            publishedCount: 0,
+            inProgressCount: 0,
             requiredCount,
           });
         }
@@ -519,7 +538,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                 {posts.map((post) => (
                   <div
                     key={post.id}
-                    onClick={() => navigate('/calendar')}
+                    onClick={() => navigate(`/post/${post.id}`)}
                     className="flex items-center gap-2 text-xs p-2 rounded bg-muted/30 hover:bg-muted/70 transition-colors cursor-pointer group"
                   >
                     <div
@@ -541,7 +560,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
 
             {!isExpanded && posts.length > 0 && (
               <div
-                onClick={() => navigate('/calendar')}
+                onClick={() => navigate(`/post/${posts[0].id}`)}
                 className="flex items-center gap-2 text-xs text-muted-foreground mt-1 p-1.5 rounded hover:bg-muted/30 cursor-pointer transition-colors group"
               >
                 <div
