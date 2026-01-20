@@ -173,22 +173,24 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
               )}
               
               {/* Platform icon */}
-              <div className="absolute bottom-1 right-1">
-                {(() => {
-                  const Icon = platformIcons[firstImagePost.platform];
-                  const platformColors = {
-                    facebook: "text-[#1877F2]",
-                    instagram: "text-[#E4405F]", 
-                    twitter: "text-[#1DA1F2]",
-                    linkedin: "text-[#0077B5]",
-                  };
-                  return (
-                    <div className="bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm">
-                      <Icon className={cn("w-3 h-3", platformColors[firstImagePost.platform])} />
-                    </div>
-                  );
-                })()}
-              </div>
+              {platformIcons[firstImagePost.platform] && (
+                <div className="absolute bottom-1 right-1">
+                  {(() => {
+                    const Icon = platformIcons[firstImagePost.platform];
+                    const platformColors = {
+                      facebook: "text-[#1877F2]",
+                      instagram: "text-[#E4405F]",
+                      twitter: "text-[#1DA1F2]",
+                      linkedin: "text-[#0077B5]",
+                    };
+                    return (
+                      <div className="bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm">
+                        <Icon className={cn("w-3 h-3", platformColors[firstImagePost.platform])} />
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
               {/* Date overlay on image */}
               <div className="absolute top-1 left-1">
                 <span
