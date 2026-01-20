@@ -318,6 +318,34 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     return config?.color || '#9CA3AF';
   };
 
+  const getCategoryColor = (category: 'none' | 'draft' | 'in-progress' | 'published'): string => {
+    switch (category) {
+      case 'published': {
+        const publishedStatus = statusConfigs.find(s =>
+          s.name.toLowerCase().includes('publikov') || s.name.toLowerCase() === 'published'
+        );
+        return publishedStatus?.color || '#22C55E';
+      }
+      case 'in-progress': {
+        const inProgressStatus = statusConfigs.find(s =>
+          s.name.toLowerCase().includes('proces') ||
+          s.name.toLowerCase().includes('ready') ||
+          s.name.toLowerCase() === 'scheduled'
+        );
+        return inProgressStatus?.color || '#F97316';
+      }
+      case 'draft': {
+        const draftStatus = statusConfigs.find(s =>
+          s.name.toLowerCase().includes('draft') ||
+          s.name.toLowerCase().includes('nezahájeno')
+        );
+        return draftStatus?.color || '#9CA3AF';
+      }
+      default:
+        return '#D1D5DB';
+    }
+  };
+
   const getStatusColor = (status: 'none' | 'draft' | 'in-progress' | 'published') => {
     switch (status) {
       case 'published':
@@ -396,16 +424,17 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                           )}
                           <div className="flex-1 flex gap-0.5">
                             {Array.from({ length: week.requiredCount }).map((_, segmentIndex) => {
-                              let segmentColor = 'bg-gray-200';
+                              let segmentColor = getCategoryColor('none');
                               if (segmentIndex < week.publishedCount) {
-                                segmentColor = 'bg-green-500';
+                                segmentColor = getCategoryColor('published');
                               } else if (segmentIndex < week.publishedCount + week.inProgressCount) {
-                                segmentColor = 'bg-orange-500';
+                                segmentColor = getCategoryColor('in-progress');
                               }
                               return (
                                 <div
                                   key={segmentIndex}
-                                  className={`h-2 flex-1 rounded-sm ${segmentColor}`}
+                                  className="h-2 flex-1 rounded-sm"
+                                  style={{ backgroundColor: segmentColor }}
                                 />
                               );
                             })}
@@ -414,16 +443,17 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                       ))
                     ) : (
                       Array.from({ length: status.requiredCount }).map((_, segmentIndex) => {
-                        let segmentColor = 'bg-gray-200';
+                        let segmentColor = getCategoryColor('none');
                         if (segmentIndex < status.publishedCount) {
-                          segmentColor = 'bg-green-500';
+                          segmentColor = getCategoryColor('published');
                         } else if (segmentIndex < status.publishedCount + status.inProgressCount) {
-                          segmentColor = 'bg-orange-500';
+                          segmentColor = getCategoryColor('in-progress');
                         }
                         return (
                           <div
                             key={segmentIndex}
-                            className={`h-2 flex-1 rounded-sm ${segmentColor}`}
+                            className="h-2 flex-1 rounded-sm"
+                            style={{ backgroundColor: segmentColor }}
                           />
                         );
                       })
