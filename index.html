@@ -21,11 +21,12 @@
     <div id="root"></div>
     <script>
       // GitHub Pages SPA redirect handler
-      // Convert hash-based URLs back to proper paths
+      // Restore the original route from session storage
       (function() {
-        if (window.location.hash && window.location.hash.startsWith('#/')) {
-          var path = window.location.hash.slice(1);
-          window.history.replaceState(null, null, path);
+        var redirectPath = sessionStorage.getItem('redirectPath');
+        if (redirectPath) {
+          sessionStorage.removeItem('redirectPath');
+          window.history.replaceState(null, null, redirectPath);
         }
       })();
     </script>
