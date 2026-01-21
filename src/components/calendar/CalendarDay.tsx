@@ -173,11 +173,11 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
               )}
               
               {/* Platform icon */}
-              {platformIcons[firstImagePost.platform] && (
+              {platformIcons[firstImagePost.platform as keyof typeof platformIcons] && (
                 <div className="absolute bottom-1 right-1">
                   {(() => {
-                    const Icon = platformIcons[firstImagePost.platform];
-                    const platformColors = {
+                    const Icon = platformIcons[firstImagePost.platform as keyof typeof platformIcons] || Facebook;
+                    const platformColors: Record<string, string> = {
                       facebook: "text-[#1877F2]",
                       instagram: "text-[#E4405F]",
                       twitter: "text-[#1DA1F2]",
@@ -185,7 +185,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                     };
                     return (
                       <div className="bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm">
-                        <Icon className={cn("w-3 h-3", platformColors[firstImagePost.platform])} />
+                        <Icon className={cn("w-3 h-3", platformColors[firstImagePost.platform] || "text-gray-500")} />
                       </div>
                     );
                   })()}
