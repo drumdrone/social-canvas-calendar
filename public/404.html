@@ -5,25 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>social-canvas-calendar</title>
     <script>
-      // GitHub Pages SPA redirect handler
+      // SPA redirect handler for custom domain
       // This script takes the current URL and redirects to the base URL
       // with the path stored in the URL hash, so the SPA can handle routing
       (function() {
-        var basePath = '/social-canvas-calendar';
         var path = window.location.pathname;
         var search = window.location.search;
 
-        // Remove the base path from the pathname if it exists
-        if (path.startsWith(basePath)) {
-          path = path.slice(basePath.length);
-        }
-
         // Only redirect if we're not already at the base path
         if (path !== '/' && path !== '/index.html' && path !== '') {
-          var redirect = basePath + '/' + (search ? '?' + search : '') + '#' + path;
+          var redirect = '/' + (search ? '?' + search : '') + '#' + path;
           window.location.replace(redirect);
-        } else if (!window.location.pathname.startsWith(basePath)) {
-          window.location.replace(basePath + '/');
         }
       })();
     </script>
