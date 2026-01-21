@@ -59,24 +59,6 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
-- Supabase (Database & Authentication)
-
-## Configuration
-
-### Magic Link Authentication
-
-This application supports magic link (passwordless) authentication. For magic links to work properly:
-
-**Development:**
-- Ensure the dev server is running (`npm run dev`) when clicking the magic link in your email
-- The app will redirect to `http://localhost:5173/login` by default
-
-**Production:**
-- Add `VITE_APP_URL` to your `.env` file with your production URL:
-  ```
-  VITE_APP_URL=https://your-app-url.com
-  ```
-- Make sure this URL is added to the "Redirect URLs" in your Supabase project settings (Authentication > URL Configuration)
 
 ## How can I deploy this project?
 
