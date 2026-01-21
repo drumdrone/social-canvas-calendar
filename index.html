@@ -19,6 +19,16 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // GitHub Pages SPA redirect handler
+      // Convert hash-based URLs back to proper paths
+      (function() {
+        if (window.location.hash && window.location.hash.startsWith('#/')) {
+          var path = window.location.hash.slice(1);
+          window.history.replaceState(null, null, path);
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
