@@ -143,21 +143,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    // Clean up auth state
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
     try {
       await supabase.auth.signOut({ scope: 'global' });
+
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
+      window.location.href = '/login';
     }
-    
-    // Force page reload for clean state
-    window.location.href = '/';
   };
 
   const refreshSession = async (): Promise<boolean> => {
