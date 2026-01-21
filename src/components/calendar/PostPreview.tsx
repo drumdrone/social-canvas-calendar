@@ -29,7 +29,7 @@ const platformColors = {
 };
 
 export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact = false }) => {
-  const Icon = platformIcons[post.platform];
+  const Icon = platformIcons[post.platform as keyof typeof platformIcons] || Facebook;
   const [authorData, setAuthorData] = useState<{ initials: string; color: string } | null>(null);
   const [statusColor, setStatusColor] = useState<string>('#6B7280');
 
@@ -91,11 +91,11 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
   };
   
   return (
-    <div 
+    <div
       className={cn(
         "rounded-md border-l-2 cursor-pointer hover:bg-muted/50 transition-colors backdrop-blur-sm",
         compact ? "p-1 text-xs bg-background/80" : "p-2 text-xs bg-background/90",
-        platformColors[post.platform]
+        platformColors[post.platform as keyof typeof platformColors] || 'border-gray-500 bg-gray-500/10'
       )}
       onClick={(e) => {
         e.stopPropagation();
