@@ -123,10 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithMagicLink = async (email: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      const redirectUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${redirectUrl}/login`,
         },
       });
 

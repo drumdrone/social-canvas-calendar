@@ -121,6 +121,9 @@ const Login = () => {
                       Odeslali jsme vám odkaz pro přihlášení na adresu:
                     </p>
                     <p className="font-medium mt-1">{magicLinkEmail}</p>
+                    <p className="text-xs text-amber-600 mt-3 p-2 bg-amber-50 rounded border border-amber-200">
+                      <strong>Důležité:</strong> Před kliknutím na odkaz v emailu se ujistěte, že je aplikace spuštěná.
+                    </p>
                   </div>
                   <Button
                     variant="outline"
@@ -145,6 +148,11 @@ const Login = () => {
                     <p className="text-xs text-muted-foreground">
                       Pošleme vám odkaz pro bezpečné přihlášení
                     </p>
+                    {!import.meta.env.VITE_APP_URL && (
+                      <p className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded border border-amber-200">
+                        <strong>Poznámka:</strong> Ujistěte se, že aplikace běží při kliknutí na odkaz v emailu.
+                      </p>
+                    )}
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Odesílání...' : 'Odeslat přihlašovací odkaz'}
