@@ -606,13 +606,13 @@ export const PostsTable: React.FC<PostsTableProps> = ({
   }
 
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="p-4">
+    <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="p-4 flex-shrink-0">
         {/* Enhanced table navigation info */}
         <div className="mb-4 text-sm text-muted-foreground">
           Use scroll wheel to navigate through posts • {filteredPosts.length} posts total
         </div>
-        
+
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Social Media Posts</h2>
           <Button onClick={() => setIsCreating(true)} disabled={isCreating}>
@@ -620,9 +620,11 @@ export const PostsTable: React.FC<PostsTableProps> = ({
             New Post
           </Button>
         </div>
+      </div>
 
-        <div className="bg-card rounded-lg border border-border">
-          <ScrollArea className="h-[calc(100vh-200px)] posts-table-scroll">
+      <div className="flex-1 overflow-hidden px-4 pb-4">
+        <div className="bg-card rounded-lg border border-border h-full flex flex-col">
+          <ScrollArea className="flex-1 posts-table-scroll">
           <Table>
           <TableHeader>
             <TableRow>
