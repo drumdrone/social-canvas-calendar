@@ -6,6 +6,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithMagicLink: (email: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
   sessionExpiresAt: Date | null;
@@ -120,6 +121,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithMagicLink = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      });
+
+      if (error) {
+        console.error('Magic link error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Magic link error:', error);
+      return { success: false, error: 'Nepodařilo se odeslat odkaz' };
+    }
+  };
+
   const logout = async () => {
     // Clean up auth state
     Object.keys(localStorage).forEach((key) => {
@@ -153,14 +175,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
-      user, 
-      login, 
-      logout, 
-      refreshSession, 
-      sessionExpiresAt, 
-      isLoading 
+    <AuthContext.Provider value={{
+      isAuthenticated,
+      user,
+      login,
+      loginWithMagicLink,
+      logout,
+      refreshSession,
+      sessionExpiresAt,
+      isLoading
     }}>
       {children}
     </AuthContext.Provider>
