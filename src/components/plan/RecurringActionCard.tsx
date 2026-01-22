@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, addMonths, addWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { useNavigate } from 'react-router-dom';
 
 export interface RecurringAction {
   id: string;
@@ -30,6 +29,7 @@ interface RecurringActionCardProps {
   onUpdate: (updates: Partial<RecurringAction>) => void;
   onDelete: () => void;
   onRefresh: () => void;
+  onPostClick?: (postId: string) => void;
 }
 
 interface Post {
@@ -83,8 +83,8 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   onUpdate,
   onDelete,
   onRefresh,
+  onPostClick,
 }) => {
-  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -538,7 +538,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
                 {posts.map((post) => (
                   <div
                     key={post.id}
-                    onClick={() => navigate(`/post/${post.id}`)}
+                    onClick={() => onPostClick?.(post.id)}
                     className="flex items-center gap-2 text-xs p-2 rounded bg-muted/30 hover:bg-muted/70 transition-colors cursor-pointer group"
                   >
                     <div
@@ -560,7 +560,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
 
             {!isExpanded && posts.length > 0 && (
               <div
-                onClick={() => navigate(`/post/${posts[0].id}`)}
+                onClick={() => onPostClick?.(posts[0].id)}
                 className="flex items-center gap-2 text-xs text-muted-foreground mt-1 p-1.5 rounded hover:bg-muted/30 cursor-pointer transition-colors group"
               >
                 <div

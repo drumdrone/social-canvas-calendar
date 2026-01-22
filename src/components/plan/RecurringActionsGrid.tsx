@@ -18,7 +18,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export const RecurringActionsGrid: React.FC = () => {
+interface RecurringActionsGridProps {
+  onPostClick?: (postId: string) => void;
+}
+
+export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPostClick }) => {
   const { user } = useAuth();
   const [actions, setActions] = useState<RecurringAction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -233,6 +237,7 @@ export const RecurringActionsGrid: React.FC = () => {
                     onUpdate={(updates) => updateAction(action.id, updates)}
                     onDelete={() => deleteAction(action.id)}
                     onRefresh={loadActions}
+                    onPostClick={onPostClick}
                   />
                 ))}
                 {monthlyActions.length === 0 && (
@@ -266,6 +271,7 @@ export const RecurringActionsGrid: React.FC = () => {
                     onUpdate={(updates) => updateAction(action.id, updates)}
                     onDelete={() => deleteAction(action.id)}
                     onRefresh={loadActions}
+                    onPostClick={onPostClick}
                   />
                 ))}
                 {weeklyActions.length === 0 && (
@@ -299,6 +305,7 @@ export const RecurringActionsGrid: React.FC = () => {
                     onUpdate={(updates) => updateAction(action.id, updates)}
                     onDelete={() => deleteAction(action.id)}
                     onRefresh={loadActions}
+                    onPostClick={onPostClick}
                   />
                 ))}
                 {quarterlyActions.length === 0 && (
