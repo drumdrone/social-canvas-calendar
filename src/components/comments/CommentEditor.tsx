@@ -177,24 +177,41 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
 
         if (mentionError) throw mentionError;
 
+        console.log('✅ Mentions created, waiting for notifications...');
+
+        // Wait a bit for trigger to create notifications
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         // Fetch notifications created by the trigger and send emails
-        const { data: notifications } = await supabase
+        const { data: notifications, error: notifError } = await supabase
           .from('notifications')
           .select('id')
           .eq('comment_id', comment.id);
 
+        console.log('📬 Notifications found:', notifications?.length || 0, notifications);
+
+        if (notifError) {
+          console.error('❌ Error fetching notifications:', notifError);
+        }
+
         // Call Edge Function to send email notifications
         if (notifications && notifications.length > 0) {
+          console.log('📤 Calling Edge Function for', notifications.length, 'notifications...');
+
           for (const notification of notifications) {
             try {
-              await supabase.functions.invoke('send-mention-email', {
+              console.log('Invoking send-mention-email with:', notification.id);
+              const result = await supabase.functions.invoke('send-mention-email', {
                 body: { notification_id: notification.id }
               });
+              console.log('✅ Edge Function result:', result);
             } catch (emailError) {
-              console.error('Error sending email notification:', emailError);
+              console.error('❌ Error sending email notification:', emailError);
               // Don't throw - comment was created successfully
             }
           }
+        } else {
+          console.warn('⚠️ No notifications found for comment:', comment.id);
         }
       }
 
