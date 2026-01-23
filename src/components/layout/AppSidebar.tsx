@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, LayoutDashboard, FileText, Grid3X3 } from 'lucide-react';
+import { Calendar, LayoutDashboard, FileText, Grid3X3, Settings } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -35,6 +35,11 @@ const navigation = [
     name: 'Matrix',
     href: '/matrix',
     icon: Grid3X3,
+  },
+  {
+    name: 'Settings',
+    href: '/settings',
+    icon: Settings,
   },
 ];
 
