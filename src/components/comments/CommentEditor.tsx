@@ -176,6 +176,26 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
           .insert(mentions);
 
         if (mentionError) throw mentionError;
+
+        // Fetch notifications created by the trigger and send emails
+        const { data: notifications } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('comment_id', comment.id);
+
+        // Call Edge Function to send email notifications
+        if (notifications && notifications.length > 0) {
+          for (const notification of notifications) {
+            try {
+              await supabase.functions.invoke('send-mention-email', {
+                body: { notification_id: notification.id }
+              });
+            } catch (emailError) {
+              console.error('Error sending email notification:', emailError);
+              // Don't throw - comment was created successfully
+            }
+          }
+        }
       }
 
       toast({
