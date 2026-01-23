@@ -11,6 +11,7 @@ import Matrix from "./pages/Matrix";
 import Plan from "./pages/Plan";
 import Login from "./pages/Login";
 import ShareablePost from "./pages/ShareablePost";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/matrix" element={<ProtectedRoute><Matrix /></ProtectedRoute>} />
             <Route path="/plan" element={<ProtectedRoute><Plan /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/post/:id" element={<ShareablePost />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
