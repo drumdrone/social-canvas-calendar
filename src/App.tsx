@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { RightSidebarProvider } from "./contexts/RightSidebarContext";
+import { RightCalendarSidebar } from "./components/layout/RightCalendarSidebar";
 import { useEffect } from "react";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -11,6 +13,7 @@ import Matrix from "./pages/Matrix";
 import Plan from "./pages/Plan";
 import Login from "./pages/Login";
 import ShareablePost from "./pages/ShareablePost";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,18 +58,22 @@ const App = () => (
       <Sonner />
       <BrowserRouter basename="/social-canvas-calendar">
         <AuthProvider>
-          <RedirectHandler />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Index />} />
-            <Route path="/calendar" element={<Index />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/matrix" element={<ProtectedRoute><Matrix /></ProtectedRoute>} />
-            <Route path="/plan" element={<ProtectedRoute><Plan /></ProtectedRoute>} />
-            <Route path="/post/:id" element={<ShareablePost />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <RightSidebarProvider>
+            <RedirectHandler />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/calendar" element={<Index />} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/matrix" element={<ProtectedRoute><Matrix /></ProtectedRoute>} />
+              <Route path="/plan" element={<ProtectedRoute><Plan /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/post/:id" element={<ShareablePost />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <RightCalendarSidebar />
+          </RightSidebarProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

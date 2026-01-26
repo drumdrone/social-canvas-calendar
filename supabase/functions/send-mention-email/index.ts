@@ -1,169 +1,188 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { Resend } from "npm:resend@2.0.0";
+// Follow this setup guide to integrate the Deno runtime into your project:
+// https://deno.land/manual/getting_started/setup_your_environment
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-interface MentionEmailRequest {
-  mentionedAuthorEmail: string;
-  mentionedAuthorName: string;
-  postTitle: string;
-  commentText: string;
-  commenterName: string;
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+interface NotificationPayload {
+  notification_id: string
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
-  }
-
+serve(async (req) => {
   try {
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-
-    if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured");
-      return new Response(
-        JSON.stringify({
-          error: "Email service not configured. Please set up RESEND_API_KEY.",
-          success: false
-        }),
-        {
-          status: 500,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders
-          },
-        }
-      );
+    // Only allow POST requests
+    if (req.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 })
     }
 
-    const resend = new Resend(resendApiKey);
+    // Parse request body
+    const { notification_id } = await req.json() as NotificationPayload
 
-    const {
-      mentionedAuthorEmail,
-      mentionedAuthorName,
-      postTitle,
-      commentText,
-      commenterName
-    }: MentionEmailRequest = await req.json();
-
-    console.log("=== MENTION EMAIL DEBUG ===");
-    console.log("Request data:", {
-      mentionedAuthorEmail,
-      mentionedAuthorName,
-      postTitle,
-      commentText,
-      commenterName
-    });
-
-    if (!mentionedAuthorEmail || !mentionedAuthorName || !postTitle || !commentText || !commenterName) {
+    if (!notification_id) {
       return new Response(
-        JSON.stringify({
-          error: "Missing required fields",
-          success: false
-        }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders
-          },
-        }
-      );
+        JSON.stringify({ error: 'notification_id is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      )
     }
 
-    const emailData = {
-      from: "Social Media Manager <onboarding@resend.dev>",
-      to: [mentionedAuthorEmail],
-      subject: `You were mentioned in "${postTitle}"`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #333;">Hi ${mentionedAuthorName}!</h1>
-          <p style="font-size: 16px; line-height: 1.5;">
-            You were mentioned by <strong>${commenterName}</strong> in a comment on the post "<strong>${postTitle}</strong>":
-          </p>
-          <blockquote style="border-left: 3px solid #3B82F6; padding-left: 16px; margin: 24px 0; font-style: italic; color: #555;">
-            ${commentText}
-          </blockquote>
-          <p style="font-size: 14px; color: #666;">
-            Please check the post to see the full context and respond if needed.
-          </p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-          <p style="font-size: 14px; color: #999;">
-            Best regards,<br>
-            Your Social Media Team
-          </p>
-        </div>
-      `,
-    };
+    // Initialize Supabase client with service role key (bypasses RLS)
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    console.log("Sending email to:", mentionedAuthorEmail);
+    // Fetch notification details with all related data
+    const { data: notification, error: notificationError } = await supabase
+      .from('notifications')
+      .select(`
+        *,
+        user:user_profiles!notifications_user_id_fkey(*),
+        comment:comments!notifications_comment_id_fkey(
+          *,
+          author:user_profiles!comments_author_id_fkey(*)
+        ),
+        post:social_media_posts!notifications_post_id_fkey(*)
+      `)
+      .eq('id', notification_id)
+      .single()
 
-    const emailResponse = await resend.emails.send(emailData);
+    if (notificationError || !notification) {
+      console.error('Error fetching notification:', notificationError)
+      return new Response(
+        JSON.stringify({ error: 'Notification not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
 
-    console.log("Resend API response:", emailResponse);
-    console.log("=== END MENTION EMAIL DEBUG ===");
+    // Check if email already sent
+    if (notification.email_sent) {
+      return new Response(
+        JSON.stringify({ message: 'Email already sent' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
 
-    if (emailResponse.error) {
-      console.error("Resend API error:", emailResponse.error);
+    // Check if user has notifications enabled
+    if (!notification.user?.notification_enabled) {
+      console.log('User has notifications disabled')
 
-      let errorMessage = emailResponse.error.message || "Failed to send email";
-
-      // Check if it's a domain verification issue
-      if (errorMessage.includes("verify a domain") || errorMessage.includes("testing emails")) {
-        errorMessage = "Email service is in test mode. To send emails to team members, please verify a domain at resend.com/domains and update the 'from' address in the edge function.";
-      }
+      // Mark as sent so we don't try again
+      await supabase
+        .from('notifications')
+        .update({ email_sent: true })
+        .eq('id', notification_id)
 
       return new Response(
-        JSON.stringify({
-          error: errorMessage,
-          success: false,
-          resendError: emailResponse.error
-        }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders
-          },
-        }
-      );
+        JSON.stringify({ message: 'User has notifications disabled' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Extract data
+    const recipientEmail = notification.user?.email
+    const recipientName = notification.user?.full_name || 'Team Member'
+    const authorName = notification.comment?.author?.full_name || 'Someone'
+    const commentContent = notification.comment?.content || ''
+    const postTitle = notification.post?.title || 'a post'
+    const postId = notification.post?.id
+
+    // Create email HTML
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You were mentioned in a comment</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">📢 You were mentioned!</h1>
+  </div>
+
+  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
+    <p style="font-size: 16px; margin-bottom: 20px;">
+      Hi <strong>${recipientName}</strong>,
+    </p>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      <strong>${authorName}</strong> mentioned you in a comment on <strong>"${postTitle}"</strong>:
+    </p>
+
+    <div style="background: #f9fafb; border-left: 4px solid #667eea; padding: 20px; margin: 25px 0; border-radius: 4px;">
+      <p style="margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${commentContent}</p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="https://drumdrone.github.io/social-canvas-calendar/post/${postId || ''}"
+         style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
+        View Comment
+      </a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+    <p style="font-size: 13px; color: #6b7280; margin: 0;">
+      You're receiving this email because you were mentioned in a comment.
+      To stop receiving these notifications, go to <a href="https://drumdrone.github.io/social-canvas-calendar/settings" style="color: #667eea;">Settings</a> and disable notifications.
+    </p>
+  </div>
+</body>
+</html>
+    `
+
+    // Send email via Resend
+    const resendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: 'Social Canvas Calendar <notifications@yourdomain.com>',
+        to: [recipientEmail],
+        subject: `${authorName} mentioned you in "${postTitle}"`,
+        html: emailHtml,
+      }),
+    })
+
+    if (!resendResponse.ok) {
+      const errorText = await resendResponse.text()
+      console.error('Resend API error:', errorText)
+      throw new Error(`Resend API error: ${errorText}`)
+    }
+
+    const resendData = await resendResponse.json()
+    console.log('Email sent successfully:', resendData)
+
+    // Mark email as sent in database
+    const { error: updateError } = await supabase
+      .from('notifications')
+      .update({ email_sent: true })
+      .eq('id', notification_id)
+
+    if (updateError) {
+      console.error('Error updating notification:', updateError)
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        emailId: emailResponse.data?.id,
-        message: `Email sent successfully to ${mentionedAuthorEmail}`
+        message: 'Email sent successfully',
+        email_id: resendData.id
       }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
-        },
-      }
-    );
-  } catch (error: any) {
-    console.error("Error in send-mention-email function:", error);
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
+
+  } catch (error) {
+    console.error('Error in send-mention-email function:', error)
+
     return new Response(
       JSON.stringify({
-        error: error.message || "Unknown error occurred",
-        success: false
+        error: error.message || 'Internal server error'
       }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders
-        },
-      }
-    );
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
   }
-});
+})

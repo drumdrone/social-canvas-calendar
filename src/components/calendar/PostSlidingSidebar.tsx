@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
 import { MultiImageUpload } from './MultiImageUpload';
 import { MentionInput } from './MentionInput';
+import { CommentEditor } from '../comments/CommentEditor';
+import { CommentList } from '../comments/CommentList';
 
 interface PostSlidingSidebarProps {
   isOpen: boolean;
@@ -61,6 +63,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [editingCommentIndex, setEditingCommentIndex] = useState<number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState('');
   const [activeTab, setActiveTab] = useState('content');
+  const [commentRefresh, setCommentRefresh] = useState(0);
   const { toast } = useToast();
 
   // Load options from database
@@ -1103,6 +1106,31 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       Comments are for internal team communication. Use @initials or @name to mention team members and send them email notifications.
                     </p>
                   </div>
+
+                  {/* New @Mention Comment System */}
+                  {post && (
+                    <div className="space-y-4 pt-6 border-t">
+                      <div>
+                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4" />
+                          Team Mentions & Notifications
+                        </h4>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Použijte @ pro označení členů týmu. Email notifikace budou odeslány automaticky.
+                        </p>
+                      </div>
+
+                      <CommentList
+                        postId={post.id}
+                        refreshTrigger={commentRefresh}
+                      />
+
+                      <CommentEditor
+                        postId={post.id}
+                        onCommentAdded={() => setCommentRefresh(prev => prev + 1)}
+                      />
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             </div>
