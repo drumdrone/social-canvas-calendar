@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, LayoutDashboard, FileText, Grid3X3, Settings } from 'lucide-react';
+import { Calendar, LayoutDashboard, FileText, Grid3X3, Settings, CalendarDays } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -14,6 +14,7 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { useRightSidebar } from '@/contexts/RightSidebarContext';
 
 const navigation = [
   {
@@ -47,6 +48,7 @@ export const AppSidebar: React.FC = () => {
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
+  const { toggle: toggleRightSidebar, isOpen: isRightSidebarOpen } = useRightSidebar();
 
   const isActive = (path: string) => currentPath === path;
 
@@ -90,6 +92,35 @@ export const AppSidebar: React.FC = () => {
                   </SidebarMenuItem>
                 );
               })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="hidden lg:block">Quick View</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <button
+                    onClick={toggleRightSidebar}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full',
+                      isRightSidebarOpen
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <CalendarDays className="h-5 w-5 flex-shrink-0" />
+                    <span className={cn(
+                      "truncate",
+                      state === "collapsed" && "sr-only"
+                    )}>
+                      Quick Calendar
+                    </span>
+                  </button>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
