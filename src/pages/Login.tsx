@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('test@example.com');
+  const [email, setEmail] = useState('honza.hrodek@gmail.com');
   const [password, setPassword] = useState('123456');
   const [isLoading, setIsLoading] = useState(false);
   const { login, user } = useAuth();
