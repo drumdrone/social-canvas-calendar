@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit2, Check, X, Circle, Calendar, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Trash2, Edit2, Check, X, Circle, Calendar, ChevronDown, ChevronUp, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -90,6 +90,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   const [posts, setPosts] = useState<Post[]>([]);
   const [periodStatuses, setPeriodStatuses] = useState<PeriodStatus[]>([]);
   const [statusConfigs, setStatusConfigs] = useState<StatusConfig[]>([]);
+  const [monthOffset, setMonthOffset] = useState(0); // 0 = current period, -1 = previous, +1 = next
   const [editData, setEditData] = useState({
     title: action.title,
     frequency: action.frequency || '1x',
@@ -107,7 +108,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     if (statusConfigs.length > 0) {
       setPeriodStatuses(calculatePeriodStatuses(posts));
     }
-  }, [statusConfigs, posts]);
+  }, [statusConfigs, posts, monthOffset]);
 
   useEffect(() => {
     const subscription = supabase
@@ -208,14 +209,14 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
 
     if (action.action_type === 'monthly') {
       for (let i = 0; i < 3; i++) {
-        const monthDate = addMonths(now, i);
+        const monthDate = addMonths(now, monthOffset * 3 + i);
         const start = startOfMonth(monthDate);
         const end = endOfMonth(monthDate);
         statuses.push(checkPeriodStatus(posts, start, end, requiredCount));
       }
     } else if (action.action_type === 'weekly') {
       for (let i = 0; i < 3; i++) {
-        const monthDate = addMonths(now, i);
+        const monthDate = addMonths(now, monthOffset * 3 + i);
         const monthStart = startOfMonth(monthDate);
         const monthEnd = endOfMonth(monthDate);
 
@@ -271,7 +272,7 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       }
     } else if (action.action_type === 'quarterly') {
       for (let i = 0; i < 2; i++) {
-        const quarterDate = addMonths(now, i * 3);
+        const quarterDate = addMonths(now, monthOffset * 6 + i * 3);
         const start = startOfQuarter(quarterDate);
         const end = endOfQuarter(quarterDate);
         statuses.push({
@@ -378,6 +379,16 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     }
   };
 
+  const handlePreviousPeriod = () => {
+    setMonthOffset(monthOffset - 1);
+  };
+
+  const handleNextPeriod = () => {
+    setMonthOffset(monthOffset + 1);
+  };
+
+  const isCurrentPeriod = monthOffset === 0;
+
   if (isEditing) {
     return (
       <Card className="bg-white">
@@ -431,59 +442,89 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-2">
-              {periodStatuses.map((status, index) => (
-                <div key={index} className="flex flex-col items-center gap-1 flex-1 min-w-0">
-                  <div className="w-full flex gap-0.5">
-                    {status.weeklyBreakdown ? (
-                      status.weeklyBreakdown.map((week, weekIndex) => (
-                        <React.Fragment key={weekIndex}>
-                          {weekIndex > 0 && (
-                            <div className="w-[1px] h-2 bg-gray-400 mx-0.5" />
-                          )}
-                          <div className="flex-1 flex gap-0.5">
-                            {Array.from({ length: week.requiredCount }).map((_, segmentIndex) => {
-                              let segmentColor = getCategoryColor('none');
-                              if (segmentIndex < week.publishedCount) {
-                                segmentColor = getCategoryColor('published');
-                              } else if (segmentIndex < week.publishedCount + week.inProgressCount) {
-                                segmentColor = getCategoryColor('in-progress');
-                              }
-                              return (
-                                <div
-                                  key={segmentIndex}
-                                  className="h-2 flex-1 rounded-sm"
-                                  style={{ backgroundColor: segmentColor }}
-                                />
-                              );
-                            })}
-                          </div>
-                        </React.Fragment>
-                      ))
-                    ) : (
-                      Array.from({ length: status.requiredCount }).map((_, segmentIndex) => {
-                        let segmentColor = getCategoryColor('none');
-                        if (segmentIndex < status.publishedCount) {
-                          segmentColor = getCategoryColor('published');
-                        } else if (segmentIndex < status.publishedCount + status.inProgressCount) {
-                          segmentColor = getCategoryColor('in-progress');
-                        }
-                        return (
-                          <div
-                            key={segmentIndex}
-                            className="h-2 flex-1 rounded-sm"
-                            style={{ backgroundColor: segmentColor }}
-                          />
-                        );
-                      })
-                    )}
+            <div className="flex items-center gap-2 mb-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handlePreviousPeriod}
+                className="h-6 w-6 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex-1 flex items-center gap-3">
+                {periodStatuses.map((status, index) => (
+                  <div key={index} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                    <div className="w-full flex gap-0.5">
+                      {status.weeklyBreakdown ? (
+                        status.weeklyBreakdown.map((week, weekIndex) => (
+                          <React.Fragment key={weekIndex}>
+                            {weekIndex > 0 && (
+                              <div className="w-[1px] h-2 bg-gray-400 mx-0.5" />
+                            )}
+                            <div className="flex-1 flex gap-0.5">
+                              {Array.from({ length: week.requiredCount }).map((_, segmentIndex) => {
+                                let segmentColor = getCategoryColor('none');
+                                if (segmentIndex < week.publishedCount) {
+                                  segmentColor = getCategoryColor('published');
+                                } else if (segmentIndex < week.publishedCount + week.inProgressCount) {
+                                  segmentColor = getCategoryColor('in-progress');
+                                }
+                                return (
+                                  <div
+                                    key={segmentIndex}
+                                    className="h-2 flex-1 rounded-sm"
+                                    style={{ backgroundColor: segmentColor }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </React.Fragment>
+                        ))
+                      ) : (
+                        Array.from({ length: status.requiredCount }).map((_, segmentIndex) => {
+                          let segmentColor = getCategoryColor('none');
+                          if (segmentIndex < status.publishedCount) {
+                            segmentColor = getCategoryColor('published');
+                          } else if (segmentIndex < status.publishedCount + status.inProgressCount) {
+                            segmentColor = getCategoryColor('in-progress');
+                          }
+                          return (
+                            <div
+                              key={segmentIndex}
+                              className="h-2 flex-1 rounded-sm"
+                              style={{ backgroundColor: segmentColor }}
+                            />
+                          );
+                        })
+                      )}
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground">
+                      {status.label}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-medium text-muted-foreground">
-                    {status.label}
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleNextPeriod}
+                className="h-6 w-6 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
+            {!isCurrentPeriod && (
+              <div className="flex justify-center mb-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setMonthOffset(0)}
+                  className="h-5 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                >
+                  Zpět na současnost
+                </Button>
+              </div>
+            )}
             <h3 className="font-semibold text-sm mb-1">{action.title}</h3>
             <Badge variant="outline" className="text-xs">
               {getFrequencyLabel()}
