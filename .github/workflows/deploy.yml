@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - claude/merge-image-fixes-yIDwt
   workflow_dispatch:
 
 permissions:
