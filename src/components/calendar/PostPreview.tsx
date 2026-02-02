@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useImageHover } from '@/hooks/useImageHover';
-import { getImageUrl } from '@/lib/imageUtils';
+import { getImageUrl, PLACEHOLDER_URL } from '@/lib/imageUtils';
 
 interface PostPreviewProps {
   post: SocialPost;
@@ -141,13 +141,13 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
       {!compact && post.image_url && (
         <div className="flex items-center gap-1 mt-1">
           <img
-            src={getImageUrl(post.image_url) || '/placeholder.svg'}
+            src={getImageUrl(post.image_url) || PLACEHOLDER_URL}
             alt="Post thumbnail"
             className="w-6 h-6 rounded object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              if (target.src !== window.location.origin + '/placeholder.svg') {
-                target.src = '/placeholder.svg';
+              if (target.src !== window.location.origin + PLACEHOLDER_URL) {
+                target.src = PLACEHOLDER_URL;
               }
             }}
           />

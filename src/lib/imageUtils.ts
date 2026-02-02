@@ -1,6 +1,11 @@
 import { supabase } from '@/integrations/supabase/client';
 
 /**
+ * Get the correct placeholder URL respecting the base path (for GitHub Pages)
+ */
+export const PLACEHOLDER_URL = `${import.meta.env.BASE_URL || '/'}placeholder.svg`;
+
+/**
  * Converts a stored image path/URL to a proper public URL
  * Handles different URL formats stored in the database:
  * - Full URLs with protocol (https://...)

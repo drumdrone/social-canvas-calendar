@@ -6,7 +6,7 @@ import { Facebook, Instagram, Twitter, Linkedin, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { getImageUrl } from '@/lib/imageUtils';
+import { getImageUrl, PLACEHOLDER_URL } from '@/lib/imageUtils';
 
 interface CalendarDayProps {
   date: Date;
@@ -124,7 +124,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
               onClick={(e) => handlePostClick(e, firstImagePost)}
             >
               <img
-                src={getImageUrl(firstImagePost.image_url) || '/placeholder.svg'}
+                src={getImageUrl(firstImagePost.image_url) || PLACEHOLDER_URL}
                 alt="Post image"
                 className="w-full h-[90%] object-cover object-center"
                 onMouseEnter={(e) => {
@@ -137,8 +137,8 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                 }}
                 onError={(e) => {
                   // If image fails to load, show placeholder
-                  if (e.currentTarget.src !== '/placeholder.svg') {
-                    e.currentTarget.src = '/placeholder.svg';
+                  if (e.currentTarget.src !== PLACEHOLDER_URL) {
+                    e.currentTarget.src = PLACEHOLDER_URL;
                   }
                 }}
               />
