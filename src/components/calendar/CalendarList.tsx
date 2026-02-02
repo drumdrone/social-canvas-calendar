@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PostPreview } from './PostPreview';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface CalendarListProps {
   currentDate: Date;
@@ -211,7 +212,7 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                             
                             {post.image_url && (
                               <img
-                                src={post.image_url}
+                                src={getImageUrl(post.image_url) || '/placeholder.svg'}
                                 alt="Post thumbnail"
                                 className="w-16 h-16 rounded-md object-cover border cursor-pointer"
                                 onMouseEnter={(e) => {
@@ -221,6 +222,12 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                                 }}
                                 onMouseLeave={(e) => {
                                   e.currentTarget.removeAttribute('title');
+                                }}
+                                onError={(e) => {
+                                  // If image fails to load, show placeholder
+                                  if (e.currentTarget.src !== '/placeholder.svg') {
+                                    e.currentTarget.src = '/placeholder.svg';
+                                  }
                                 }}
                               />
                             )}

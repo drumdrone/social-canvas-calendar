@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useRightSidebar } from '@/contexts/RightSidebarContext';
 import { cn } from '@/lib/utils';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface MonthlyPosts {
   month: Date;
@@ -175,9 +176,15 @@ export const RightCalendarSidebar: React.FC = () => {
 
                           {post.image_url && (
                             <img
-                              src={post.image_url}
+                              src={getImageUrl(post.image_url) || '/placeholder.svg'}
                               alt="Post thumbnail"
                               className="w-12 h-12 rounded object-cover border flex-shrink-0"
+                              onError={(e) => {
+                                // If image fails to load, show placeholder
+                                if (e.currentTarget.src !== '/placeholder.svg') {
+                                  e.currentTarget.src = '/placeholder.svg';
+                                }
+                              }}
                             />
                           )}
 
