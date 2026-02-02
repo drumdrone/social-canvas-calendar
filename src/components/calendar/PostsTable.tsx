@@ -778,9 +778,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                           <TableCell>
                             <div className="flex items-center gap-2">
                                {post.image_url ? (
-                                  <img 
-                                    src={post.image_url} 
-                                    alt="Post image" 
+                                  <img
+                                    src={post.image_url}
+                                    alt="Post image"
                                     className="w-10 h-10 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
                                     onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
                                     onMouseEnter={(e) => {
@@ -791,15 +791,21 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                                     onMouseLeave={(e) => {
                                       e.currentTarget.removeAttribute('title');
                                     }}
+                                    onError={(e) => {
+                                      // Hide broken image and show placeholder instead
+                                      e.currentTarget.style.display = 'none';
+                                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                      if (placeholder) placeholder.style.display = 'flex';
+                                    }}
                                   />
-                              ) : (
-                                <div 
-                                  className="w-10 h-10 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer hover:border-gray-400"
-                                  onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
-                                >
-                                  <ImageIcon className="h-4 w-4 text-gray-400" />
-                                </div>
-                              )}
+                              ) : null}
+                              <div
+                                className="w-10 h-10 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer hover:border-gray-400"
+                                style={{ display: post.image_url ? 'none' : 'flex' }}
+                                onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
+                              >
+                                <ImageIcon className="h-4 w-4 text-gray-400" />
+                              </div>
                               {uploadingImage === post.id && (
                                 <div className="text-xs text-muted-foreground">Uploading...</div>
                               )}

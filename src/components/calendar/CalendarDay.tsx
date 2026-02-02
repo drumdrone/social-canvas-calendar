@@ -118,13 +118,13 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         {/* First Row - Date and Image/Primary Post */}
         <div className="h-[90%] relative overflow-hidden border-b border-muted/30">
           {hasImage && firstImagePost?.image_url ? (
-            <div 
+            <div
               className="h-full relative cursor-pointer hover:opacity-90 transition-opacity"
               onClick={(e) => handlePostClick(e, firstImagePost)}
             >
-              <img 
-                src={firstImagePost.image_url} 
-                alt="Post image" 
+              <img
+                src={firstImagePost.image_url}
+                alt="Post image"
                 className="w-full h-[90%] object-cover object-center"
                 onMouseEnter={(e) => {
                   if ((firstImagePost as any).comments) {
@@ -133,6 +133,10 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.removeAttribute('title');
+                }}
+                onError={(e) => {
+                  // If image fails to load, hide it
+                  e.currentTarget.style.display = 'none';
                 }}
               />
               
