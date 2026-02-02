@@ -16,24 +16,28 @@ export function getImageUrl(imageUrl: string | null | undefined): string | null 
 
   const url = imageUrl.trim();
 
+  console.log('getImageUrl input:', url);
+
   // Already a full URL with protocol
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    console.log('getImageUrl output (already full):', url);
     return url;
   }
 
   // URL without protocol (e.g., "domain.supabase.co/...")
   if (url.includes('supabase.co/')) {
-    return `https://${url}`;
+    const result = `https://${url}`;
+    console.log('getImageUrl output (added https):', result);
+    return result;
   }
 
   // Relative path or filename only - construct full Supabase Storage URL
-  // Remove 'public/' prefix if present since getPublicUrl adds it
-  const fileName = url.startsWith('public/') ? url.substring(7) : url;
-
+  // Keep the path as-is, getPublicUrl will handle it
   const { data } = supabase.storage
     .from('social-media-images')
-    .getPublicUrl(fileName);
+    .getPublicUrl(url);
 
+  console.log('getImageUrl output (from storage):', data.publicUrl);
   return data.publicUrl;
 }
 
