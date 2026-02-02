@@ -31,6 +31,16 @@ export function getImageUrl(imageUrl: string | null | undefined): string | null 
     return result;
   }
 
+  // Check if it's a path to local public folder
+  if (url.startsWith('public/') || url.startsWith('/public/')) {
+    const cleanPath = url.replace(/^\/?(public\/)/, '');
+    // For GitHub Pages, we need to include the base path
+    const basePath = import.meta.env.BASE_URL || '/';
+    const result = `${basePath}${cleanPath}`;
+    console.log('getImageUrl output (local public):', result);
+    return result;
+  }
+
   // Relative path or filename only - construct full Supabase Storage URL
   // Keep the path as-is, getPublicUrl will handle it
   const { data } = supabase.storage

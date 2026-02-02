@@ -141,9 +141,15 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
       {!compact && post.image_url && (
         <div className="flex items-center gap-1 mt-1">
           <img
-            src={getImageUrl(post.image_url) || ''}
+            src={getImageUrl(post.image_url) || '/placeholder.svg'}
             alt="Post thumbnail"
             className="w-6 h-6 rounded object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (target.src !== window.location.origin + '/placeholder.svg') {
+                target.src = '/placeholder.svg';
+              }
+            }}
           />
           <span className="text-muted-foreground text-xs">Image</span>
         </div>
