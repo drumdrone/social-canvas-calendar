@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - claude/merge-image-fixes-yIDwt
+      - claude/create-website-repo-yIDwt
   workflow_dispatch:
 
 permissions:
