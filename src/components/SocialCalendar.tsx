@@ -5,7 +5,6 @@ import { CalendarList } from './calendar/CalendarList';
 import { PostsTable } from './calendar/PostsTable';
 import { CalendarFilters } from './calendar/CalendarFilters';
 import { FacebookPostPreview } from './calendar/FacebookPostPreview';
-import { PostSlidingSidebar } from './calendar/PostSlidingSidebar';
 import { PostDataManager } from './calendar/PostDataManager';
 import { PlanningPanel } from './calendar/PlanningPanel';
 import { SettingsSidebar } from './settings/SettingsSidebar';
@@ -13,6 +12,7 @@ import { Button } from './ui/button';
 import { Settings, Plus, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, addWeeks } from 'date-fns';
+import { usePostEdit } from '@/contexts/PostEditContext';
 
 export type ViewMode = 'month' | 'week' | 'list' | 'table';
 export type Platform = string; // Changed to string to support dynamic platforms
@@ -40,16 +40,13 @@ export interface SocialPost {
 }
 
 export const SocialCalendar: React.FC = () => {
+  const { openPostEdit, openNewPost } = usePostEdit();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<PostStatus[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
   const [showPlanning, setShowPlanning] = useState(false);
-  const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Load initial platform and status selections from database
@@ -83,7 +80,7 @@ export const SocialCalendar: React.FC = () => {
           supabase.from('platforms').select('name').eq('is_active', true),
           supabase.from('post_statuses').select('name').eq('is_active', true)
         ]);
-        
+
         if (platformsResult.data) {
           setSelectedPlatforms(platformsResult.data.map(p => p.name));
         }
@@ -97,6 +94,16 @@ export const SocialCalendar: React.FC = () => {
 
     window.addEventListener('settingsChanged', handleSettingsChange);
     return () => window.removeEventListener('settingsChanged', handleSettingsChange);
+  }, []);
+
+  // Listen for post save events to refresh calendar
+  useEffect(() => {
+    const handlePostSaved = () => {
+      setRefreshKey(prev => prev + 1);
+    };
+
+    window.addEventListener('postSaved', handlePostSaved);
+    return () => window.removeEventListener('postSaved', handlePostSaved);
   }, []);
 
   const getDates = () => {
@@ -130,31 +137,17 @@ export const SocialCalendar: React.FC = () => {
   };
 
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
-    setEditingPost(null);
-    setSidebarPost(null);
-    setShowSidebar(true);
+    openNewPost(date);
   };
 
   const handlePostClick = (post: SocialPost) => {
     console.log('Post clicked for editing:', post);
-    setSidebarPost(post);
-    setEditingPost(post);
-    setSelectedDate(new Date(post.scheduled_date));
-    setShowSidebar(true);
-  };
-
-  const handleCloseSidebar = () => {
-    setShowSidebar(false);
-    setSidebarPost(null);
-    setEditingPost(null);
-    setSelectedDate(null);
+    openPostEdit(post);
   };
 
   const handleSidebarSave = () => {
     // Refresh the calendar data without losing current date/state
     setRefreshKey(prev => prev + 1);
-    handleCloseSidebar();
   };
 
   // Removed calendar month/week scrolling behavior
@@ -249,15 +242,6 @@ export const SocialCalendar: React.FC = () => {
           />
         )}
       </div>
-      
-      {/* Sliding Sidebar for Post Creation/Editing */}
-      <PostSlidingSidebar
-        isOpen={showSidebar}
-        onClose={handleCloseSidebar}
-        post={sidebarPost}
-        selectedDate={selectedDate}
-        onSave={handleSidebarSave}
-      />
 
       {/* Planning Panel */}
       <PlanningPanel

@@ -6,6 +6,7 @@ import { SocialPost } from '../SocialCalendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { getImageUrl, PLACEHOLDER_URL } from '@/lib/imageUtils';
+import { usePostEdit } from '@/contexts/PostEditContext';
 
 interface MonthlyPosts {
   month: Date;
@@ -13,6 +14,7 @@ interface MonthlyPosts {
 }
 
 export const RightCalendarColumn: React.FC = () => {
+  const { openPostEdit } = usePostEdit();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [monthlyPosts, setMonthlyPosts] = useState<MonthlyPosts[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,16 @@ export const RightCalendarColumn: React.FC = () => {
 
   useEffect(() => {
     fetchPosts();
+  }, [currentDate]);
+
+  // Listen for post save events to refresh calendar
+  useEffect(() => {
+    const handlePostSaved = () => {
+      fetchPosts();
+    };
+
+    window.addEventListener('postSaved', handlePostSaved);
+    return () => window.removeEventListener('postSaved', handlePostSaved);
   }, [currentDate]);
 
   const goToPreviousMonth = () => {
@@ -128,10 +140,7 @@ export const RightCalendarColumn: React.FC = () => {
                     <div
                       key={post.id}
                       className="flex items-start gap-2 p-2 bg-card border border-border rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => {
-                        // TODO: Navigate to post or open detail
-                        console.log('Post clicked:', post.id);
-                      }}
+                      onClick={() => openPostEdit(post)}
                     >
                       <div className="flex flex-col items-center justify-center min-w-[40px] text-center flex-shrink-0">
                         <div className="text-sm font-bold text-foreground">
