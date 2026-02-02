@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Platform, PostStatus, SocialPost, Category } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface PostsTableProps {
   selectedPlatforms: Platform[];
@@ -779,7 +780,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
                             <div className="flex items-center gap-2">
                                {post.image_url ? (
                                   <img
-                                    src={post.image_url}
+                                    src={getImageUrl(post.image_url) || ''}
                                     alt="Post image"
                                     className="w-10 h-10 rounded object-cover cursor-pointer hover:opacity-80 transition-opacity"
                                     onClick={() => document.getElementById(`image-upload-${post.id}`)?.click()}
@@ -960,9 +961,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           }}
         >
           <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 max-w-sm">
-            <img 
-              src={hoverImage.imageUrl} 
-              alt="Image preview" 
+            <img
+              src={getImageUrl(hoverImage.imageUrl) || ''}
+              alt="Image preview"
               className="max-w-80 max-h-80 rounded object-contain"
             />
           </div>

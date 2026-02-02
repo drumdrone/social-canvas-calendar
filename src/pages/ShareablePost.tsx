@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { SocialPost } from '@/components/SocialCalendar';
+import { getImageUrl } from '@/lib/imageUtils';
 
 const platformIcons = {
   facebook: Facebook,
@@ -162,9 +163,9 @@ const ShareablePost = () => {
                   Image
                 </h3>
                 <div className="border rounded-lg overflow-hidden">
-                  <img 
-                    src={post.image_url} 
-                    alt="Post image" 
+                  <img
+                    src={getImageUrl(post.image_url) || ''}
+                    alt="Post image"
                     className="w-full h-auto max-h-[600px] object-contain"
                   />
                 </div>

@@ -7,6 +7,7 @@ import { SocialPost, Platform, PostStatus } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { PostSlidingSidebar } from './PostSlidingSidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getImageUrl } from '@/lib/imageUtils';
 
 interface FacebookPostPreviewProps {
   selectedPlatforms: Platform[];
@@ -174,7 +175,7 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
           {post.image_url && (
             <div className="relative w-full h-80 overflow-hidden">
               <img
-                src={post.image_url}
+                src={getImageUrl(post.image_url) || ''}
                 alt={post.title || "Post image"}
                 className="w-full h-full object-cover"
               />

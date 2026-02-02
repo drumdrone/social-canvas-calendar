@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { X, Upload, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getImageUrl } from "@/lib/imageUtils";
 
 interface MultiImageUploadProps {
   images: (string | null)[];
@@ -70,7 +71,7 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
             {images[index] ? (
               <div className="relative group">
                 <img
-                  src={images[index] || ''}
+                  src={getImageUrl(images[index]) || ''}
                   alt={`Upload ${index + 1}`}
                   className="w-full h-32 object-cover rounded-lg border"
                 />
