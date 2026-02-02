@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppSidebar } from './AppSidebar';
+import { RightCalendarColumn } from './RightCalendarColumn';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -21,6 +22,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </header>
           {children}
         </main>
+        {/* Right Calendar Column - hidden on mobile */}
+        {!isMobile && <RightCalendarColumn />}
       </div>
     </SidebarProvider>
   );
