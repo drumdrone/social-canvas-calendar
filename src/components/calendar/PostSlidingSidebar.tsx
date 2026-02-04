@@ -203,11 +203,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         platform,
         status,
         category,
-        image_url_1: postImages[0],
-        image_url_2: postImages[1],
-        image_url_3: postImages[2],
-        // Keep old image_url for backward compatibility
-        image_url: postImages[0],
+        image_url_1: postImages[0] || null,
+        image_url_2: postImages[1] || null,
+        image_url_3: postImages[2] || null,
+        // Keep old image_url for backward compatibility - explicitly set null if no image
+        image_url: postImages[0] || null,
         scheduled_date: scheduledDateTime.toISOString(),
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
@@ -280,6 +280,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         });
       }
 
+      // Dispatch event to refresh Quick Calendar
+      window.dispatchEvent(new Event('postsChanged'));
+
       // Trigger refresh which will also handle closing
       onSave();
     } catch (error) {
@@ -309,6 +312,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         title: 'Success',
         description: 'Post deleted successfully!',
       });
+
+      // Dispatch event to refresh Quick Calendar
+      window.dispatchEvent(new Event('postsChanged'));
+
       onSave();
       onClose();
     } catch (error) {
