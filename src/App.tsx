@@ -56,7 +56,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter basename="/social-canvas-calendar">
+      <BrowserRouter basename="/">
         <AuthProvider>
           <RightSidebarProvider>
             <RedirectHandler />
