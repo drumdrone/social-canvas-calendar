@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CalendarHeader } from './calendar/CalendarHeader';
 import { CalendarGrid } from './calendar/CalendarGrid';
 import { CalendarList } from './calendar/CalendarList';
@@ -40,6 +41,7 @@ export interface SocialPost {
 }
 
 export const SocialCalendar: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -51,6 +53,31 @@ export const SocialCalendar: React.FC = () => {
   const [showPlanning, setShowPlanning] = useState(false);
   const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Handle edit parameter from URL (e.g., from Quick Calendar)
+  useEffect(() => {
+    const editPostId = searchParams.get('edit');
+    if (editPostId) {
+      // Fetch the post and open the sidebar
+      const fetchAndEditPost = async () => {
+        const { data, error } = await supabase
+          .from('social_media_posts')
+          .select('*')
+          .eq('id', editPostId)
+          .single();
+
+        if (data && !error) {
+          setSidebarPost(data as SocialPost);
+          setEditingPost(data as SocialPost);
+          setSelectedDate(new Date(data.scheduled_date));
+          setShowSidebar(true);
+          // Clear the URL parameter
+          setSearchParams({});
+        }
+      };
+      fetchAndEditPost();
+    }
+  }, [searchParams, setSearchParams]);
 
   // Load initial platform and status selections from database
   useEffect(() => {
