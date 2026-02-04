@@ -163,9 +163,9 @@ export const RightCalendarSidebar: React.FC = () => {
                           </div>
                         </div>
 
-                        {post.image_url && (
+                        {(post.image_url_1 || post.image_url) && (
                           <img
-                            src={post.image_url}
+                            src={post.image_url_1 || post.image_url}
                             alt="Post thumbnail"
                             className="w-10 h-10 rounded object-cover border flex-shrink-0"
                           />
