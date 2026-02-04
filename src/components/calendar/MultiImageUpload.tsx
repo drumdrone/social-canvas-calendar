@@ -25,18 +25,24 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split('.').pop() || 'png';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `public/${fileName}`;
+
+      console.log('Uploading image to:', filePath, 'File size:', file.size);
 
       const { error: uploadError } = await supabase.storage
         .from('social-media-images')
-        .upload(fileName, file);
+        .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error details:', uploadError);
+        throw uploadError;
+      }
 
       const { data } = supabase.storage
         .from('social-media-images')
-        .getPublicUrl(fileName);
+        .getPublicUrl(filePath);
 
       const newImages = [...images];
       newImages[slotIndex] = data.publicUrl;
