@@ -64,8 +64,16 @@ export const RightCalendarSidebar: React.FC = () => {
     fetchPosts();
   }, [currentDate]);
 
-  // Listen for post updates
+  // Listen for post updates via custom event (more reliable than realtime)
   useEffect(() => {
+    const handlePostsChanged = () => {
+      console.log('Posts changed event received, refreshing Quick Calendar');
+      fetchPosts();
+    };
+
+    window.addEventListener('postsChanged', handlePostsChanged);
+
+    // Also try realtime subscription as backup
     const channel = supabase
       .channel('quick-calendar-posts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'social_media_posts' }, () => {
@@ -74,6 +82,7 @@ export const RightCalendarSidebar: React.FC = () => {
       .subscribe();
 
     return () => {
+      window.removeEventListener('postsChanged', handlePostsChanged);
       supabase.removeChannel(channel);
     };
   }, [currentDate]);

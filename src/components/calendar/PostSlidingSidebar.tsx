@@ -280,6 +280,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         });
       }
 
+      // Dispatch event to refresh Quick Calendar
+      window.dispatchEvent(new Event('postsChanged'));
+
       // Trigger refresh which will also handle closing
       onSave();
     } catch (error) {
@@ -309,6 +312,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         title: 'Success',
         description: 'Post deleted successfully!',
       });
+
+      // Dispatch event to refresh Quick Calendar
+      window.dispatchEvent(new Event('postsChanged'));
+
       onSave();
       onClose();
     } catch (error) {
