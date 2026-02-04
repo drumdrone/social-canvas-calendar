@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { SocialPost } from '../SocialCalendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,7 +14,6 @@ interface MonthlyPosts {
 
 export const RightCalendarSidebar: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [monthlyPosts, setMonthlyPosts] = useState<MonthlyPosts[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,9 +21,9 @@ export const RightCalendarSidebar: React.FC = () => {
   const fetchPosts = async () => {
     setLoading(true);
 
-    // Fetch posts for 3 months (current + 1 before + 1 after)
-    const startDate = startOfMonth(subMonths(currentDate, 1));
-    const endDate = endOfMonth(addMonths(currentDate, 1));
+    // Fetch posts from current month + 2 months ahead (no past months)
+    const startDate = startOfMonth(currentDate);
+    const endDate = endOfMonth(addMonths(currentDate, 2));
 
     const { data, error } = await supabase
       .from('social_media_posts')
@@ -93,7 +92,7 @@ export const RightCalendarSidebar: React.FC = () => {
   };
 
   return (
-    <div className="hidden lg:flex w-[300px] flex-shrink-0 border-l border-border bg-background h-screen">
+    <div className="hidden lg:flex w-[350px] flex-shrink-0 border-l border-border bg-background h-screen">
       <div className="flex flex-col h-full w-full">
         {/* Header */}
         <div className="flex items-center justify-center p-3 border-b border-border bg-muted/30">
@@ -106,8 +105,8 @@ export const RightCalendarSidebar: React.FC = () => {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h2 className="text-sm font-semibold min-w-[100px] text-center">
-              {format(currentDate, 'MMM yyyy')}
+            <h2 className="text-sm font-semibold min-w-[120px] text-center">
+              {format(currentDate, 'MMMM yyyy')}
             </h2>
             <Button
               variant="ghost"
@@ -134,7 +133,7 @@ export const RightCalendarSidebar: React.FC = () => {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {monthlyPosts.map(({ month, posts }, index) => (
+              {monthlyPosts.map(({ month, posts }) => (
                 <div key={format(month, 'yyyy-MM')} className="py-3">
                   {/* Month Header */}
                   <div className="flex items-center justify-between px-3 mb-2">
@@ -147,14 +146,14 @@ export const RightCalendarSidebar: React.FC = () => {
                   </div>
 
                   {/* Posts */}
-                  <div className="space-y-1 px-2">
+                  <div className="space-y-1.5 px-2">
                     {posts.map((post) => (
                       <div
                         key={post.id}
-                        className="flex items-start gap-2 p-2 bg-card border border-border rounded-md hover:bg-primary/5 hover:border-primary/20 transition-colors cursor-pointer"
+                        className="flex items-start gap-3 p-2 bg-card border border-border rounded-md hover:bg-primary/5 hover:border-primary/20 transition-colors cursor-pointer"
                         onClick={() => handlePostClick(post)}
                       >
-                        <div className="flex flex-col items-center justify-center min-w-[32px] text-center flex-shrink-0 bg-muted rounded px-1 py-0.5">
+                        <div className="flex flex-col items-center justify-center min-w-[36px] text-center flex-shrink-0 bg-muted rounded px-1.5 py-1">
                           <div className="text-sm font-bold text-foreground leading-tight">
                             {format(new Date(post.scheduled_date), 'd')}
                           </div>
@@ -167,20 +166,20 @@ export const RightCalendarSidebar: React.FC = () => {
                           <img
                             src={post.image_url_1 || post.image_url}
                             alt="Post thumbnail"
-                            className="w-10 h-10 rounded object-cover border flex-shrink-0"
+                            className="w-12 h-12 rounded object-cover border flex-shrink-0"
                           />
                         )}
 
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-medium text-foreground truncate">
+                          <h4 className="text-sm font-medium text-foreground truncate">
                             {post.title || 'Untitled'}
                           </h4>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <span className="text-[9px] text-muted-foreground">
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-[10px] text-muted-foreground">
                               {format(new Date(post.scheduled_date), 'HH:mm')}
                             </span>
-                            <span className="text-[9px] text-muted-foreground">•</span>
-                            <span className="text-[9px] text-muted-foreground capitalize">
+                            <span className="text-[10px] text-muted-foreground">•</span>
+                            <span className="text-[10px] text-muted-foreground capitalize">
                               {post.platform || 'No platform'}
                             </span>
                           </div>
