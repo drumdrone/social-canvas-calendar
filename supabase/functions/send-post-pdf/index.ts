@@ -7,16 +7,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface SendPostPdfPayload {
+interface SendPostPayload {
   emails: string[]
   email?: string
-  pdfBase64?: string
   screenshotBase64?: string
   postTitle: string
-  postContent?: string
-  postPlatform?: string
-  postAuthor?: string
-  postDate?: string
+  appUrl?: string
 }
 
 function escapeHtml(str: string): string {
@@ -37,7 +33,7 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json() as SendPostPdfPayload
+    const body = await req.json() as SendPostPayload
 
     const recipients = body.emails?.length ? body.emails : body.email ? [body.email] : []
 
@@ -56,8 +52,8 @@ serve(async (req) => {
     }
 
     const title = escapeHtml(body.postTitle || '')
+    const appLink = body.appUrl || ''
 
-    // Email HTML: show screenshot as inline image
     const emailHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -76,6 +72,11 @@ serve(async (req) => {
         <img src="cid:post-screenshot" alt="Post preview" style="width:100%;max-width:500px;border-radius:8px;border:1px solid #dddfe2;display:block;" />
       </td>
     </tr>
+    ${appLink ? `<tr>
+      <td style="padding-top:16px;text-align:center;">
+        <a href="${escapeHtml(appLink)}" style="display:inline-block;background:#1877F2;color:#ffffff;padding:10px 24px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">Otevrit v Social Canvas</a>
+      </td>
+    </tr>` : ''}
     <tr>
       <td style="padding-top:16px;">
         <table cellpadding="0" cellspacing="0" width="100%">
@@ -91,24 +92,13 @@ serve(async (req) => {
 </body>
 </html>`
 
-    // Build attachments
     const attachments: Array<Record<string, string>> = []
 
-    // Inline screenshot image
     if (body.screenshotBase64) {
       attachments.push({
         filename: 'post-preview.png',
         content: body.screenshotBase64,
         content_id: 'post-screenshot',
-      })
-    }
-
-    // PDF attachment
-    if (body.pdfBase64) {
-      const fileName = `post-${body.postTitle.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.pdf`
-      attachments.push({
-        filename: fileName,
-        content: body.pdfBase64,
       })
     }
 
@@ -137,7 +127,6 @@ serve(async (req) => {
     }
 
     const resendData = await resendResponse.json()
-    console.log('Email sent to', recipients.length, 'recipients:', resendData)
 
     return new Response(
       JSON.stringify({ success: true, email_id: resendData.id, recipients: recipients.length }),

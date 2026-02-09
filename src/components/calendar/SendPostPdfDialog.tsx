@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { PostPdfPreview } from './PostPdfPreview';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 const STORAGE_KEY = 'social-canvas-preset-emails';
 
@@ -102,55 +101,30 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
     setSelectedEmails(prev => prev.filter(e => e !== email));
   };
 
-  const generatePdfBlob = async (): Promise<{ blob: Blob; base64: string }> => {
+  const captureScreenshot = async (): Promise<string> => {
     if (!previewRef.current) throw new Error('Preview not ready');
-
     const canvas = await html2canvas(previewRef.current, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
     });
-
-    const imgWidth = 190;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const xOffset = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
-    const yOffset = Math.max(10, (pageHeight - imgHeight) / 2);
-
-    pdf.addImage(
-      canvas.toDataURL('image/png'),
-      'PNG',
-      xOffset,
-      yOffset,
-      imgWidth,
-      Math.min(imgHeight, pageHeight - 20)
-    );
-
-    const blob = pdf.output('blob');
-    const dataUri = pdf.output('datauristring');
-    const base64 = dataUri.split(',')[1];
-
-    return { blob, base64 };
+    return canvas.toDataURL('image/png');
   };
 
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const { blob } = await generatePdfBlob();
-      const url = URL.createObjectURL(blob);
+      const dataUrl = await captureScreenshot();
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `post-${post.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.pdf`;
+      a.href = dataUrl;
+      a.download = `post-${post.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.png`;
       a.click();
-      URL.revokeObjectURL(url);
 
-      toast({ title: 'PDF stazeno', description: 'PDF soubor byl ulozen.' });
+      toast({ title: 'Obrazek stazen', description: 'PNG soubor byl ulozen.' });
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({ title: 'Chyba', description: 'Nepodarilo se vygenerovat PDF.', variant: 'destructive' });
+      console.error('Error generating image:', error);
+      toast({ title: 'Chyba', description: 'Nepodarilo se vygenerovat obrazek.', variant: 'destructive' });
     } finally {
       setDownloading(false);
     }
@@ -164,29 +138,18 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
 
     setSending(true);
     try {
-      // Capture screenshot of preview for inline email image
-      if (!previewRef.current) throw new Error('Preview not ready');
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-      });
-      const screenshotBase64 = canvas.toDataURL('image/png').split(',')[1];
+      const dataUrl = await captureScreenshot();
+      const screenshotBase64 = dataUrl.split(',')[1];
 
-      // Also generate PDF for attachment
-      const { base64: pdfBase64 } = await generatePdfBlob();
+      // Get app URL for link to post
+      const appUrl = window.location.origin;
 
       const { data, error } = await supabase.functions.invoke('send-post-pdf', {
         body: {
           emails: selectedEmails,
-          pdfBase64,
           screenshotBase64,
           postTitle: post.title,
-          postContent: post.content,
-          postPlatform: post.platform,
-          postAuthor: post.author,
-          postDate: post.scheduledDate,
+          appUrl,
         },
       });
 
@@ -243,7 +206,7 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Odeslat post jako PDF</DialogTitle>
+          <DialogTitle>Odeslat post</DialogTitle>
         </DialogHeader>
 
         {/* Preset Emails */}
@@ -361,7 +324,7 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
 
         {/* Preview */}
         <div className="border rounded-lg p-4 bg-gray-50 overflow-auto">
-          <Label className="text-xs text-muted-foreground mb-2 block">Nahled PDF</Label>
+          <Label className="text-xs text-muted-foreground mb-2 block">Nahled</Label>
           <div style={{ transform: 'scale(0.85)', transformOrigin: 'top left', width: '117.6%' }}>
             <PostPdfPreview
               ref={previewRef}
@@ -381,7 +344,7 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={handleDownload} disabled={downloading || sending}>
             {downloading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-            Stahnout PDF
+            Stahnout obrazek
           </Button>
           <Button onClick={handleSend} disabled={selectedEmails.length === 0 || sending || downloading}>
             {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
