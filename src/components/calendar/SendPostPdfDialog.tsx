@@ -164,21 +164,29 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
 
     setSending(true);
     try {
-      const { base64 } = await generatePdfBlob();
+      // Capture screenshot of preview for inline email image
+      if (!previewRef.current) throw new Error('Preview not ready');
+      const canvas = await html2canvas(previewRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+      });
+      const screenshotBase64 = canvas.toDataURL('image/png').split(',')[1];
+
+      // Also generate PDF for attachment
+      const { base64: pdfBase64 } = await generatePdfBlob();
 
       const { data, error } = await supabase.functions.invoke('send-post-pdf', {
         body: {
           emails: selectedEmails,
-          pdfBase64: base64,
+          pdfBase64,
+          screenshotBase64,
           postTitle: post.title,
           postContent: post.content,
           postPlatform: post.platform,
           postAuthor: post.author,
           postDate: post.scheduledDate,
-          postImages: post.images.filter(Boolean),
-          postCategory: post.category,
-          postPillar: post.pillar,
-          postStatus: post.status,
         },
       });
 
