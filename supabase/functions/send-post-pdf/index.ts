@@ -8,7 +8,8 @@ const corsHeaders = {
 }
 
 interface SendPostPdfPayload {
-  email: string
+  emails: string[]
+  email?: string // backward compat
   pdfBase64: string
   postTitle: string
   postContent?: string
@@ -18,7 +19,6 @@ interface SendPostPdfPayload {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -28,26 +28,28 @@ serve(async (req) => {
   }
 
   try {
-    const { email, pdfBase64, postTitle, postContent, postPlatform, postAuthor, postDate } =
-      await req.json() as SendPostPdfPayload
+    const body = await req.json() as SendPostPdfPayload
 
-    if (!email || !pdfBase64) {
+    // Support both `emails` array and legacy single `email`
+    const recipients = body.emails?.length ? body.emails : body.email ? [body.email] : []
+    const { pdfBase64, postTitle, postContent, postPlatform, postAuthor, postDate } = body
+
+    if (recipients.length === 0 || !pdfBase64) {
       return new Response(
-        JSON.stringify({ error: 'email and pdfBase64 are required' }),
+        JSON.stringify({ error: 'emails and pdfBase64 are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     if (!RESEND_API_KEY) {
       return new Response(
-        JSON.stringify({ error: 'RESEND_API_KEY not configured' }),
+        JSON.stringify({ error: 'RESEND_API_KEY not configured. Set it with: supabase secrets set RESEND_API_KEY=re_...' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     const fileName = `post-${postTitle.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.pdf`
 
-    // Build email HTML body
     const emailHtml = `
 <!DOCTYPE html>
 <html>
@@ -61,7 +63,7 @@ serve(async (req) => {
   </div>
   <div style="background: #ffffff; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
     <p style="font-size: 15px; margin-bottom: 16px;">
-      Posílame Vam post <strong>"${postTitle}"</strong> ke schvaleni.
+      Posilame Vam post <strong>"${postTitle}"</strong> ke schvaleni.
     </p>
     ${postPlatform ? `<p style="font-size: 14px; color: #65676B; margin-bottom: 8px;">Platforma: <strong>${postPlatform}</strong></p>` : ''}
     ${postAuthor ? `<p style="font-size: 14px; color: #65676B; margin-bottom: 8px;">Autor: <strong>${postAuthor}</strong></p>` : ''}
@@ -76,13 +78,13 @@ serve(async (req) => {
     </p>
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
     <p style="font-size: 12px; color: #9ca3af; margin: 0;">
-      Odesláno ze Social Canvas Calendar
+      Odeslano ze Social Canvas Calendar
     </p>
   </div>
 </body>
 </html>`
 
-    // Send email via Resend with PDF attachment
+    // Send email to all recipients via Resend
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -91,7 +93,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: 'Social Canvas <onboarding@resend.dev>',
-        to: [email],
+        to: recipients,
         subject: `Post ke schvaleni: ${postTitle}`,
         html: emailHtml,
         attachments: [
@@ -113,10 +115,10 @@ serve(async (req) => {
     }
 
     const resendData = await resendResponse.json()
-    console.log('Email sent successfully:', resendData)
+    console.log('Email sent successfully to', recipients.length, 'recipients:', resendData)
 
     return new Response(
-      JSON.stringify({ success: true, email_id: resendData.id }),
+      JSON.stringify({ success: true, email_id: resendData.id, recipients: recipients.length }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {

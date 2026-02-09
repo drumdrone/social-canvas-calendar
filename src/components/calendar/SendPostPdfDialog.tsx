@@ -1,14 +1,29 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Send, Download } from 'lucide-react';
+import { Loader2, Send, Download, X, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { PostPdfPreview } from './PostPdfPreview';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+
+const STORAGE_KEY = 'social-canvas-preset-emails';
+
+function loadPresetEmails(): string[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePresetEmails(emails: string[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(emails));
+}
 
 interface SendPostPdfDialogProps {
   isOpen: boolean;
@@ -31,13 +46,63 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
   onClose,
   post,
 }) => {
-  const [email, setEmail] = useState('');
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [emailInput, setEmailInput] = useState('');
+  const [presetEmails, setPresetEmails] = useState<string[]>([]);
+  const [showAddPreset, setShowAddPreset] = useState(false);
+  const [newPresetEmail, setNewPresetEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const generatePdf = async (): Promise<string> => {
+  useEffect(() => {
+    if (isOpen) {
+      setPresetEmails(loadPresetEmails());
+    }
+  }, [isOpen]);
+
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const addEmail = (email: string) => {
+    const trimmed = email.trim().toLowerCase();
+    if (trimmed && isValidEmail(trimmed) && !selectedEmails.includes(trimmed)) {
+      setSelectedEmails(prev => [...prev, trimmed]);
+    }
+    setEmailInput('');
+  };
+
+  const removeEmail = (email: string) => {
+    setSelectedEmails(prev => prev.filter(e => e !== email));
+  };
+
+  const togglePresetEmail = (email: string) => {
+    if (selectedEmails.includes(email)) {
+      removeEmail(email);
+    } else {
+      setSelectedEmails(prev => [...prev, email]);
+    }
+  };
+
+  const addPresetEmail = () => {
+    const trimmed = newPresetEmail.trim().toLowerCase();
+    if (trimmed && isValidEmail(trimmed) && !presetEmails.includes(trimmed)) {
+      const updated = [...presetEmails, trimmed];
+      setPresetEmails(updated);
+      savePresetEmails(updated);
+      setNewPresetEmail('');
+      setShowAddPreset(false);
+    }
+  };
+
+  const removePresetEmail = (email: string) => {
+    const updated = presetEmails.filter(e => e !== email);
+    setPresetEmails(updated);
+    savePresetEmails(updated);
+    setSelectedEmails(prev => prev.filter(e => e !== email));
+  };
+
+  const generatePdfBlob = async (): Promise<{ blob: Blob; base64: string }> => {
     if (!previewRef.current) throw new Error('Preview not ready');
 
     const canvas = await html2canvas(previewRef.current, {
@@ -64,76 +129,47 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
       Math.min(imgHeight, pageHeight - 20)
     );
 
-    return pdf.output('datauristring');
+    const blob = pdf.output('blob');
+    const dataUri = pdf.output('datauristring');
+    const base64 = dataUri.split(',')[1];
+
+    return { blob, base64 };
   };
 
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      if (!previewRef.current) throw new Error('Preview not ready');
+      const { blob } = await generatePdfBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `post-${post.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
 
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-      });
-
-      const imgWidth = 190;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const xOffset = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
-      const yOffset = Math.max(10, (pageHeight - imgHeight) / 2);
-
-      pdf.addImage(
-        canvas.toDataURL('image/png'),
-        'PNG',
-        xOffset,
-        yOffset,
-        imgWidth,
-        Math.min(imgHeight, pageHeight - 20)
-      );
-
-      pdf.save(`post-${post.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.pdf`);
-
-      toast({
-        title: 'PDF stazeno',
-        description: 'PDF soubor byl ulozen.',
-      });
+      toast({ title: 'PDF stazeno', description: 'PDF soubor byl ulozen.' });
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast({
-        title: 'Chyba',
-        description: 'Nepodarilo se vygenerovat PDF.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Chyba', description: 'Nepodarilo se vygenerovat PDF.', variant: 'destructive' });
     } finally {
       setDownloading(false);
     }
   };
 
   const handleSend = async () => {
-    if (!email.trim()) {
-      toast({
-        title: 'Chyba',
-        description: 'Zadejte emailovou adresu.',
-        variant: 'destructive',
-      });
+    if (selectedEmails.length === 0) {
+      toast({ title: 'Chyba', description: 'Vyberte alespon jeden email.', variant: 'destructive' });
       return;
     }
 
     setSending(true);
     try {
-      const pdfDataUri = await generatePdf();
-      // Extract base64 from data URI: "data:application/pdf;base64,..."
-      const pdfBase64 = pdfDataUri.split(',')[1];
+      const { base64 } = await generatePdfBlob();
 
       const { data, error } = await supabase.functions.invoke('send-post-pdf', {
         body: {
-          email: email.trim(),
-          pdfBase64,
+          emails: selectedEmails,
+          pdfBase64: base64,
           postTitle: post.title,
           postContent: post.content,
           postPlatform: post.platform,
@@ -143,25 +179,49 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
       });
 
       if (error) throw error;
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      if (data?.error) throw new Error(data.error);
 
       toast({
         title: 'Email odeslan',
-        description: `PDF bylo odeslano na ${email.trim()}`,
+        description: `PDF odeslano na ${selectedEmails.length} ${selectedEmails.length === 1 ? 'adresu' : selectedEmails.length < 5 ? 'adresy' : 'adres'}`,
       });
 
-      setEmail('');
+      // Auto-save any new emails to presets
+      const newPresets = [...presetEmails];
+      selectedEmails.forEach(email => {
+        if (!newPresets.includes(email)) newPresets.push(email);
+      });
+      if (newPresets.length !== presetEmails.length) {
+        setPresetEmails(newPresets);
+        savePresetEmails(newPresets);
+      }
+
+      setSelectedEmails([]);
       onClose();
     } catch (error: any) {
       console.error('Error sending PDF:', error);
-      toast({
-        title: 'Chyba pri odesilani',
-        description: error.message || 'Nepodarilo se odeslat email. Zkuste stahnout PDF.',
-        variant: 'destructive',
-      });
+
+      const msg = error.message || '';
+      const isEdgeFunctionError =
+        msg.includes('Edge Function') ||
+        msg.includes('FunctionsHttpError') ||
+        msg.includes('FunctionsRelayError') ||
+        msg.includes('Failed to send');
+
+      if (isEdgeFunctionError) {
+        toast({
+          title: 'Edge function neni dostupna',
+          description: 'PDF bude stazeno. Pro odesilani emailem nasadte: supabase functions deploy send-post-pdf',
+          variant: 'destructive',
+        });
+        await handleDownload();
+      } else {
+        toast({
+          title: 'Chyba pri odesilani',
+          description: msg || 'Nepodarilo se odeslat email.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setSending(false);
     }
@@ -174,20 +234,118 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
           <DialogTitle>Odeslat post jako PDF</DialogTitle>
         </DialogHeader>
 
-        {/* Email Input */}
-        <div className="space-y-2">
-          <Label htmlFor="pdf-email">Emailova adresa</Label>
-          <Input
-            id="pdf-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@example.com"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !sending) handleSend();
-            }}
-          />
+        {/* Preset Emails */}
+        {presetEmails.length > 0 && (
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Ulozene emaily (kliknete pro vyber)</Label>
+            <div className="flex flex-wrap gap-2">
+              {presetEmails.map(email => (
+                <div key={email} className="flex items-center gap-0.5">
+                  <Button
+                    variant={selectedEmails.includes(email) ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => togglePresetEmail(email)}
+                  >
+                    {email}
+                  </Button>
+                  <button
+                    onClick={() => removePresetEmail(email)}
+                    className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                    title="Odebrat z ulozenych"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add preset */}
+        <div>
+          {showAddPreset ? (
+            <div className="flex gap-2">
+              <Input
+                value={newPresetEmail}
+                onChange={e => setNewPresetEmail(e.target.value)}
+                placeholder="novy@email.cz"
+                className="h-8 text-sm"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') addPresetEmail();
+                  if (e.key === 'Escape') setShowAddPreset(false);
+                }}
+                autoFocus
+              />
+              <Button size="sm" className="h-8" onClick={addPresetEmail} disabled={!isValidEmail(newPresetEmail.trim())}>
+                Ulozit
+              </Button>
+              <Button size="sm" variant="ghost" className="h-8" onClick={() => { setShowAddPreset(false); setNewPresetEmail(''); }}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground gap-1"
+              onClick={() => setShowAddPreset(true)}
+            >
+              <Plus className="h-3 w-3" />
+              Pridat predvoleny email
+            </Button>
+          )}
         </div>
+
+        {/* Manual email input */}
+        <div className="space-y-2">
+          <Label htmlFor="pdf-email" className="text-xs text-muted-foreground">Nebo zadejte email rucne</Label>
+          <div className="flex gap-2">
+            <Input
+              id="pdf-email"
+              type="email"
+              value={emailInput}
+              onChange={e => setEmailInput(e.target.value)}
+              placeholder="dalsi@email.cz + Enter"
+              className="h-8 text-sm"
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addEmail(emailInput);
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={() => addEmail(emailInput)}
+              disabled={!isValidEmail(emailInput.trim())}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Selected emails summary */}
+        {selectedEmails.length > 0 && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Odeslat na ({selectedEmails.length}):</Label>
+            <div className="flex flex-wrap gap-1">
+              {selectedEmails.map(email => (
+                <span
+                  key={email}
+                  className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-full"
+                >
+                  {email}
+                  <button onClick={() => removeEmail(email)} className="hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Preview */}
         <div className="border rounded-lg p-4 bg-gray-50 overflow-auto">
@@ -209,28 +367,13 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={handleDownload}
-            disabled={downloading || sending}
-          >
-            {downloading ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
+          <Button variant="outline" onClick={handleDownload} disabled={downloading || sending}>
+            {downloading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
             Stahnout PDF
           </Button>
-          <Button
-            onClick={handleSend}
-            disabled={!email.trim() || sending || downloading}
-          >
-            {sending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4 mr-2" />
-            )}
-            Odeslat
+          <Button onClick={handleSend} disabled={selectedEmails.length === 0 || sending || downloading}>
+            {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+            Odeslat ({selectedEmails.length})
           </Button>
         </DialogFooter>
       </DialogContent>
