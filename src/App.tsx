@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { RightCalendarSidebar } from "./components/layout/RightCalendarSidebar";
+import SimpleAuthGate from "./components/SimpleAuthGate";
 import { useEffect } from "react";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -55,28 +56,30 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter basename="/">
-        <AuthProvider>
-          <RedirectHandler />
-          <div className="flex h-screen overflow-hidden">
-            <div className="flex-1 overflow-auto">
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<Index />} />
-                <Route path="/calendar" element={<Index />} />
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/matrix" element={<ProtectedRoute><Matrix /></ProtectedRoute>} />
-                <Route path="/plan" element={<ProtectedRoute><Plan /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/post/:id" element={<ShareablePost />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+      <SimpleAuthGate>
+        <BrowserRouter basename="/">
+          <AuthProvider>
+            <RedirectHandler />
+            <div className="flex h-screen overflow-hidden">
+              <div className="flex-1 overflow-auto">
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                  <Route path="/calendar" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/matrix" element={<ProtectedRoute><Matrix /></ProtectedRoute>} />
+                  <Route path="/plan" element={<ProtectedRoute><Plan /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/post/:id" element={<ShareablePost />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+              <RightCalendarSidebar />
             </div>
-            <RightCalendarSidebar />
-          </div>
-        </AuthProvider>
-      </BrowserRouter>
+          </AuthProvider>
+        </BrowserRouter>
+      </SimpleAuthGate>
     </TooltipProvider>
   </QueryClientProvider>
 );
