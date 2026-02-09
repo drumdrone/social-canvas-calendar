@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History, Plus, MessageSquare, Edit3, Check } from 'lucide-react';
+import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History, Plus, MessageSquare, Edit3, Check, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +20,7 @@ import { MultiImageUpload } from './MultiImageUpload';
 import { MentionInput } from './MentionInput';
 import { CommentEditor } from '../comments/CommentEditor';
 import { CommentList } from '../comments/CommentList';
+import { SendPostPdfDialog } from './SendPostPdfDialog';
 
 interface PostSlidingSidebarProps {
   isOpen: boolean;
@@ -57,6 +58,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [recurringActionId, setRecurringActionId] = useState<string>('none');
   const [recurringActions, setRecurringActions] = useState<Array<{id: string, title: string, action_type: string}>>([]);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showPdfDialog, setShowPdfDialog] = useState(false);
   const [comments, setComments] = useState('');
   const [newComment, setNewComment] = useState('');
   const [selectedCommentAuthor, setSelectedCommentAuthor] = useState('');
@@ -627,15 +629,27 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
             </div>
             <div className="flex items-center gap-2">
               {post && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowVersionHistory(true)}
-                  title="View version history"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <History className="h-4 w-4" />
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPdfDialog(true)}
+                    title="Odeslat post jako PDF"
+                    className="text-primary hover:text-primary hover:bg-primary/10 gap-1"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className="text-xs">PDF</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowVersionHistory(true)}
+                    title="View version history"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <History className="h-4 w-4" />
+                  </Button>
+                </>
               )}
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-5 w-5" />
@@ -1170,6 +1184,25 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           onClose();
         }}
       />
+
+      {/* Send Post as PDF Dialog */}
+      {post && (
+        <SendPostPdfDialog
+          isOpen={showPdfDialog}
+          onClose={() => setShowPdfDialog(false)}
+          post={{
+            title,
+            content,
+            platform,
+            author: authorOptions.find(a => a.initials === author)?.name || author || '',
+            scheduledDate: scheduledDate.toISOString(),
+            images: postImages,
+            category,
+            pillar,
+            status,
+          }}
+        />
+      )}
     </>
   );
 };
