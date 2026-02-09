@@ -17,6 +17,22 @@ export const RightCalendarSidebar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [monthlyPosts, setMonthlyPosts] = useState<MonthlyPosts[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusColors, setStatusColors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchStatusColors = async () => {
+      const { data } = await supabase
+        .from('post_statuses')
+        .select('name, color')
+        .eq('is_active', true);
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach(s => { map[s.name] = s.color; });
+        setStatusColors(map);
+      }
+    };
+    fetchStatusColors();
+  }, []);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -180,9 +196,16 @@ export const RightCalendarSidebar: React.FC = () => {
                         )}
 
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-foreground truncate">
-                            {post.title || 'Untitled'}
-                          </h4>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: statusColors[post.status] || '#6B7280' }}
+                              title={post.status || 'unknown'}
+                            />
+                            <h4 className="text-sm font-medium text-foreground truncate">
+                              {post.title || 'Untitled'}
+                            </h4>
+                          </div>
                           <div className="flex items-center gap-1.5 mt-1">
                             <span className="text-[10px] text-muted-foreground">
                               {format(new Date(post.scheduled_date), 'HH:mm')}
