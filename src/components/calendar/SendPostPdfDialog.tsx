@@ -104,12 +104,13 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
   const captureScreenshot = async (): Promise<string> => {
     if (!previewRef.current) throw new Error('Preview not ready');
     const canvas = await html2canvas(previewRef.current, {
-      scale: 2,
+      scale: 1.5,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
     });
-    return canvas.toDataURL('image/png');
+    // Use JPEG for smaller payload (PNG base64 can be 2MB+)
+    return canvas.toDataURL('image/jpeg', 0.85);
   };
 
   const handleDownload = async () => {
@@ -118,7 +119,7 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
       const dataUrl = await captureScreenshot();
       const a = document.createElement('a');
       a.href = dataUrl;
-      a.download = `post-${post.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.png`;
+      a.download = `post-${post.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.jpg`;
       a.click();
 
       toast({ title: 'Obrazek stazen', description: 'PNG soubor byl ulozen.' });
@@ -153,8 +154,10 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
         },
       });
 
+      // Edge function now always returns 200, check for error in body
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (!data?.success) throw new Error('Neocekavana odpoved ze serveru');
 
       toast({
         title: 'Email odeslan',
