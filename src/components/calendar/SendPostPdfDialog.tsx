@@ -175,6 +175,10 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
           postPlatform: post.platform,
           postAuthor: post.author,
           postDate: post.scheduledDate,
+          postImages: post.images.filter(Boolean),
+          postCategory: post.category,
+          postPillar: post.pillar,
+          postStatus: post.status,
         },
       });
 
