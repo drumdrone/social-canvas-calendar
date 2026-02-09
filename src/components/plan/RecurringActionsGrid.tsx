@@ -3,7 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { RecurringActionCard, RecurringAction } from './RecurringActionCard';
 import { AddActionDialog } from './AddActionDialog';
 import { toast } from 'sonner';
@@ -23,7 +22,6 @@ interface RecurringActionsGridProps {
 }
 
 export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPostClick }) => {
-  const { user } = useAuth();
   const [actions, setActions] = useState<RecurringAction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,14 +29,11 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
 
   const loadActions = useCallback(async () => {
-    if (!user) return;
-
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('recurring_actions')
         .select('*')
-        .eq('user_id', user.id)
         .order('order_index', { ascending: true });
 
       if (error) throw error;
@@ -50,7 +45,7 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     loadActions();
@@ -62,13 +57,12 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
   };
 
   const addAction = async (title: string, frequency: string) => {
-    if (!user || !pendingActionType) return;
+    if (!pendingActionType) return;
 
     try {
       const { data, error } = await supabase
         .from('recurring_actions')
         .insert([{
-          user_id: user.id,
           action_type: pendingActionType,
           title,
           frequency,
@@ -123,13 +117,12 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
   };
 
   const deleteAllActions = async () => {
-    if (!user) return;
-
     try {
+      const actionIds = actions.map(a => a.id);
       const { error } = await supabase
         .from('recurring_actions')
         .delete()
-        .eq('user_id', user.id);
+        .in('id', actionIds);
 
       if (error) throw error;
 
