@@ -25,7 +25,7 @@ const ensureUserViaEdgeFunction = async (): Promise<boolean> => {
     });
 
     if (error) {
-      console.error('Supabase auto-login: edge function error -', error.message);
+      console.error('Supabase auto-login: edge function error -', error.message, error);
       return false;
     }
 
@@ -34,10 +34,16 @@ const ensureUserViaEdgeFunction = async (): Promise<boolean> => {
       return true;
     }
 
-    console.error('Supabase auto-login: edge function returned:', data);
+    // Handle case where edge function returns error in data
+    if (data?.error) {
+      console.error('Supabase auto-login: edge function returned error:', data.error);
+      return false;
+    }
+
+    console.error('Supabase auto-login: edge function returned unexpected:', JSON.stringify(data));
     return false;
   } catch (err: any) {
-    console.error('Supabase auto-login: edge function call failed -', err?.message);
+    console.error('Supabase auto-login: edge function call failed -', err?.message, err);
     return false;
   }
 };
@@ -62,34 +68,44 @@ export const ensureSupabaseSession = async (): Promise<string | null> => {
     return signInData.session.user.id;
   }
 
-  // Sign-in failed - use edge function to create/confirm user, then retry
-  const needsEdgeFunction =
-    signInError?.message?.includes('Invalid login credentials') ||
-    signInError?.message?.includes('Email not confirmed');
+  // Sign-in failed - always try edge function to create/confirm user
+  // This handles "Email not confirmed", "Invalid login credentials", and any other auth errors
+  console.log('Supabase auto-login: sign-in failed, trying edge function...', signInError?.message);
+  const ensured = await ensureUserViaEdgeFunction();
 
-  if (needsEdgeFunction) {
-    console.log('Supabase auto-login: sign-in blocked, using edge function...', signInError?.message);
-    const ensured = await ensureUserViaEdgeFunction();
+  if (ensured) {
+    // Retry sign-in after edge function confirmed the user
+    // Add a small delay to allow Supabase to propagate the email confirmation
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    if (ensured) {
-      // Retry sign-in after edge function confirmed the user
-      const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-        email: SUPABASE_EMAIL,
-        password: SUPABASE_PASSWORD,
-      });
+    const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+      email: SUPABASE_EMAIL,
+      password: SUPABASE_PASSWORD,
+    });
 
-      if (!retryError && retryData.session) {
-        console.log('Supabase auto-login: signed in after edge function');
-        return retryData.session.user.id;
-      }
-
-      console.error('Supabase auto-login: sign-in still failed after edge function -', retryError?.message);
+    if (!retryError && retryData.session) {
+      console.log('Supabase auto-login: signed in after edge function');
+      return retryData.session.user.id;
     }
 
-    return null;
+    console.error('Supabase auto-login: sign-in still failed after edge function -', retryError?.message);
+
+    // Second retry with longer delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const { data: retry2Data, error: retry2Error } = await supabase.auth.signInWithPassword({
+      email: SUPABASE_EMAIL,
+      password: SUPABASE_PASSWORD,
+    });
+
+    if (!retry2Error && retry2Data.session) {
+      console.log('Supabase auto-login: signed in on second retry');
+      return retry2Data.session.user.id;
+    }
+
+    console.error('Supabase auto-login: all retries failed -', retry2Error?.message);
   }
 
-  console.error('Supabase auto-login: sign in failed -', signInError?.message);
   return null;
 };
 

@@ -21,23 +21,50 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     // Check if user already exists
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+
+    if (listError) {
+      console.error('Failed to list users:', listError.message);
+      return new Response(
+        JSON.stringify({ error: 'Failed to list users: ' + listError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const existingUser = existingUsers?.users?.find(u => u.email === email);
 
     if (existingUser) {
-      // User exists - ensure email is confirmed
-      if (!existingUser.email_confirmed_at) {
-        await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
-          email_confirm: true,
-        });
+      // User exists - ensure email is confirmed and password is correct
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+        email_confirm: true,
+        password: password,
+      });
+
+      if (updateError) {
+        console.error('Failed to update user:', updateError.message);
+        return new Response(
+          JSON.stringify({ error: 'Failed to update user: ' + updateError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+
+      console.log('User confirmed and updated:', existingUser.id);
       return new Response(
         JSON.stringify({ success: true, user_id: existingUser.id }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,17 +79,20 @@ Deno.serve(async (req: Request) => {
     });
 
     if (error) {
+      console.error('Failed to create user:', error.message);
       return new Response(
         JSON.stringify({ error: error.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('User created:', data.user.id);
     return new Response(
       JSON.stringify({ success: true, user_id: data.user.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    console.error('Edge function error:', error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
