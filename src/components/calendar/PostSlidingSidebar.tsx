@@ -194,6 +194,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
+      // Use getSession() (local, no API call) instead of getUser() (network call that can fail)
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || null;
 
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
@@ -222,13 +225,14 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       console.log('Post ID:', post?.id);
       console.log('Status value:', status);
       console.log('Status type:', typeof status);
+      console.log('User ID from session:', userId);
       console.log('All postData:', postData);
 
       if (post) {
         // Update existing post - preserve user_id
         const updateData = {
           ...postData,
-          user_id: post.user_id || null,
+          user_id: post.user_id || userId,
         };
 
         console.log('Updating with data:', updateData);
@@ -253,26 +257,23 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           throw error;
         }
 
-        if (data && data.length > 0) {
-          console.log('Successfully updated post. New data:', data[0]);
+        if (!data || data.length === 0) {
+          throw new Error('Post could not be updated. You may not have permission to edit this post.');
         }
+
+        console.log('Successfully updated post. New data:', data[0]);
 
         toast({
           title: 'Success',
           description: 'Post updated successfully!',
         });
       } else {
-        // Create new post - must include user_id for RLS
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-
+        // Create new post
         const { error } = await supabase
           .from('social_media_posts')
           .insert([{
             ...postData,
-            user_id: user.id,
+            user_id: userId,
           }]);
 
         if (error) throw error;
@@ -287,11 +288,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
       // Trigger refresh which will also handle closing
       onSave();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving post:', error);
+      const errorMessage = error?.message || 'Failed to save post';
       toast({
         title: 'Error',
-        description: 'Failed to save post',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

@@ -346,11 +346,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         imageUrl = publicUrl;
       }
 
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
+      // Get user from local session (no API call)
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || null;
 
       const { error } = await supabase
         .from('social_media_posts')
@@ -363,7 +361,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           pillar: newPost.pillar,
           scheduled_date: scheduledDateTime.toISOString(),
           image_url: imageUrl,
-          user_id: user.id,
+          user_id: userId,
         }]);
 
       if (error) throw error;
