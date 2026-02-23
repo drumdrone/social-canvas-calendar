@@ -3,10 +3,48 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 
 const SIMPLE_AUTH_KEY = 'simple_auth_verified';
 const VALID_USERNAME = 'admin';
 const VALID_PASSWORD = 'canvas2026';
+
+// Supabase auth account used for database operations
+const SUPABASE_EMAIL = 'admin@socialcanvas.app';
+const SUPABASE_PASSWORD = 'canvas2026admin';
+
+const ensureSupabaseSession = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) return;
+
+  // Try to sign in
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: SUPABASE_EMAIL,
+    password: SUPABASE_PASSWORD,
+  });
+
+  if (signInError && signInError.message.includes('Invalid login credentials')) {
+    // Account doesn't exist yet, create it
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: SUPABASE_EMAIL,
+      password: SUPABASE_PASSWORD,
+    });
+    if (signUpError) {
+      console.error('Supabase auto-login: sign up failed', signUpError.message);
+      return;
+    }
+    // Try signing in again after sign up
+    const { error } = await supabase.auth.signInWithPassword({
+      email: SUPABASE_EMAIL,
+      password: SUPABASE_PASSWORD,
+    });
+    if (error) {
+      console.error('Supabase auto-login: sign in after sign up failed', error.message);
+    }
+  } else if (signInError) {
+    console.error('Supabase auto-login: sign in failed', signInError.message);
+  }
+};
 
 const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isVerified, setIsVerified] = useState<boolean>(() => {
@@ -15,6 +53,13 @@ const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  // Ensure Supabase session exists when gate is already verified
+  useEffect(() => {
+    if (isVerified) {
+      ensureSupabaseSession();
+    }
+  }, [isVerified]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
