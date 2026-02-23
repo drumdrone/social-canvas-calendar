@@ -13,37 +13,62 @@ const VALID_PASSWORD = 'canvas2026';
 const SUPABASE_EMAIL = 'admin@socialcanvas.app';
 const SUPABASE_PASSWORD = 'canvas2026admin';
 
-const ensureSupabaseSession = async () => {
+/**
+ * Ensures a Supabase Auth session exists. Returns user ID or null.
+ * Creates account automatically if it doesn't exist.
+ */
+export const ensureSupabaseSession = async (): Promise<string | null> => {
+  // Check existing session first
   const { data: { session } } = await supabase.auth.getSession();
-  if (session) return;
+  if (session?.user?.id) return session.user.id;
 
   // Try to sign in
-  const { error: signInError } = await supabase.auth.signInWithPassword({
+  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: SUPABASE_EMAIL,
     password: SUPABASE_PASSWORD,
   });
 
+  if (!signInError && signInData.session) {
+    console.log('Supabase auto-login: signed in successfully');
+    return signInData.session.user.id;
+  }
+
   if (signInError && signInError.message.includes('Invalid login credentials')) {
     // Account doesn't exist yet, create it
-    const { error: signUpError } = await supabase.auth.signUp({
+    console.log('Supabase auto-login: creating account...');
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: SUPABASE_EMAIL,
       password: SUPABASE_PASSWORD,
     });
+
     if (signUpError) {
-      console.error('Supabase auto-login: sign up failed', signUpError.message);
-      return;
+      console.error('Supabase auto-login: sign up failed -', signUpError.message);
+      return null;
     }
-    // Try signing in again after sign up
-    const { error } = await supabase.auth.signInWithPassword({
+
+    // signUp may return a session directly (if email confirmation is disabled)
+    if (signUpData.session) {
+      console.log('Supabase auto-login: signed up and got session');
+      return signUpData.session.user.id;
+    }
+
+    // Try signing in after sign up (works if email confirmation is disabled)
+    const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
       email: SUPABASE_EMAIL,
       password: SUPABASE_PASSWORD,
     });
-    if (error) {
-      console.error('Supabase auto-login: sign in after sign up failed', error.message);
+
+    if (!retryError && retryData.session) {
+      console.log('Supabase auto-login: signed in after sign up');
+      return retryData.session.user.id;
     }
-  } else if (signInError) {
-    console.error('Supabase auto-login: sign in failed', signInError.message);
+
+    console.error('Supabase auto-login: could not sign in after sign up -', retryError?.message);
+    return null;
   }
+
+  console.error('Supabase auto-login: sign in failed -', signInError?.message);
+  return null;
 };
 
 const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
