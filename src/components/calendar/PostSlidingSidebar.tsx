@@ -194,6 +194,16 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
+      // Verify auth session before any save operation
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: 'Error',
+          description: 'Session expired. Please log in again.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
@@ -225,10 +235,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       console.log('All postData:', postData);
 
       if (post) {
-        // Update existing post - preserve user_id
+        // Update existing post - set user_id to current user if legacy post (null), otherwise preserve
         const updateData = {
           ...postData,
-          user_id: post.user_id || null,
+          user_id: post.user_id || user.id,
         };
 
         console.log('Updating with data:', updateData);
@@ -253,9 +263,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           throw error;
         }
 
-        if (data && data.length > 0) {
-          console.log('Successfully updated post. New data:', data[0]);
+        if (!data || data.length === 0) {
+          throw new Error('Post could not be updated. You may not have permission to edit this post.');
         }
+
+        console.log('Successfully updated post. New data:', data[0]);
 
         toast({
           title: 'Success',
@@ -263,11 +275,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         });
       } else {
         // Create new post - must include user_id for RLS
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-
         const { error } = await supabase
           .from('social_media_posts')
           .insert([{
@@ -287,11 +294,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
       // Trigger refresh which will also handle closing
       onSave();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving post:', error);
+      const errorMessage = error?.message || 'Failed to save post';
       toast({
         title: 'Error',
-        description: 'Failed to save post',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
