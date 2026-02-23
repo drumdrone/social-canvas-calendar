@@ -194,16 +194,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
-      // Verify auth session before any save operation
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: 'Error',
-          description: 'Session expired. Please log in again.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      // Use getSession() (local, no API call) instead of getUser() (network call that can fail)
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || null;
 
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
@@ -232,13 +225,14 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       console.log('Post ID:', post?.id);
       console.log('Status value:', status);
       console.log('Status type:', typeof status);
+      console.log('User ID from session:', userId);
       console.log('All postData:', postData);
 
       if (post) {
-        // Update existing post - set user_id to current user if legacy post (null), otherwise preserve
+        // Update existing post - preserve user_id
         const updateData = {
           ...postData,
-          user_id: post.user_id || user.id,
+          user_id: post.user_id || userId,
         };
 
         console.log('Updating with data:', updateData);
@@ -274,12 +268,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           description: 'Post updated successfully!',
         });
       } else {
-        // Create new post - must include user_id for RLS
+        // Create new post
         const { error } = await supabase
           .from('social_media_posts')
           .insert([{
             ...postData,
-            user_id: user.id,
+            user_id: userId,
           }]);
 
         if (error) throw error;
