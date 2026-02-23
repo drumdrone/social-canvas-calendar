@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
+import { ensureSupabaseSession } from '../SimpleAuthGate';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
@@ -194,9 +195,16 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
-      // Use getSession() (local, no API call) instead of getUser() (network call that can fail)
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id || null;
+      // Ensure Supabase session exists (auto-creates account if needed)
+      const userId = await ensureSupabaseSession();
+      if (!userId) {
+        toast({
+          title: 'Error',
+          description: 'Nepodařilo se přihlásit k databázi. Zkuste obnovit stránku.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);

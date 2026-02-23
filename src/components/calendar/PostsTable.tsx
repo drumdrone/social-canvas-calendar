@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Platform, PostStatus, SocialPost, Category } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
+import { ensureSupabaseSession } from '../SimpleAuthGate';
 import { toast } from 'sonner';
 
 interface PostsTableProps {
@@ -346,9 +347,11 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         imageUrl = publicUrl;
       }
 
-      // Get user from local session (no API call)
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id || null;
+      // Ensure Supabase session exists (auto-creates account if needed)
+      const userId = await ensureSupabaseSession();
+      if (!userId) {
+        throw new Error('Nepodařilo se přihlásit k databázi. Zkuste obnovit stránku.');
+      }
 
       const { error } = await supabase
         .from('social_media_posts')
