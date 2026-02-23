@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.send-post-pdf]
 verify_jwt = false
+
+[functions.ensure-app-user]
+verify_jwt = false

@@ -14,8 +14,37 @@ const SUPABASE_EMAIL = 'admin@socialcanvas.app';
 const SUPABASE_PASSWORD = 'canvas2026admin';
 
 /**
+ * Calls the ensure-app-user edge function to create/confirm the admin user
+ * via the Supabase Admin API (bypasses email confirmation requirement).
+ */
+const ensureUserViaEdgeFunction = async (): Promise<boolean> => {
+  try {
+    console.log('Supabase auto-login: calling ensure-app-user edge function...');
+    const { data, error } = await supabase.functions.invoke('ensure-app-user', {
+      body: { email: SUPABASE_EMAIL, password: SUPABASE_PASSWORD },
+    });
+
+    if (error) {
+      console.error('Supabase auto-login: edge function error -', error.message);
+      return false;
+    }
+
+    if (data?.success) {
+      console.log('Supabase auto-login: user ensured via edge function, user_id:', data.user_id);
+      return true;
+    }
+
+    console.error('Supabase auto-login: edge function returned:', data);
+    return false;
+  } catch (err: any) {
+    console.error('Supabase auto-login: edge function call failed -', err?.message);
+    return false;
+  }
+};
+
+/**
  * Ensures a Supabase Auth session exists. Returns user ID or null.
- * Creates account automatically if it doesn't exist.
+ * Uses edge function to create/confirm user if email confirmation blocks sign-in.
  */
 export const ensureSupabaseSession = async (): Promise<string | null> => {
   // Check existing session first
@@ -33,37 +62,30 @@ export const ensureSupabaseSession = async (): Promise<string | null> => {
     return signInData.session.user.id;
   }
 
-  if (signInError && signInError.message.includes('Invalid login credentials')) {
-    // Account doesn't exist yet, create it
-    console.log('Supabase auto-login: creating account...');
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: SUPABASE_EMAIL,
-      password: SUPABASE_PASSWORD,
-    });
+  // Sign-in failed - use edge function to create/confirm user, then retry
+  const needsEdgeFunction =
+    signInError?.message?.includes('Invalid login credentials') ||
+    signInError?.message?.includes('Email not confirmed');
 
-    if (signUpError) {
-      console.error('Supabase auto-login: sign up failed -', signUpError.message);
-      return null;
+  if (needsEdgeFunction) {
+    console.log('Supabase auto-login: sign-in blocked, using edge function...', signInError?.message);
+    const ensured = await ensureUserViaEdgeFunction();
+
+    if (ensured) {
+      // Retry sign-in after edge function confirmed the user
+      const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+        email: SUPABASE_EMAIL,
+        password: SUPABASE_PASSWORD,
+      });
+
+      if (!retryError && retryData.session) {
+        console.log('Supabase auto-login: signed in after edge function');
+        return retryData.session.user.id;
+      }
+
+      console.error('Supabase auto-login: sign-in still failed after edge function -', retryError?.message);
     }
 
-    // signUp may return a session directly (if email confirmation is disabled)
-    if (signUpData.session) {
-      console.log('Supabase auto-login: signed up and got session');
-      return signUpData.session.user.id;
-    }
-
-    // Try signing in after sign up (works if email confirmation is disabled)
-    const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-      email: SUPABASE_EMAIL,
-      password: SUPABASE_PASSWORD,
-    });
-
-    if (!retryError && retryData.session) {
-      console.log('Supabase auto-login: signed in after sign up');
-      return retryData.session.user.id;
-    }
-
-    console.error('Supabase auto-login: could not sign in after sign up -', retryError?.message);
     return null;
   }
 
