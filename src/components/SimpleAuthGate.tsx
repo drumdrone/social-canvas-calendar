@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 
 const SIMPLE_AUTH_KEY = 'simple_auth_verified';
-const VALID_USERNAME = 'admin';
-const VALID_PASSWORD = 'canvas2026';
+const VALID_PASSWORD = 'socka';
 
 // Supabase auth account used for database operations
 const SUPABASE_EMAIL = 'admin@socialcanvas.app';
@@ -130,7 +129,6 @@ const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const [isVerified, setIsVerified] = useState<boolean>(() => {
     return localStorage.getItem(SIMPLE_AUTH_KEY) === 'true';
   });
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
@@ -145,11 +143,11 @@ const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
     e.preventDefault();
     setError('');
 
-    if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+    if (password === VALID_PASSWORD) {
       localStorage.setItem(SIMPLE_AUTH_KEY, 'true');
       setIsVerified(true);
     } else {
-      setError('Nesprávné přihlašovací údaje');
+      setError('Nesprávné heslo');
     }
   };
 
@@ -163,23 +161,11 @@ const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
         <CardHeader>
           <CardTitle>Přístup do aplikace</CardTitle>
           <CardDescription>
-            Zadejte přihlašovací údaje pro přístup do Social Canvas Calendar
+            Zadejte heslo pro přístup do Social Canvas Calendar
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="gate-username">Uživatel</Label>
-              <Input
-                id="gate-username"
-                type="text"
-                placeholder="Zadejte uživatelské jméno"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                required
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="gate-password">Heslo</Label>
               <Input
@@ -189,6 +175,7 @@ const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                autoFocus
                 required
               />
             </div>
