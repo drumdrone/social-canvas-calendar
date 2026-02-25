@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Platform, PostStatus, SocialPost, Category } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureSupabaseSession, forceReauthenticate } from '../SimpleAuthGate';
+import { ensureSupabaseSession } from '../SimpleAuthGate';
 import { toast } from 'sonner';
 
 interface PostsTableProps {
@@ -347,38 +347,22 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         imageUrl = publicUrl;
       }
 
-      // Get user ID - try cached session first
-      let userId = await ensureSupabaseSession();
+      // Get user ID if available, but don't block on auth failure
+      const userId = await ensureSupabaseSession();
 
-      const insertData = {
-        title: newPost.title,
-        content: newPost.content || null,
-        platform: newPost.platform,
-        status: newPost.status,
-        category: newPost.category,
-        pillar: newPost.pillar,
-        scheduled_date: scheduledDateTime.toISOString(),
-        image_url: imageUrl,
-        user_id: userId || '',
-      };
-
-      // Try to save directly
-      let { error } = await supabase
+      const { error } = await supabase
         .from('social_media_posts')
-        .insert([insertData]);
-
-      // If failed (possibly auth), re-authenticate and retry
-      if (error) {
-        console.warn('Insert failed, retrying with fresh auth...', error.message);
-        const freshUserId = await forceReauthenticate();
-        if (freshUserId) {
-          insertData.user_id = freshUserId;
-          const retryResult = await supabase
-            .from('social_media_posts')
-            .insert([insertData]);
-          error = retryResult.error;
-        }
-      }
+        .insert([{
+          title: newPost.title,
+          content: newPost.content || null,
+          platform: newPost.platform,
+          status: newPost.status,
+          category: newPost.category,
+          pillar: newPost.pillar,
+          scheduled_date: scheduledDateTime.toISOString(),
+          image_url: imageUrl,
+          user_id: userId || null,
+        }]);
 
       if (error) throw error;
 

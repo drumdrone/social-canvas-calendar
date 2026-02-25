@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureSupabaseSession, forceReauthenticate, getLastAuthError } from '../SimpleAuthGate';
+import { ensureSupabaseSession } from '../SimpleAuthGate';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
@@ -195,11 +195,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
-      // Get user ID - try cached session first, then sign in
-      let userId = await ensureSupabaseSession();
+      // Try to get user ID, but don't block save if auth fails
+      const userId = await ensureSupabaseSession();
       console.log('=== SAVING POST DATA ===');
       console.log('Post ID:', post?.id);
-      console.log('User ID from session:', userId);
+      console.log('User ID from session:', userId || '(none - saving without auth)');
 
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
@@ -223,81 +223,34 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         comments: comments || null,
       };
 
-      // Helper to check if an error is auth-related
-      const isAuthError = (err: any) => {
-        const msg = err?.message?.toLowerCase() || '';
-        const code = err?.code || '';
-        return msg.includes('jwt') || msg.includes('token') || msg.includes('auth') ||
-          msg.includes('row-level security') || msg.includes('rls') ||
-          code === 'PGRST301' || code === '42501';
-      };
-
-      // Attempt the save operation
-      const attemptSave = async (currentUserId: string | null) => {
-        if (post) {
-          // Update existing post - use post's original user_id
-          const updateData = {
+      let result;
+      if (post) {
+        // Update existing post
+        const { error, data } = await supabase
+          .from('social_media_posts')
+          .update({
             ...postData,
-            user_id: post.user_id || currentUserId,
-          };
+            user_id: post.user_id || userId || null,
+          })
+          .eq('id', post.id)
+          .select();
 
-          const { error, data } = await supabase
-            .from('social_media_posts')
-            .update(updateData)
-            .eq('id', post.id)
-            .select();
+        result = { error, data };
+      } else {
+        // Create new post - user_id can be null (RLS allows it)
+        const { error, data } = await supabase
+          .from('social_media_posts')
+          .insert([{
+            ...postData,
+            user_id: userId || null,
+          }])
+          .select();
 
-          if (error) {
-            return { error, data: null };
-          }
-
-          if (!data || data.length === 0) {
-            return { error: new Error('Post could not be updated. You may not have permission to edit this post.'), data: null };
-          }
-
-          return { error: null, data };
-        } else {
-          // Create new post - need a user ID
-          if (!currentUserId) {
-            return { error: new Error('No authenticated user for creating post'), data: null };
-          }
-          const { error, data } = await supabase
-            .from('social_media_posts')
-            .insert([{
-              ...postData,
-              user_id: currentUserId,
-            }])
-            .select();
-
-          return { error, data };
-        }
-      };
-
-      // Try to save directly (Supabase client auto-refreshes tokens)
-      let result = await attemptSave(userId);
-
-      // If save failed due to auth issues, force re-authenticate and retry
-      if (result.error && isAuthError(result.error)) {
-        console.warn('Save failed due to auth error, re-authenticating...', result.error.message);
-        const newUserId = await forceReauthenticate();
-        if (newUserId) {
-          userId = newUserId;
-          result = await attemptSave(userId);
-        }
-      }
-
-      // If still failing and we had no userId, try one more time with fresh auth
-      if (result.error && !userId) {
-        console.warn('Save failed without userId, trying force auth...');
-        const freshUserId = await forceReauthenticate();
-        if (freshUserId) {
-          userId = freshUserId;
-          result = await attemptSave(userId);
-        }
+        result = { error, data };
       }
 
       if (result.error) {
-        console.error('Save error details:', result.error);
+        console.error('Save error:', result.error);
         throw result.error;
       }
 
@@ -313,13 +266,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       onSave();
     } catch (error: any) {
       console.error('Error saving post:', error);
-      const errorMessage = error?.message || 'Failed to save post';
-      const authError = getLastAuthError();
       toast({
         title: 'Chyba při ukládání',
-        description: authError
-          ? `Auth: ${authError} | DB: ${errorMessage}`
-          : errorMessage,
+        description: error?.message || 'Failed to save post',
         variant: 'destructive',
       });
     } finally {
