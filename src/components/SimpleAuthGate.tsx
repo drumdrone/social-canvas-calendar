@@ -63,35 +63,24 @@ const attemptSignIn = async (): Promise<string | null> => {
 };
 
 /**
- * Ensures a Supabase Auth session exists and is valid. Returns user ID or null.
- * Uses a fast local-first approach: check cached session, then refresh, then sign in.
+ * Ensures a Supabase Auth session exists. Returns user ID or null.
+ * Uses local-first approach: trust cached session (autoRefreshToken handles expiry),
+ * only sign in if no session exists at all.
  */
 export const ensureSupabaseSession = async (): Promise<string | null> => {
   // Step 1: Check local cached session (fast, no network call)
+  // With autoRefreshToken: true, the Supabase client handles token refresh
+  // automatically during API calls, so we don't need to check expiration.
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user?.id) {
-      // Check if token is still valid (with 60s safety buffer)
-      const expiresAt = session.expires_at;
-      const now = Math.floor(Date.now() / 1000);
-      if (expiresAt && expiresAt > now + 60) {
-        return session.user.id;
-      }
-
-      // Token expired or close to expiring - try refresh
-      console.log('Session token expiring soon, refreshing...');
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (!refreshError && refreshData?.session?.user?.id) {
-        console.log('Session refreshed successfully');
-        return refreshData.session.user.id;
-      }
-      console.warn('Session refresh failed:', refreshError?.message);
+      return session.user.id;
     }
   } catch (e) {
     console.warn('Local session check failed:', e);
   }
 
-  // Step 2: No valid session - try to sign in (single attempt first)
+  // Step 2: No session at all - try to sign in
   try {
     const userId = await attemptSignIn();
     if (userId) {
@@ -102,10 +91,9 @@ export const ensureSupabaseSession = async (): Promise<string | null> => {
     console.warn('Supabase sign-in attempt threw:', e);
   }
 
-  // Step 3: Sign out stale session and retry once
+  // Step 3: Clear everything and retry once
   try {
     try { await supabase.auth.signOut(); } catch (_) { /* ignore */ }
-    await new Promise(resolve => setTimeout(resolve, 500));
     const userId = await attemptSignIn();
     if (userId) {
       console.log('Supabase auto-login: signed in after clearing stale session');

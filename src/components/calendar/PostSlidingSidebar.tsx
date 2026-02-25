@@ -195,21 +195,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
-      // Ensure Supabase session exists (auto-creates account if needed)
+      // Get user ID - try cached session first, then sign in
       let userId = await ensureSupabaseSession();
-      if (!userId) {
-        // Try force re-authentication as a fallback
-        console.warn('Initial auth failed, attempting force re-authentication...');
-        userId = await forceReauthenticate();
-      }
-      if (!userId) {
-        toast({
-          title: 'Error',
-          description: 'Nepodařilo se přihlásit k databázi. Zkuste obnovit stránku.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      console.log('=== SAVING POST DATA ===');
+      console.log('Post ID:', post?.id);
+      console.log('User ID from session:', userId);
 
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
@@ -224,7 +214,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         image_url_1: postImages[0] || null,
         image_url_2: postImages[1] || null,
         image_url_3: postImages[2] || null,
-        // Keep old image_url for backward compatibility - explicitly set null if no image
         image_url: postImages[0] || null,
         scheduled_date: scheduledDateTime.toISOString(),
         pillar: pillar && pillar !== 'none' ? pillar : null,
@@ -233,10 +222,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         recurring_action_id: recurringActionId && recurringActionId !== 'none' ? recurringActionId : null,
         comments: comments || null,
       };
-
-      console.log('=== SAVING POST DATA ===');
-      console.log('Post ID:', post?.id);
-      console.log('User ID from session:', userId);
 
       // Helper to check if an error is auth-related
       const isAuthError = (err: any) => {
@@ -247,10 +232,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           code === 'PGRST301' || code === '42501';
       };
 
-      // Attempt the save operation, with one retry on auth failure
-      const attemptSave = async (currentUserId: string) => {
+      // Attempt the save operation
+      const attemptSave = async (currentUserId: string | null) => {
         if (post) {
-          // Update existing post - preserve user_id
+          // Update existing post - use post's original user_id
           const updateData = {
             ...postData,
             user_id: post.user_id || currentUserId,
@@ -272,7 +257,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
           return { error: null, data };
         } else {
-          // Create new post
+          // Create new post - need a user ID
+          if (!currentUserId) {
+            return { error: new Error('No authenticated user for creating post'), data: null };
+          }
           const { error, data } = await supabase
             .from('social_media_posts')
             .insert([{
@@ -285,14 +273,25 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         }
       };
 
+      // Try to save directly (Supabase client auto-refreshes tokens)
       let result = await attemptSave(userId);
 
-      // If save failed due to auth issues, re-authenticate and retry once
+      // If save failed due to auth issues, force re-authenticate and retry
       if (result.error && isAuthError(result.error)) {
         console.warn('Save failed due to auth error, re-authenticating...', result.error.message);
         const newUserId = await forceReauthenticate();
         if (newUserId) {
           userId = newUserId;
+          result = await attemptSave(userId);
+        }
+      }
+
+      // If still failing and we had no userId, try one more time with fresh auth
+      if (result.error && !userId) {
+        console.warn('Save failed without userId, trying force auth...');
+        const freshUserId = await forceReauthenticate();
+        if (freshUserId) {
+          userId = freshUserId;
           result = await attemptSave(userId);
         }
       }
