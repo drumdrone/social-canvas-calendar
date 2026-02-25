@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureSupabaseSession } from '../SimpleAuthGate';
+import { ensureSupabaseSession, forceReauthenticate } from '../SimpleAuthGate';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
@@ -195,8 +195,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
-      // Try to get user ID, but don't block save if auth fails
-      const userId = await ensureSupabaseSession();
+      // Try to get user ID, retry with force re-auth if needed
+      let userId = await ensureSupabaseSession();
+      if (!userId) {
+        console.log('Initial auth failed, forcing re-authentication...');
+        userId = await forceReauthenticate();
+      }
       console.log('=== SAVING POST DATA ===');
       console.log('Post ID:', post?.id);
       console.log('User ID from session:', userId || '(none - saving without auth)');
@@ -247,6 +251,32 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           .select();
 
         result = { error, data };
+      }
+
+      // If save failed due to null user_id constraint, retry with force re-auth
+      if (result.error?.message?.includes('null value in column') && result.error?.message?.includes('user_id')) {
+        console.log('Save failed due to null user_id, retrying with force re-auth...');
+        const retryUserId = await forceReauthenticate();
+        if (retryUserId) {
+          const retryData = {
+            ...postData,
+            user_id: retryUserId,
+          };
+          if (post) {
+            const { error, data } = await supabase
+              .from('social_media_posts')
+              .update(retryData)
+              .eq('id', post.id)
+              .select();
+            result = { error, data };
+          } else {
+            const { error, data } = await supabase
+              .from('social_media_posts')
+              .insert([retryData])
+              .select();
+            result = { error, data };
+          }
+        }
       }
 
       if (result.error) {
