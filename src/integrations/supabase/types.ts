@@ -583,6 +583,7 @@ export type Database = {
           pillar: string | null
           platform: string
           product_line: string | null
+          recurring_action_id: string | null
           scheduled_date: string
           status: string
           title: string
@@ -603,6 +604,7 @@ export type Database = {
           pillar?: string | null
           platform: string
           product_line?: string | null
+          recurring_action_id?: string | null
           scheduled_date: string
           status?: string
           title: string
@@ -623,6 +625,7 @@ export type Database = {
           pillar?: string | null
           platform?: string
           product_line?: string | null
+          recurring_action_id?: string | null
           scheduled_date?: string
           status?: string
           title?: string

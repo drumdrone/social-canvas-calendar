@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureSupabaseSession } from '../SimpleAuthGate';
+import { ensureSupabaseSession, forceReauthenticate } from '../SimpleAuthGate';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
@@ -196,7 +196,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
     try {
       // Ensure Supabase session exists (auto-creates account if needed)
-      const userId = await ensureSupabaseSession();
+      let userId = await ensureSupabaseSession();
+      if (!userId) {
+        // Try force re-authentication as a fallback
+        console.warn('Initial auth failed, attempting force re-authentication...');
+        userId = await forceReauthenticate();
+      }
       if (!userId) {
         toast({
           title: 'Error',
@@ -231,65 +236,76 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
       console.log('=== SAVING POST DATA ===');
       console.log('Post ID:', post?.id);
-      console.log('Status value:', status);
-      console.log('Status type:', typeof status);
       console.log('User ID from session:', userId);
-      console.log('All postData:', postData);
 
-      if (post) {
-        // Update existing post - preserve user_id
-        const updateData = {
-          ...postData,
-          user_id: post.user_id || userId,
-        };
+      // Helper to check if an error is auth-related
+      const isAuthError = (err: any) => {
+        const msg = err?.message?.toLowerCase() || '';
+        const code = err?.code || '';
+        return msg.includes('jwt') || msg.includes('token') || msg.includes('auth') ||
+          msg.includes('row-level security') || msg.includes('rls') ||
+          code === 'PGRST301' || code === '42501';
+      };
 
-        console.log('Updating with data:', updateData);
-
-        const { error, data } = await supabase
-          .from('social_media_posts')
-          .update(updateData)
-          .eq('id', post.id)
-          .select();
-
-        console.log('Update result - data:', data);
-        console.log('Update result - error:', error);
-
-        if (error) {
-          console.error('Update error details:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-            fullError: error
-          });
-          throw error;
-        }
-
-        if (!data || data.length === 0) {
-          throw new Error('Post could not be updated. You may not have permission to edit this post.');
-        }
-
-        console.log('Successfully updated post. New data:', data[0]);
-
-        toast({
-          title: 'Success',
-          description: 'Post updated successfully!',
-        });
-      } else {
-        // Create new post
-        const { error } = await supabase
-          .from('social_media_posts')
-          .insert([{
+      // Attempt the save operation, with one retry on auth failure
+      const attemptSave = async (currentUserId: string) => {
+        if (post) {
+          // Update existing post - preserve user_id
+          const updateData = {
             ...postData,
-            user_id: userId,
-          }]);
+            user_id: post.user_id || currentUserId,
+          };
 
-        if (error) throw error;
-        toast({
-          title: 'Success',
-          description: 'Post created successfully!',
-        });
+          const { error, data } = await supabase
+            .from('social_media_posts')
+            .update(updateData)
+            .eq('id', post.id)
+            .select();
+
+          if (error) {
+            return { error, data: null };
+          }
+
+          if (!data || data.length === 0) {
+            return { error: new Error('Post could not be updated. You may not have permission to edit this post.'), data: null };
+          }
+
+          return { error: null, data };
+        } else {
+          // Create new post
+          const { error, data } = await supabase
+            .from('social_media_posts')
+            .insert([{
+              ...postData,
+              user_id: currentUserId,
+            }])
+            .select();
+
+          return { error, data };
+        }
+      };
+
+      let result = await attemptSave(userId);
+
+      // If save failed due to auth issues, re-authenticate and retry once
+      if (result.error && isAuthError(result.error)) {
+        console.warn('Save failed due to auth error, re-authenticating...', result.error.message);
+        const newUserId = await forceReauthenticate();
+        if (newUserId) {
+          userId = newUserId;
+          result = await attemptSave(userId);
+        }
       }
+
+      if (result.error) {
+        console.error('Save error details:', result.error);
+        throw result.error;
+      }
+
+      toast({
+        title: 'Success',
+        description: post ? 'Post updated successfully!' : 'Post created successfully!',
+      });
 
       // Dispatch event to refresh Quick Calendar
       window.dispatchEvent(new Event('postsChanged'));

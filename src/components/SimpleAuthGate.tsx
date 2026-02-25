@@ -14,27 +14,21 @@ const SUPABASE_EMAIL = 'admin@socialcanvas.app';
 const SUPABASE_PASSWORD = 'canvas2026admin';
 
 /**
- * Ensures a Supabase Auth session exists. Returns user ID or null.
- * Creates account automatically if it doesn't exist.
+ * Attempts to sign in with the shared Supabase credentials.
+ * Handles account creation if the account doesn't exist yet.
  */
-export const ensureSupabaseSession = async (): Promise<string | null> => {
-  // Check existing session first
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user?.id) return session.user.id;
-
-  // Try to sign in
+const attemptSignIn = async (): Promise<string | null> => {
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: SUPABASE_EMAIL,
     password: SUPABASE_PASSWORD,
   });
 
   if (!signInError && signInData.session) {
-    console.log('Supabase auto-login: signed in successfully');
     return signInData.session.user.id;
   }
 
-  if (signInError && signInError.message.includes('Invalid login credentials')) {
-    // Account doesn't exist yet, create it
+  // If credentials are invalid, try creating the account
+  if (signInError?.message?.includes('Invalid login credentials')) {
     console.log('Supabase auto-login: creating account...');
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: SUPABASE_EMAIL,
@@ -46,20 +40,17 @@ export const ensureSupabaseSession = async (): Promise<string | null> => {
       return null;
     }
 
-    // signUp may return a session directly (if email confirmation is disabled)
     if (signUpData.session) {
-      console.log('Supabase auto-login: signed up and got session');
       return signUpData.session.user.id;
     }
 
-    // Try signing in after sign up (works if email confirmation is disabled)
+    // Try signing in after sign up
     const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
       email: SUPABASE_EMAIL,
       password: SUPABASE_PASSWORD,
     });
 
     if (!retryError && retryData.session) {
-      console.log('Supabase auto-login: signed in after sign up');
       return retryData.session.user.id;
     }
 
@@ -69,6 +60,59 @@ export const ensureSupabaseSession = async (): Promise<string | null> => {
 
   console.error('Supabase auto-login: sign in failed -', signInError?.message);
   return null;
+};
+
+/**
+ * Ensures a Supabase Auth session exists and is valid. Returns user ID or null.
+ * Validates the session with the server (not just local cache).
+ * Retries sign-in on failure with exponential backoff.
+ */
+export const ensureSupabaseSession = async (): Promise<string | null> => {
+  // Step 1: Check if there's a valid session by asking the server
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user?.id && !error) {
+      return user.id;
+    }
+  } catch (e) {
+    console.warn('Supabase session validation failed:', e);
+  }
+
+  // Step 2: No valid session - try to sign in with retries
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      // Clear any stale session data before retrying
+      if (attempt > 0) {
+        try { await supabase.auth.signOut(); } catch (_) { /* ignore */ }
+      }
+
+      const userId = await attemptSignIn();
+      if (userId) {
+        console.log(`Supabase auto-login: signed in on attempt ${attempt + 1}`);
+        return userId;
+      }
+    } catch (e) {
+      console.warn(`Supabase sign-in attempt ${attempt + 1} threw:`, e);
+    }
+
+    // Wait before next retry (1s, 2s)
+    if (attempt < MAX_RETRIES - 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+  }
+
+  console.error('Supabase auto-login: all authentication attempts failed');
+  return null;
+};
+
+/**
+ * Forces a fresh sign-in, clearing any cached session first.
+ * Use this when a database operation fails due to auth issues.
+ */
+export const forceReauthenticate = async (): Promise<string | null> => {
+  try { await supabase.auth.signOut(); } catch (_) { /* ignore */ }
+  return ensureSupabaseSession();
 };
 
 const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
