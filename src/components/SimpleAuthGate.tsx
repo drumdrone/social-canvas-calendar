@@ -16,15 +16,16 @@ const SUPABASE_PASSWORD = 'canvas2026admin';
 /**
  * Attempts to sign in with the shared Supabase credentials.
  * Handles account creation if the account doesn't exist yet.
+ * Returns { userId, error } for diagnostics.
  */
-const attemptSignIn = async (): Promise<string | null> => {
+const attemptSignIn = async (): Promise<{ userId: string | null; error: string | null }> => {
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
     email: SUPABASE_EMAIL,
     password: SUPABASE_PASSWORD,
   });
 
   if (!signInError && signInData.session) {
-    return signInData.session.user.id;
+    return { userId: signInData.session.user.id, error: null };
   }
 
   // If credentials are invalid, try creating the account
@@ -37,11 +38,11 @@ const attemptSignIn = async (): Promise<string | null> => {
 
     if (signUpError) {
       console.error('Supabase auto-login: sign up failed -', signUpError.message);
-      return null;
+      return { userId: null, error: `SignUp: ${signUpError.message}` };
     }
 
     if (signUpData.session) {
-      return signUpData.session.user.id;
+      return { userId: signUpData.session.user.id, error: null };
     }
 
     // Try signing in after sign up
@@ -51,16 +52,18 @@ const attemptSignIn = async (): Promise<string | null> => {
     });
 
     if (!retryError && retryData.session) {
-      return retryData.session.user.id;
+      return { userId: retryData.session.user.id, error: null };
     }
 
-    console.error('Supabase auto-login: could not sign in after sign up -', retryError?.message);
-    return null;
+    return { userId: null, error: `SignIn after SignUp: ${retryError?.message}` };
   }
 
-  console.error('Supabase auto-login: sign in failed -', signInError?.message);
-  return null;
+  return { userId: null, error: `SignIn: ${signInError?.message} (${signInError?.name})` };
 };
+
+// Stores the last auth error for diagnostics
+let _lastAuthError: string | null = null;
+export const getLastAuthError = () => _lastAuthError;
 
 /**
  * Ensures a Supabase Auth session exists. Returns user ID or null.
@@ -68,6 +71,8 @@ const attemptSignIn = async (): Promise<string | null> => {
  * only sign in if no session exists at all.
  */
 export const ensureSupabaseSession = async (): Promise<string | null> => {
+  _lastAuthError = null;
+
   // Step 1: Check local cached session (fast, no network call)
   // With autoRefreshToken: true, the Supabase client handles token refresh
   // automatically during API calls, so we don't need to check expiration.
@@ -76,34 +81,39 @@ export const ensureSupabaseSession = async (): Promise<string | null> => {
     if (session?.user?.id) {
       return session.user.id;
     }
+    _lastAuthError = 'No cached session found';
   } catch (e) {
-    console.warn('Local session check failed:', e);
+    _lastAuthError = `Session check: ${e}`;
   }
 
   // Step 2: No session at all - try to sign in
   try {
-    const userId = await attemptSignIn();
-    if (userId) {
+    const result = await attemptSignIn();
+    if (result.userId) {
+      _lastAuthError = null;
       console.log('Supabase auto-login: signed in successfully');
-      return userId;
+      return result.userId;
     }
+    _lastAuthError = result.error || 'Sign-in returned no user';
   } catch (e) {
-    console.warn('Supabase sign-in attempt threw:', e);
+    _lastAuthError = `Sign-in threw: ${e}`;
   }
 
   // Step 3: Clear everything and retry once
   try {
     try { await supabase.auth.signOut(); } catch (_) { /* ignore */ }
-    const userId = await attemptSignIn();
-    if (userId) {
+    const result = await attemptSignIn();
+    if (result.userId) {
+      _lastAuthError = null;
       console.log('Supabase auto-login: signed in after clearing stale session');
-      return userId;
+      return result.userId;
     }
+    _lastAuthError = result.error || 'Retry sign-in returned no user';
   } catch (e) {
-    console.warn('Supabase sign-in retry threw:', e);
+    _lastAuthError = `Retry threw: ${e}`;
   }
 
-  console.error('Supabase auto-login: all authentication attempts failed');
+  console.error('Supabase auto-login: all attempts failed. Last error:', _lastAuthError);
   return null;
 };
 

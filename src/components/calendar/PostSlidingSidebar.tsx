@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureSupabaseSession, forceReauthenticate } from '../SimpleAuthGate';
+import { ensureSupabaseSession, forceReauthenticate, getLastAuthError } from '../SimpleAuthGate';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
@@ -314,9 +314,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     } catch (error: any) {
       console.error('Error saving post:', error);
       const errorMessage = error?.message || 'Failed to save post';
+      const authError = getLastAuthError();
       toast({
-        title: 'Error',
-        description: errorMessage,
+        title: 'Chyba při ukládání',
+        description: authError
+          ? `Auth: ${authError} | DB: ${errorMessage}`
+          : errorMessage,
         variant: 'destructive',
       });
     } finally {
