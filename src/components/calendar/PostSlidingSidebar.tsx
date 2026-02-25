@@ -195,16 +195,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
-      // Ensure Supabase session exists (auto-creates account if needed)
+      // Try to get user ID, but don't block save if auth fails
       const userId = await ensureSupabaseSession();
-      if (!userId) {
-        toast({
-          title: 'Error',
-          description: 'Nepodařilo se přihlásit k databázi. Zkuste obnovit stránku.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      console.log('=== SAVING POST DATA ===');
+      console.log('Post ID:', post?.id);
+      console.log('User ID from session:', userId || '(none - saving without auth)');
 
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
@@ -219,7 +214,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         image_url_1: postImages[0] || null,
         image_url_2: postImages[1] || null,
         image_url_3: postImages[2] || null,
-        // Keep old image_url for backward compatibility - explicitly set null if no image
         image_url: postImages[0] || null,
         scheduled_date: scheduledDateTime.toISOString(),
         pillar: pillar && pillar !== 'none' ? pillar : null,
@@ -229,67 +223,41 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         comments: comments || null,
       };
 
-      console.log('=== SAVING POST DATA ===');
-      console.log('Post ID:', post?.id);
-      console.log('Status value:', status);
-      console.log('Status type:', typeof status);
-      console.log('User ID from session:', userId);
-      console.log('All postData:', postData);
-
+      let result;
       if (post) {
-        // Update existing post - preserve user_id
-        const updateData = {
-          ...postData,
-          user_id: post.user_id || userId,
-        };
-
-        console.log('Updating with data:', updateData);
-
+        // Update existing post
         const { error, data } = await supabase
           .from('social_media_posts')
-          .update(updateData)
+          .update({
+            ...postData,
+            user_id: post.user_id || userId || null,
+          })
           .eq('id', post.id)
           .select();
 
-        console.log('Update result - data:', data);
-        console.log('Update result - error:', error);
-
-        if (error) {
-          console.error('Update error details:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-            fullError: error
-          });
-          throw error;
-        }
-
-        if (!data || data.length === 0) {
-          throw new Error('Post could not be updated. You may not have permission to edit this post.');
-        }
-
-        console.log('Successfully updated post. New data:', data[0]);
-
-        toast({
-          title: 'Success',
-          description: 'Post updated successfully!',
-        });
+        result = { error, data };
       } else {
-        // Create new post
-        const { error } = await supabase
+        // Create new post - user_id can be null (RLS allows it)
+        const { error, data } = await supabase
           .from('social_media_posts')
           .insert([{
             ...postData,
-            user_id: userId,
-          }]);
+            user_id: userId || null,
+          }])
+          .select();
 
-        if (error) throw error;
-        toast({
-          title: 'Success',
-          description: 'Post created successfully!',
-        });
+        result = { error, data };
       }
+
+      if (result.error) {
+        console.error('Save error:', result.error);
+        throw result.error;
+      }
+
+      toast({
+        title: 'Success',
+        description: post ? 'Post updated successfully!' : 'Post created successfully!',
+      });
 
       // Dispatch event to refresh Quick Calendar
       window.dispatchEvent(new Event('postsChanged'));
@@ -298,10 +266,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       onSave();
     } catch (error: any) {
       console.error('Error saving post:', error);
-      const errorMessage = error?.message || 'Failed to save post';
       toast({
-        title: 'Error',
-        description: errorMessage,
+        title: 'Chyba při ukládání',
+        description: error?.message || 'Failed to save post',
         variant: 'destructive',
       });
     } finally {

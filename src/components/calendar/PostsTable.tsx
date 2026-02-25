@@ -347,11 +347,8 @@ export const PostsTable: React.FC<PostsTableProps> = ({
         imageUrl = publicUrl;
       }
 
-      // Ensure Supabase session exists (auto-creates account if needed)
+      // Get user ID if available, but don't block on auth failure
       const userId = await ensureSupabaseSession();
-      if (!userId) {
-        throw new Error('Nepodařilo se přihlásit k databázi. Zkuste obnovit stránku.');
-      }
 
       const { error } = await supabase
         .from('social_media_posts')
@@ -364,7 +361,7 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           pillar: newPost.pillar,
           scheduled_date: scheduledDateTime.toISOString(),
           image_url: imageUrl,
-          user_id: userId,
+          user_id: userId || null,
         }]);
 
       if (error) throw error;
