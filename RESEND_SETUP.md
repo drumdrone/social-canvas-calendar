@@ -1,35 +1,55 @@
 # Resend Email Setup Guide
 
-The comment mention system uses Resend to send email notifications. Currently, it's in test mode.
+The comment mention system uses Resend to send email notifications from
+`info@socka.site`.
 
-## Current Status
+## How it works
 
-✅ Edge function deployed and working
-✅ Comment system functional
-⚠️ Email delivery limited to test mode
+```
+Uživatel napíše komentář a zmíní @JH
+        │
+        ▼
+Frontend najde @zmínky → dohledá e-mail (tabulka `authors`)
+        │
+        ▼
+Edge Function `send-mention-email`
+        │
+        ▼
+Resend API → from: "Social Canvas <info@socka.site>"
+        │
+        ▼
+📧 e-mail dorazí zmíněnému členovi týmu
+```
 
-## Issue
+The edge function accepts **two payload shapes** so both comment panels work:
 
-Resend's test mode only allows sending emails to your own verified email address (greenapothekelibchavy@gmail.com). To send emails to team members, you need to verify a domain.
+- **Direct** (panel „Comments & Discussion", `@INICIÁLY`):
+  `{ mentionedAuthorEmail, mentionedAuthorName, postTitle, commentText, commenterName }`
+- **Notification record** (panel „Team Mentions", `@Jméno`):
+  `{ notification_id }`
 
-## Solution: Verify a Domain
-
-### Option 1: Verify Your Own Domain (Recommended)
+## Step 1: Verify the socka.site domain in Resend
 
 1. Go to [Resend Domains](https://resend.com/domains)
-2. Click "Add Domain"
-3. Enter your domain (e.g., yourdomain.com)
-4. Add the DNS records provided by Resend to your domain
-5. Wait for verification (usually takes a few minutes)
-6. Update the edge function:
+2. Click **Add Domain**
+3. Enter `socka.site`
+4. Add the DNS records provided by Resend to the socka.site DNS zone:
+   - SPF record
+   - DKIM record(s)
+   - DMARC record
+5. Wait for verification (usually a few minutes)
+
+Once verified, the function sends from `info@socka.site` automatically —
+no code change needed. To use a different address, set the `EMAIL_FROM`
+secret (see Step 2).
+
+## Step 2: Configure Supabase secrets
 
 ```bash
-# Edit: supabase/functions/send-mention-email/index.ts
-# Change line 82 from:
-from: "Social Media Manager <onboarding@resend.dev>",
-
-# To:
-from: "Social Media Manager <notifications@yourdomain.com>",
+supabase secrets set RESEND_API_KEY=re_your_api_key_here
+# optional overrides:
+supabase secrets set EMAIL_FROM="Social Canvas <info@socka.site>"
+supabase secrets set APP_URL="https://socka.site"
 ```
 
 ### Option 2: Use Test Mode (Current Setup)

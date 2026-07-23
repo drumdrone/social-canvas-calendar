@@ -74,9 +74,10 @@ Or manually run the SQL from:
    - DKIM record
    - DMARC record
 5. Wait for verification (usually 5-10 minutes)
-6. Update the Edge Function email "from" address:
-   ```typescript
-   from: 'Social Canvas Calendar <notifications@yourdomain.com>',
+6. The Edge Function sends from `info@socka.site` by default. To override,
+   set the `EMAIL_FROM` secret:
+   ```bash
+   supabase secrets set EMAIL_FROM="Social Canvas <info@socka.site>"
    ```
 
 ### For Testing:
