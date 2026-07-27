@@ -19,8 +19,8 @@ import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
 import { MultiImageUpload } from './MultiImageUpload';
 import { MentionInput } from './MentionInput';
-import { CommentEditor } from '../comments/CommentEditor';
-import { CommentList } from '../comments/CommentList';
+import { MentionText } from '../comments/MentionText';
+import { findMentionedAuthors } from '@/lib/mentions';
 import { SendPostPdfDialog } from './SendPostPdfDialog';
 
 interface PostSlidingSidebarProps {
@@ -66,7 +66,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [editingCommentIndex, setEditingCommentIndex] = useState<number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState('');
   const [activeTab, setActiveTab] = useState('content');
-  const [commentRefresh, setCommentRefresh] = useState(0);
   const { toast } = useToast();
 
   // Load options from database
@@ -444,116 +443,92 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setEditingCommentText('');
   };
 
-  // Function to detect mentions and send emails
+  // Function to detect @mentions in a comment and send email notifications
   const detectMentionsAndSendEmails = async (commentText: string, commenterName: string) => {
-    console.log('=== MENTION DETECTION STARTED ===');
-    console.log('Comment text:', commentText);
-    console.log('Available authors:', authorOptions);
+    const mentionedAuthors = findMentionedAuthors(commentText, authorOptions);
 
-    // Use the same regex as MentionInput component for consistency
-    const mentionRegex = /@([A-Z]{2,})/g;
-    const mentions = [...commentText.matchAll(mentionRegex)];
-    
-    console.log('Mentions found with regex:', mentions);
-    
-    if (mentions.length === 0) {
-      console.log('No mentions detected in comment');
-      toast({
-        title: "No mentions found",
-        description: "No valid mentions (@INITIALS format) detected in comment",
-      });
+    if (mentionedAuthors.length === 0) {
       return;
     }
-    
-    for (const mention of mentions) {
-      const mentionedInitials = mention[1].toUpperCase();
-      console.log('Processing mention for initials:', mentionedInitials);
-      
-      const mentionedAuthor = authorOptions.find(a => 
-        a.initials.toUpperCase() === mentionedInitials
-      );
-      
-      console.log('Found author for initials:', mentionedAuthor);
-      
-      if (mentionedAuthor && mentionedAuthor.email) {
-        try {
-          console.log('=== CALLING EDGE FUNCTION ===');
-          console.log('Sending email to:', mentionedAuthor.email);
-          console.log('Function parameters:', {
+
+    const withoutEmail = mentionedAuthors.filter((author) => !author.email);
+    if (withoutEmail.length > 0) {
+      toast({
+        title: 'Chybí email',
+        description: `${withoutEmail
+          .map((a) => a.name)
+          .join(', ')} nemá vyplněný email (Nastavení → Autoři), notifikace nebyla odeslána.`,
+        variant: 'destructive',
+      });
+    }
+
+    const recipients = mentionedAuthors.filter((author) => author.email);
+    if (recipients.length === 0) {
+      return;
+    }
+
+    const notified: string[] = [];
+    const failed: string[] = [];
+
+    for (const mentionedAuthor of recipients) {
+      try {
+        const { data, error } = await supabase.functions.invoke('send-mention-email', {
+          body: {
             mentionedAuthorEmail: mentionedAuthor.email,
             mentionedAuthorName: mentionedAuthor.name,
+            postId: post?.id ?? null,
             postTitle: title,
             commentText,
             commenterName,
-          });
-          
-          const { data, error } = await supabase.functions.invoke('send-mention-email', {
-            body: {
-              mentionedAuthorEmail: mentionedAuthor.email,
-              mentionedAuthorName: mentionedAuthor.name,
-              postTitle: title,
-              commentText,
-              commenterName,
-            },
-          });
-
-          console.log('=== EDGE FUNCTION RESPONSE ===');
-          console.log('Data:', data);
-          console.log('Error:', error);
-          console.log('=== END EDGE FUNCTION RESPONSE ===');
-
-          if (error) {
-            console.error('Edge function returned error:', error);
-
-            // Check if it's a Resend domain verification issue
-            const isDomainIssue = error.message?.includes("verify a domain") ||
-                                  error.message?.includes("testing emails") ||
-                                  error.message?.includes("test mode");
-
-            toast({
-              title: isDomainIssue ? "Email service not configured" : "Email notification failed",
-              description: isDomainIssue
-                ? "Resend is in test mode. Verify your domain at resend.com/domains to send emails to team members."
-                : `Could not send notification to ${mentionedAuthor.name}: ${error.message}`,
-              variant: "destructive",
-              duration: isDomainIssue ? 10000 : 5000,
-            });
-          } else if (data?.success) {
-            console.log(`SUCCESS: Mention email sent to ${mentionedAuthor.email}`);
-            toast({
-              title: "Email sent successfully",
-              description: `${mentionedAuthor.name} has been notified at ${mentionedAuthor.email}`,
-            });
-          } else if (data?.error) {
-            // Handle error in response data
-            const isDomainIssue = data.error.includes("verify a domain") ||
-                                  data.error.includes("testing emails") ||
-                                  data.error.includes("test mode");
-
-            toast({
-              title: isDomainIssue ? "Email service not configured" : "Email notification failed",
-              description: isDomainIssue
-                ? "Resend is in test mode. Verify your domain at resend.com/domains to send emails to team members."
-                : data.error,
-              variant: "destructive",
-              duration: isDomainIssue ? 10000 : 5000,
-            });
-          }
-        } catch (error) {
-          console.error('Exception calling edge function:', error);
-          toast({
-            title: "Email notification failed",
-            description: `Unable to send mention notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            variant: "destructive",
-          });
-        }
-      } else if (mentionedAuthor && !mentionedAuthor.email) {
-        toast({
-          title: "No email address",
-          description: `${mentionedAuthor.name} doesn't have an email address set`,
-          variant: "destructive",
+          },
         });
+
+        let errorMessage: string | null = null;
+
+        if (error) {
+          errorMessage = error.message;
+          // Edge function returns the real reason in the response body
+          const context = (error as { context?: Response }).context;
+          if (context && typeof context.json === 'function') {
+            try {
+              const body = (await context.json()) as { error?: string };
+              if (body?.error) errorMessage = body.error;
+            } catch {
+              // keep the generic message
+            }
+          }
+        } else if (data && data.success === false) {
+          errorMessage = data.error || 'Neznámá chyba';
+        }
+
+        if (errorMessage) {
+          console.error('send-mention-email failed:', errorMessage, data);
+          failed.push(`${mentionedAuthor.name}: ${errorMessage}`);
+        } else {
+          notified.push(mentionedAuthor.name);
+        }
+      } catch (error) {
+        console.error('Exception calling send-mention-email:', error);
+        failed.push(
+          `${mentionedAuthor.name}: ${error instanceof Error ? error.message : 'Neznámá chyba'}`
+        );
       }
+    }
+
+    if (notified.length > 0) {
+      toast({
+        title: 'Notifikace odeslána',
+        description: `Email z info@socka.site byl odeslán: ${notified.join(', ')}`,
+      });
+    }
+
+    if (failed.length > 0) {
+      toast({
+        title: 'Email se nepodařilo odeslat',
+        description: failed.join(' | '),
+        variant: 'destructive',
+        duration: 10000,
+      });
     }
   };
 
@@ -1038,9 +1013,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                                     </div>
                                     {editingCommentIndex === index ? (
                                       <div className="space-y-2">
-                                        <Textarea
+                                        <MentionInput
                                           value={editingCommentText}
-                                          onChange={(e) => setEditingCommentText(e.target.value)}
+                                          onChange={setEditingCommentText}
+                                          authors={authorOptions}
                                           className="text-sm resize-none"
                                           rows={2}
                                         />
@@ -1065,7 +1041,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                                         </div>
                                       </div>
                                     ) : (
-                                      <div className="text-sm text-foreground whitespace-pre-wrap">{commentText}</div>
+                                      <MentionText
+                                        text={commentText}
+                                        authors={authorOptions}
+                                        className="block text-sm text-foreground"
+                                      />
                                     )}
                                   </div>
                                 </div>
@@ -1131,34 +1111,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     </Button>
                     
                     <p className="text-xs text-muted-foreground">
-                      Comments are for internal team communication. Use @initials or @name to mention team members and send them email notifications.
+                      Komentáře slouží pro interní komunikaci týmu. Napište <strong>@</strong> a vyberte
+                      osobu (podle jména nebo iniciál) – označenému člověku přijde email z
+                      info@socka.site.
                     </p>
                   </div>
-
-                  {/* New @Mention Comment System */}
-                  {post && (
-                    <div className="space-y-4 pt-6 border-t">
-                      <div>
-                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4" />
-                          Team Mentions & Notifications
-                        </h4>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Použijte @ pro označení členů týmu. Email notifikace budou odeslány automaticky.
-                        </p>
-                      </div>
-
-                      <CommentList
-                        postId={post.id}
-                        refreshTrigger={commentRefresh}
-                      />
-
-                      <CommentEditor
-                        postId={post.id}
-                        onCommentAdded={() => setCommentRefresh(prev => prev + 1)}
-                      />
-                    </div>
-                  )}
                 </div>
               </ScrollArea>
             </div>

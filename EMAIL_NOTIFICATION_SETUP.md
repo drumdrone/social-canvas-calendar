@@ -1,199 +1,123 @@
-# Email Notification Setup Guide
+# Komentáře: @označení osob + emaily z info@socka.site
 
-This guide will help you set up email notifications for @mentions in comments.
+Kompletní návod k nastavení notifikací u komentářů. Emaily z komentářů chodí
+**vždy z adresy `info@socka.site`** (jiné funkce, např. odesílání PDF, se tímto nemění).
 
-## Prerequisites
+## Jak to funguje
 
-- Supabase project running
-- Access to Supabase dashboard
-- Domain for sending emails (or use Resend's testing domain)
+1. V detailu příspěvku (pravý sloupec **Comments & Discussion**) napíšeš `@`.
+2. Vyskočí seznam autorů z **Nastavení → Autoři**. Vybíráš podle jména i iniciál,
+   diakritika a velikost písmen nehrají roli (`@jan novak` = `@Jan Novák`).
+3. Po výběru se do textu vloží `@Jméno Příjmení`.
+4. Po odeslání (nebo úpravě) komentáře frontend zavolá edge funkci
+   `send-mention-email` pro každou označenou osobu, která má vyplněný email.
+5. Funkce odešle email přes Resend z `info@socka.site`.
 
-## Step 1: Register for Resend Account
+Zdroj lidí pro označování je tabulka `authors` (jméno, iniciály, email, barva).
+**Kdo nemá v Nastavení → Autoři vyplněný email, tomu notifikace nedorazí** –
+aplikace na to upozorní hláškou hned po odeslání komentáře.
 
-1. Go to [resend.com](https://resend.com)
-2. Sign up for a free account
-3. Verify your email address
-4. Go to **API Keys** section in dashboard
-5. Create a new API key
-6. Copy the API key (starts with `re_...`)
+## 1. Ověření domény socka.site v Resendu
 
-## Step 2: Configure Supabase Secrets
+1. Přihlas se na [resend.com](https://resend.com) → **Domains** → **Add Domain**.
+2. Zadej `socka.site` a vyber region (EU pro evropské zákazníky).
+3. Resend vypíše DNS záznamy – přidej je u registrátora/DNS providera domény
+   `socka.site`:
+   - **MX** + **TXT (SPF)** pro subdoménu `send` (např. `send.socka.site`)
+   - **TXT (DKIM)** – typicky `resend._domainkey.socka.site`
+   - doporučeně **TXT (DMARC)** na `_dmarc.socka.site`, např.
+     `v=DMARC1; p=none; rua=mailto:info@socka.site`
+4. V Resendu klikni na **Verify DNS Records** a počkej na stav `Verified`
+   (obvykle pár minut, propagace může trvat i hodiny).
 
-1. Install Supabase CLI if not already installed:
+Bez ověřené domény umí Resend v testovacím režimu doručit email jen na adresu
+vlastníka účtu – ostatní členové týmu žádný email nedostanou.
+
+## 2. API klíč z Resendu
+
+1. Resend → **API Keys** → **Create API Key** (práva *Sending access*).
+2. Zkopíruj klíč `re_...` (zobrazí se jen jednou).
+
+## 3. Nastavení Supabase secrets
+
 ```bash
-npm install -g supabase
+npm install -g supabase          # pokud ještě nemáš CLI
+supabase login
+supabase link --project-ref ejcjdhtgdjyuucknefvp
+
+supabase secrets set RESEND_API_KEY=re_tvuj_klic
 ```
 
-2. Link your project:
+Volitelné proměnné (mají rozumné výchozí hodnoty, nastavuj jen když chceš změnu):
+
+| Secret | Výchozí hodnota | Popis |
+| --- | --- | --- |
+| `RESEND_API_KEY` | – | **povinné**, klíč z Resendu |
+| `MENTION_FROM_EMAIL` | `info@socka.site` | odesílatel notifikací z komentářů |
+| `MENTION_FROM_NAME` | `Socka – Social Canvas Calendar` | jméno odesílatele |
+| `MENTION_REPLY_TO` | stejné jako `MENTION_FROM_EMAIL` | adresa pro Reply-To |
+| `APP_URL` | `https://drumdrone.github.io/social-canvas-calendar` | základ odkazu „Otevřít příspěvek" |
+
 ```bash
-supabase link --project-ref YOUR_PROJECT_REF
+# příklad, když aplikace poběží na vlastní doméně
+supabase secrets set APP_URL=https://socka.site
 ```
 
-3. Set the Resend API key as a secret:
-```bash
-supabase secrets set RESEND_API_KEY=re_your_api_key_here
-```
+## 4. Nasazení edge funkce
 
-## Step 3: Deploy Edge Function
-
-1. Navigate to your project directory:
-```bash
-cd /home/user/social-canvas-calendar
-```
-
-2. Deploy the Edge Function:
 ```bash
 supabase functions deploy send-mention-email
+supabase functions list          # kontrola
 ```
 
-3. Verify deployment:
+Funkce má v `supabase/config.toml` `verify_jwt = false`, aby ji šlo volat
+z prohlížeče přes `supabase.functions.invoke()`.
+
+## 5. Test
+
+Přes příkazovou řádku:
+
 ```bash
-supabase functions list
+curl -X POST "https://ejcjdhtgdjyuucknefvp.supabase.co/functions/v1/send-mention-email" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mentionedAuthorEmail": "tvuj@email.cz",
+    "mentionedAuthorName": "Test Uživatel",
+    "postTitle": "Testovací příspěvek",
+    "commentText": "Ahoj @Test Uživatel, tohle je test.",
+    "commenterName": "Admin"
+  }'
 ```
 
-## Step 4: Run Database Migration
+Očekávaná odpověď: `{"success":true,"message":"Email odeslán","email_id":"...","from":"info@socka.site"}`
 
-Execute the notification webhook migration:
+V aplikaci:
 
-```bash
-supabase db push
-```
+1. Otevři libovolný příspěvek v kalendáři.
+2. V pravém sloupci vyber autora komentáře, napiš `@` a vyber osobu s emailem.
+3. Klikni **Add Comment** – objeví se toast „Notifikace odeslána".
 
-Or manually run the SQL from:
-- `supabase/migrations/20260123_notification_webhook.sql`
+## Řešení problémů
 
-## Step 5: Configure Resend Domain (Optional but Recommended)
+| Hláška | Příčina / řešení |
+| --- | --- |
+| `RESEND_API_KEY není nastavený` | chybí secret, viz krok 3 |
+| `Doména odesílatele (info@socka.site) není v Resendu ověřená` | dokonči krok 1 |
+| `Chybí email` (toast v aplikaci) | autor nemá email v Nastavení → Autoři |
+| Nic se neděje / CORS chyba v konzoli | funkce není nasazená, viz krok 4 |
+| `Failed to send request to the Edge Function` | špatný `project-ref` při deployi – aplikace používá `ejcjdhtgdjyuucknefvp` |
 
-### For Production (Custom Domain):
+Logy funkce:
 
-1. In Resend dashboard, go to **Domains**
-2. Click **Add Domain**
-3. Enter your domain (e.g., `yourdomain.com`)
-4. Add the provided DNS records to your domain:
-   - SPF record
-   - DKIM record
-   - DMARC record
-5. Wait for verification (usually 5-10 minutes)
-6. Update the Edge Function email "from" address:
-   ```typescript
-   from: 'Social Canvas Calendar <notifications@yourdomain.com>',
-   ```
-
-### For Testing:
-
-Resend provides a test domain `onboarding@resend.dev` that you can use immediately without verification. However, emails will only be sent to the email address you signed up with.
-
-## Step 6: Test the Flow
-
-1. Go to your application
-2. Open a post in the calendar view
-3. Add a comment and mention a user: `@Jan Hrodek test notification`
-4. Submit the comment
-5. Check that:
-   - Comment appears in the UI
-   - Notification is created in database
-   - Email is sent (check recipient's inbox and spam folder)
-
-## Step 7: Configure Email Settings (Alternative Method)
-
-If the webhook approach doesn't work, you can configure Supabase Database Webhooks:
-
-1. Go to Supabase Dashboard → Database → Webhooks
-2. Click **Create a new hook**
-3. Configure:
-   - **Name**: Send Mention Email
-   - **Table**: notifications
-   - **Events**: INSERT
-   - **Type**: Supabase Edge Function
-   - **Edge Function**: send-mention-email
-   - **HTTP Headers**:
-     ```json
-     {
-       "Content-Type": "application/json"
-     }
-     ```
-   - **Payload**:
-     ```sql
-     SELECT id as notification_id FROM notifications WHERE id = NEW.id
-     ```
-
-## Troubleshooting
-
-### Emails Not Sending
-
-1. Check Edge Function logs:
 ```bash
 supabase functions logs send-mention-email
 ```
 
-2. Verify RESEND_API_KEY is set:
-```bash
-supabase secrets list
-```
+## Poznámky
 
-3. Test Edge Function directly:
-```bash
-curl -X POST \
-  'https://YOUR_PROJECT_REF.supabase.co/functions/v1/send-mention-email' \
-  -H 'Authorization: Bearer YOUR_ANON_KEY' \
-  -H 'Content-Type: application/json' \
-  -d '{"notification_id": "YOUR_NOTIFICATION_ID"}'
-```
-
-### Check Notification Table
-
-```sql
-SELECT * FROM notifications ORDER BY created_at DESC LIMIT 10;
-```
-
-### Check User Notification Settings
-
-```sql
-SELECT id, email, full_name, notification_enabled
-FROM user_profiles;
-```
-
-Make sure `notification_enabled` is `true` for users who should receive emails.
-
-## Email Template Customization
-
-To customize the email template, edit:
-`supabase/functions/send-mention-email/index.ts`
-
-Key sections:
-- Line 100-102: Email header styling and title
-- Line 109-111: Email body greeting and message
-- Line 113-115: Comment content display
-- Line 117-122: Call-to-action button
-- Line 126-129: Footer text
-
-After making changes, redeploy:
-```bash
-supabase functions deploy send-mention-email
-```
-
-## Configuration Variables
-
-### Update Project URL in Email Links
-
-In `send-mention-email/index.ts`, line 118:
-```typescript
-href="https://drumdrone.github.io/social-canvas-calendar/post/${postId || ''}"
-```
-
-Update to match your deployment URL.
-
-### Update Settings Link
-
-Line 128:
-```typescript
-href="https://drumdrone.github.io/social-canvas-calendar/settings"
-```
-
-## Security Notes
-
-- Edge Function uses service role key to bypass RLS
-- Never expose service role key in client code
-- Resend API key is stored as Supabase secret
-- Users can disable notifications in Settings
-- Email is only sent once per notification
+- Komentáře se ukládají do sloupce `social_media_posts.comments` ve formátu
+  `[čas] Jméno (INI): text`. Označení jsou součástí textu komentáře.
+- Migrace `20260123_comments_system.sql` a `20260123_notification_webhook.sql`
+  patří ke staršímu, nepoužívanému systému komentářů (tabulky `comments`,
+  `user_profiles`, `notifications`). Aplikace je už nevolá; zůstávají jen
+  kvůli historii migrací.
