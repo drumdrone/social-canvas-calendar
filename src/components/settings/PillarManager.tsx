@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { toast } from 'sonner';
 
 interface Pillar {
@@ -26,13 +26,8 @@ export const PillarManager: React.FC = () => {
 
   const fetchPillars = async () => {
     try {
-      const { data, error } = await supabase
-        .from('pillars')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setPillars(data || []);
+      const data = await convex.query(api.settings.list, { table: 'pillars' });
+      setPillars(data as unknown as Parameters<typeof setPillars>[0]);
     } catch (error) {
       console.error('Error fetching pillars:', error);
       toast.error('Failed to load pillars');
@@ -52,18 +47,13 @@ export const PillarManager: React.FC = () => {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('pillars')
-        .insert([{
-          user_id: user.id,
+      await convex.mutation(api.settings.create, {
+        table: 'pillars',
+        values: {
           name: newPillar.name.trim(),
           color: newPillar.color
-        }]);
-
-      if (error) throw error;
+        },
+      });
 
       toast.success('Pillar created successfully!');
       setIsCreating(false);
@@ -79,12 +69,11 @@ export const PillarManager: React.FC = () => {
 
   const handleUpdate = async (id: string, updates: Partial<Pillar>) => {
     try {
-      const { error } = await supabase
-        .from('pillars')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.update, {
+        table: 'pillars',
+        id,
+        values: updates,
+      });
 
       toast.success('Pillar updated successfully!');
       setEditingId(null);
@@ -104,12 +93,10 @@ export const PillarManager: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('pillars')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.remove, {
+        table: 'pillars',
+        id,
+      });
 
       toast.success('Pillar deleted successfully!');
       fetchPillars();

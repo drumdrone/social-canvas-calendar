@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { toast } from 'sonner';
 
 interface Format {
@@ -26,13 +26,8 @@ export const FormatManager: React.FC = () => {
 
   const fetchFormats = async () => {
     try {
-      const { data, error } = await supabase
-        .from('formats')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setFormats(data || []);
+      const data = await convex.query(api.settings.list, { table: 'formats' });
+      setFormats(data as unknown as Parameters<typeof setFormats>[0]);
     } catch (error) {
       console.error('Error fetching formats:', error);
       toast.error('Failed to load formats');
@@ -52,18 +47,13 @@ export const FormatManager: React.FC = () => {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('formats')
-        .insert([{
-          user_id: user.id,
+      await convex.mutation(api.settings.create, {
+        table: 'formats',
+        values: {
           name: newFormat.name.toLowerCase(),
           color: newFormat.color
-        }]);
-
-      if (error) throw error;
+        },
+      });
 
       toast.success('Format created successfully!');
       setIsCreating(false);
@@ -79,12 +69,11 @@ export const FormatManager: React.FC = () => {
 
   const handleUpdate = async (id: string, updates: Partial<Format>) => {
     try {
-      const { error } = await supabase
-        .from('formats')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.update, {
+        table: 'formats',
+        id,
+        values: updates,
+      });
 
       toast.success('Format updated successfully!');
       setEditingId(null);
@@ -104,12 +93,10 @@ export const FormatManager: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('formats')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.remove, {
+        table: 'formats',
+        id,
+      });
 
       toast.success('Format deleted successfully!');
       fetchFormats();

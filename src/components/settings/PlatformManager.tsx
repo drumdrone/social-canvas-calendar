@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { toast } from 'sonner';
 
 interface Platform {
@@ -35,13 +35,8 @@ export const PlatformManager: React.FC = () => {
 
   const fetchPlatforms = async () => {
     try {
-      const { data, error } = await supabase
-        .from('platforms')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setPlatforms(data || []);
+      const data = await convex.query(api.settings.list, { table: 'platforms' });
+      setPlatforms(data as unknown as Parameters<typeof setPlatforms>[0]);
     } catch (error) {
       console.error('Error fetching platforms:', error);
       toast.error('Failed to load platforms');
@@ -61,19 +56,14 @@ export const PlatformManager: React.FC = () => {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('platforms')
-        .insert([{
-          user_id: user.id,
+      await convex.mutation(api.settings.create, {
+        table: 'platforms',
+        values: {
           name: newPlatform.name.toLowerCase(),
           icon_name: newPlatform.icon_name,
           color: newPlatform.color
-        }]);
-
-      if (error) throw error;
+        },
+      });
 
       toast.success('Platform created successfully!');
       setIsCreating(false);
@@ -89,12 +79,11 @@ export const PlatformManager: React.FC = () => {
 
   const handleUpdate = async (id: string, updates: Partial<Platform>) => {
     try {
-      const { error } = await supabase
-        .from('platforms')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.update, {
+        table: 'platforms',
+        id,
+        values: updates,
+      });
 
       toast.success('Platform updated successfully!');
       setEditingId(null);
@@ -114,12 +103,10 @@ export const PlatformManager: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('platforms')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.remove, {
+        table: 'platforms',
+        id,
+      });
 
       toast.success('Platform deleted successfully!');
       fetchPlatforms();

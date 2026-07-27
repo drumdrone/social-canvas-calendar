@@ -12,7 +12,8 @@ import { PlanningPanel } from './calendar/PlanningPanel';
 import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
 import { Settings, Plus, FileText } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
+import type { Id } from '../../convex/_generated/dataModel';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, addWeeks } from 'date-fns';
 
 export type ViewMode = 'month' | 'week' | 'list' | 'table';
@@ -34,7 +35,6 @@ export interface SocialPost {
   category: Category;
   created_at: string;
   updated_at: string;
-  user_id: string;
   pillar?: string;
   product_line?: string;
   author?: string;
@@ -60,15 +60,13 @@ export const SocialCalendar: React.FC = () => {
     if (editPostId) {
       // Fetch the post and open the sidebar
       const fetchAndEditPost = async () => {
-        const { data, error } = await supabase
-          .from('social_media_posts')
-          .select('*')
-          .eq('id', editPostId)
-          .single();
+        const data = (await convex.query(api.posts.get, {
+          id: editPostId as Id<'social_media_posts'>,
+        })) as unknown as SocialPost | null;
 
-        if (data && !error) {
-          setSidebarPost(data as SocialPost);
-          setEditingPost(data as SocialPost);
+        if (data) {
+          setSidebarPost(data);
+          setEditingPost(data);
           setSelectedDate(new Date(data.scheduled_date));
           setShowSidebar(true);
           // Clear the URL parameter
@@ -83,17 +81,13 @@ export const SocialCalendar: React.FC = () => {
   useEffect(() => {
     const loadInitialSelections = async () => {
       try {
-        const [platformsResult, statusesResult] = await Promise.all([
-          supabase.from('platforms').select('name').eq('is_active', true),
-          supabase.from('post_statuses').select('name').eq('is_active', true)
+        const [platforms, statuses] = await Promise.all([
+          convex.query(api.settings.list, { table: 'platforms', activeOnly: true }),
+          convex.query(api.settings.list, { table: 'post_statuses', activeOnly: true }),
         ]);
-        
-        if (platformsResult.data) {
-          setSelectedPlatforms(platformsResult.data.map(p => p.name));
-        }
-        if (statusesResult.data) {
-          setSelectedStatuses(statusesResult.data.map(s => s.name));
-        }
+
+        setSelectedPlatforms(platforms.map((p) => p.name));
+        setSelectedStatuses(statuses.map((s) => s.name));
       } catch (error) {
         console.error('Error loading initial selections:', error);
       }
@@ -106,17 +100,13 @@ export const SocialCalendar: React.FC = () => {
   useEffect(() => {
     const handleSettingsChange = async () => {
       try {
-        const [platformsResult, statusesResult] = await Promise.all([
-          supabase.from('platforms').select('name').eq('is_active', true),
-          supabase.from('post_statuses').select('name').eq('is_active', true)
+        const [platforms, statuses] = await Promise.all([
+          convex.query(api.settings.list, { table: 'platforms', activeOnly: true }),
+          convex.query(api.settings.list, { table: 'post_statuses', activeOnly: true }),
         ]);
-        
-        if (platformsResult.data) {
-          setSelectedPlatforms(platformsResult.data.map(p => p.name));
-        }
-        if (statusesResult.data) {
-          setSelectedStatuses(statusesResult.data.map(s => s.name));
-        }
+
+        setSelectedPlatforms(platforms.map((p) => p.name));
+        setSelectedStatuses(statuses.map((s) => s.name));
       } catch (error) {
         console.error('Error refreshing selections:', error);
       }

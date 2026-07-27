@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RecurringActionsGrid } from '@/components/plan/RecurringActionsGrid';
 import { PostSlidingSidebar } from '@/components/calendar/PostSlidingSidebar';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { SocialPost } from '@/components/SocialCalendar';
+import type { Id } from '../../convex/_generated/dataModel';
 
 const Plan = () => {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -12,16 +13,12 @@ const Plan = () => {
 
   const handlePostClick = async (postId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('social_media_posts')
-        .select('*')
-        .eq('id', postId)
-        .single();
-
-      if (error) throw error;
+      const data = (await convex.query(api.posts.get, {
+        id: postId as Id<'social_media_posts'>,
+      })) as unknown as SocialPost | null;
 
       if (data) {
-        setEditingPost(data as SocialPost);
+        setEditingPost(data);
         setShowSidebar(true);
       }
     } catch (error) {

@@ -5,7 +5,7 @@ import { SocialPost } from '../SocialCalendar';
 import { Facebook, Instagram, Twitter, Linkedin, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 
 interface CalendarDayProps {
   date: Date;
@@ -36,11 +36,11 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       if (authors.size === 0) return;
       
       try {
-        const { data, error } = await supabase
-          .from('authors')
-          .select('initials, color')
-          .in('initials', Array.from(authors));
-        
+        const allAuthors = await convex.query(api.settings.list, { table: 'authors' });
+        const data = allAuthors
+          .filter((author) => Array.from(authors).includes(author.initials ?? ''))
+          .map((author) => ({ initials: author.initials ?? '', color: author.color }));
+
         if (data) {
           const authorMap = data.reduce((acc, author) => {
             acc[author.initials] = author;

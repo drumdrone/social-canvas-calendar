@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Send, Download, X, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { PostPdfPreview } from './PostPdfPreview';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -177,21 +177,18 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
       // Also generate PDF for attachment
       const { base64: pdfBase64 } = await generatePdfBlob();
 
-      const { data, error } = await supabase.functions.invoke('send-post-pdf', {
-        body: {
-          emails: selectedEmails,
-          pdfBase64,
-          screenshotBase64,
-          postTitle: post.title,
-          postContent: post.content,
-          postPlatform: post.platform,
-          postAuthor: post.author,
-          postDate: post.scheduledDate,
-        },
+      const result = await convex.action(api.email.sendPostPdf, {
+        emails: selectedEmails,
+        pdfBase64,
+        screenshotBase64,
+        postTitle: post.title,
+        postContent: post.content,
+        postPlatform: post.platform,
+        postAuthor: post.author,
+        postDate: post.scheduledDate,
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (!result.success) throw new Error(result.error || 'Email se nepodařilo odeslat');
 
       toast({
         title: 'Email odeslan',
@@ -223,7 +220,7 @@ export const SendPostPdfDialog: React.FC<SendPostPdfDialogProps> = ({
       if (isEdgeFunctionError) {
         toast({
           title: 'Edge function neni dostupna',
-          description: 'PDF bude stazeno. Pro odesilani emailem nasadte: supabase functions deploy send-post-pdf',
+          description: 'PDF bude stazeno. Pro odesilani emailem nasadte Convex funkce: npx convex deploy',
           variant: 'destructive',
         });
         await handleDownload();

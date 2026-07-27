@@ -3,7 +3,7 @@ import { format, isSameMonth, isToday, isWeekend } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarDay } from './CalendarDay';
 import { ViewMode, Platform, PostStatus, SocialPost } from '../SocialCalendar';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 
 interface CalendarGridProps {
   dates: Date[];
@@ -31,16 +31,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     const fetchPosts = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('social_media_posts')
-          .select('*')
-          .order('scheduled_date', { ascending: true });
-
-        if (error) {
-          console.error('Error fetching posts:', error);
-        } else {
-          setPosts((data as SocialPost[]) || []);
-        }
+        const data = await convex.query(api.posts.list, {});
+        setPosts((data as unknown as SocialPost[]) || []);
       } catch (error) {
         console.error('Error fetching posts:', error);
       } finally {

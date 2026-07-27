@@ -4,7 +4,7 @@ import * as LucideIcons from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Filter } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { Platform, PostStatus } from '../SocialCalendar';
 
 interface CalendarFiltersProps {
@@ -42,17 +42,13 @@ export const CalendarFilters: React.FC<CalendarFiltersProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [platformsResult, statusesResult] = await Promise.all([
-          supabase.from('platforms').select('*').eq('is_active', true).order('name'),
-          supabase.from('post_statuses').select('*').eq('is_active', true).order('name')
+        const [platforms, statuses] = await Promise.all([
+          convex.query(api.settings.list, { table: 'platforms', activeOnly: true }),
+          convex.query(api.settings.list, { table: 'post_statuses', activeOnly: true }),
         ]);
-        
-        if (platformsResult.data) {
-          setAvailablePlatforms(platformsResult.data);
-        }
-        if (statusesResult.data) {
-          setAvailableStatuses(statusesResult.data);
-        }
+
+        setAvailablePlatforms(platforms as DbPlatform[]);
+        setAvailableStatuses(statuses as DbStatus[]);
       } catch (error) {
         console.error('Error fetching filter data:', error);
       }
@@ -66,17 +62,13 @@ export const CalendarFilters: React.FC<CalendarFiltersProps> = ({
     const handleSettingsChange = () => {
       const fetchData = async () => {
         try {
-          const [platformsResult, statusesResult] = await Promise.all([
-            supabase.from('platforms').select('*').eq('is_active', true).order('name'),
-            supabase.from('post_statuses').select('*').eq('is_active', true).order('name')
+          const [platforms, statuses] = await Promise.all([
+            convex.query(api.settings.list, { table: 'platforms', activeOnly: true }),
+            convex.query(api.settings.list, { table: 'post_statuses', activeOnly: true }),
           ]);
-          
-          if (platformsResult.data) {
-            setAvailablePlatforms(platformsResult.data);
-          }
-          if (statusesResult.data) {
-            setAvailableStatuses(statusesResult.data);
-          }
+
+          setAvailablePlatforms(platforms as DbPlatform[]);
+          setAvailableStatuses(statuses as DbStatus[]);
         } catch (error) {
           console.error('Error fetching filter data:', error);
         }

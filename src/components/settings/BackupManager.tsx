@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { toast } from 'sonner';
 import { DownloadCloud, ShieldCheck, Upload, Trash2 } from 'lucide-react';
 import {
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/select';
 
 interface BackupFile {
+  id: string;
   name: string;
   created_at: string;
   size: number;
@@ -44,27 +46,19 @@ export const BackupManager: React.FC = () => {
   const loadBackups = async () => {
     setIsLoadingBackups(true);
     try {
-      const { data, error } = await supabase.storage
-        .from('backups')
-        .list('manual', {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' },
-        });
+      const data = await convex.query(api.backups.listBackups, {});
 
-      if (error) throw error;
-
-      const backupFiles = data
-        .filter(file => file.name.endsWith('.json'))
-        .map(file => ({
-          name: file.name,
-          created_at: file.created_at,
-          size: file.metadata?.size || 0,
-        }));
-
-      setBackups(backupFiles);
-    } catch (e: any) {
+      setBackups(
+        data.map((backup) => ({
+          id: backup.id,
+          name: backup.name,
+          created_at: backup.created_at,
+          size: backup.size ?? 0,
+        }))
+      );
+    } catch (e) {
       console.error('Failed to load backups', e);
-      toast.error('Failed to load backup list.');
+      toast.error('Nepodařilo se načíst seznam záloh.');
     } finally {
       setIsLoadingBackups(false);
     }
@@ -73,60 +67,16 @@ export const BackupManager: React.FC = () => {
   const handleBackup = async () => {
     setIsBackingUp(true);
     try {
-      const [posts, planSections, platforms, statuses, categories, productLines, pillars, formats] = await Promise.all([
-        supabase.from('social_media_posts').select('*'),
-        supabase.from('plan_sections').select('*'),
-        supabase.from('platforms').select('*'),
-        supabase.from('post_statuses').select('*'),
-        supabase.from('categories').select('*'),
-        supabase.from('product_lines').select('*'),
-        supabase.from('pillars').select('*'),
-        supabase.from('formats').select('*'),
-      ]);
-
-      const timestamp = new Date().toISOString().replace(/:/g, '-');
-      const payload = {
-        meta: {
-          created_at: new Date().toISOString(),
-          app: 'Social Planner Backup',
-          version: 1,
-          counts: {
-            social_media_posts: posts.data?.length || 0,
-            plan_sections: planSections.data?.length || 0,
-            platforms: platforms.data?.length || 0,
-            post_statuses: statuses.data?.length || 0,
-            categories: categories.data?.length || 0,
-            product_lines: productLines.data?.length || 0,
-            pillars: pillars.data?.length || 0,
-            formats: formats.data?.length || 0,
-          },
-        },
-        data: {
-          social_media_posts: posts.data || [],
-          plan_sections: planSections.data || [],
-          platforms: platforms.data || [],
-          post_statuses: statuses.data || [],
-          categories: categories.data || [],
-          product_lines: productLines.data || [],
-          pillars: pillars.data || [],
-          formats: formats.data || [],
-        },
-      };
-
-      const filePath = `manual/backup-${timestamp}.json`;
-      const json = JSON.stringify(payload, null, 2);
-      const { error } = await supabase.storage
-        .from('backups')
-        .upload(filePath, new Blob([json], { type: 'application/json' }));
-
-      if (error) throw error;
+      // The snapshot is built server-side in Convex, so nothing is streamed
+      // through the browser.
+      await convex.action(api.backups.create, {});
 
       setLastBackup(new Date().toLocaleString());
-      toast.success('Backup saved to Supabase Storage.');
+      toast.success('Záloha uložena do Convex storage.');
       await loadBackups();
-    } catch (e: any) {
+    } catch (e) {
       console.error('Backup failed', e);
-      toast.error('Backup failed. Please try again.');
+      toast.error('Zálohování selhalo. Zkuste to prosím znovu.');
     } finally {
       setIsBackingUp(false);
     }
@@ -134,7 +84,7 @@ export const BackupManager: React.FC = () => {
 
   const handleImportClick = () => {
     if (!selectedBackup) {
-      toast.error('Please select a backup to import.');
+      toast.error('Vyberte zálohu k obnovení.');
       return;
     }
     setShowImportDialog(true);
@@ -145,78 +95,45 @@ export const BackupManager: React.FC = () => {
     setIsImporting(true);
 
     try {
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from('backups')
-        .download(`manual/${selectedBackup}`);
+      await convex.action(api.backups.restore, {
+        id: selectedBackup as Id<'backups'>,
+      });
 
-      if (downloadError) throw downloadError;
-
-      const text = await fileData.text();
-      const backup = JSON.parse(text);
-
-      if (!backup.data) {
-        throw new Error('Invalid backup format');
-      }
-
-      const tables = [
-        { name: 'social_media_posts', data: backup.data.social_media_posts },
-        { name: 'plan_sections', data: backup.data.plan_sections },
-        { name: 'platforms', data: backup.data.platforms },
-        { name: 'post_statuses', data: backup.data.post_statuses },
-        { name: 'categories', data: backup.data.categories },
-        { name: 'product_lines', data: backup.data.product_lines },
-        { name: 'pillars', data: backup.data.pillars },
-        { name: 'formats', data: backup.data.formats },
-      ];
-
-      for (const table of tables) {
-        if (table.data && Array.isArray(table.data) && table.data.length > 0) {
-          const { error: deleteError } = await supabase
-            .from(table.name)
-            .delete()
-            .neq('id', '00000000-0000-0000-0000-000000000000');
-
-          if (deleteError) {
-            console.error(`Error clearing ${table.name}:`, deleteError);
-          }
-
-          const { error: insertError } = await supabase
-            .from(table.name)
-            .insert(table.data);
-
-          if (insertError) {
-            console.error(`Error importing ${table.name}:`, insertError);
-            throw new Error(`Failed to import ${table.name}`);
-          }
-        }
-      }
-
-      toast.success('Backup imported successfully!');
+      toast.success('Záloha byla obnovena!');
       window.location.reload();
-    } catch (e: any) {
+    } catch (e) {
       console.error('Import failed', e);
-      toast.error(`Import failed: ${e.message}`);
+      toast.error(`Obnovení selhalo: ${e instanceof Error ? e.message : 'neznámá chyba'}`);
     } finally {
       setIsImporting(false);
     }
   };
 
-  const handleDeleteBackup = async (fileName: string) => {
+  const handleDeleteBackup = async (backupId: string) => {
     try {
-      const { error } = await supabase.storage
-        .from('backups')
-        .remove([`manual/${fileName}`]);
+      await convex.mutation(api.backups.remove, { id: backupId as Id<'backups'> });
 
-      if (error) throw error;
-
-      toast.success('Backup deleted successfully.');
+      toast.success('Záloha smazána.');
       await loadBackups();
-      if (selectedBackup === fileName) {
+      if (selectedBackup === backupId) {
         setSelectedBackup('');
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('Delete failed', e);
-      toast.error('Failed to delete backup.');
+      toast.error('Zálohu se nepodařilo smazat.');
+    }
+  };
+
+  const handleDownloadBackup = async (backupId: string) => {
+    try {
+      const url = await convex.query(api.backups.downloadUrl, {
+        id: backupId as Id<'backups'>,
+      });
+
+      if (url) window.open(url, '_blank');
+    } catch (e) {
+      console.error('Download failed', e);
+      toast.error('Zálohu se nepodařilo stáhnout.');
     }
   };
 
@@ -224,25 +141,27 @@ export const BackupManager: React.FC = () => {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Backup & Export</CardTitle>
+          <CardTitle className="text-base">Zálohy a export</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Create and restore full backups of posts, plan sections, and all settings.
+            Kompletní záloha příspěvků, plánu a všech nastavení.
           </p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="h-4 w-4" />
-            Backups are stored securely in Supabase Storage
+            Zálohy jsou uložené v Convex storage
           </div>
 
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-3">
               <Button onClick={handleBackup} disabled={isBackingUp}>
                 <DownloadCloud className="h-4 w-4 mr-2" />
-                {isBackingUp ? 'Creating Backup…' : 'Create Backup'}
+                {isBackingUp ? 'Vytvářím zálohu…' : 'Vytvořit zálohu'}
               </Button>
               {lastBackup && (
-                <span className="text-xs text-muted-foreground">Last backup: {lastBackup}</span>
+                <span className="text-xs text-muted-foreground">
+                  Poslední záloha: {lastBackup}
+                </span>
               )}
             </div>
 
@@ -250,15 +169,22 @@ export const BackupManager: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Select value={selectedBackup} onValueChange={setSelectedBackup}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder={isLoadingBackups ? "Loading backups..." : "Select backup to import"} />
+                    <SelectValue
+                      placeholder={
+                        isLoadingBackups ? 'Načítám zálohy…' : 'Vyberte zálohu k obnovení'
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {backups.length === 0 ? (
-                      <SelectItem value="none" disabled>No backups available</SelectItem>
+                      <SelectItem value="none" disabled>
+                        Žádné zálohy
+                      </SelectItem>
                     ) : (
                       backups.map((backup) => (
-                        <SelectItem key={backup.name} value={backup.name}>
-                          {new Date(backup.created_at).toLocaleString()} ({(backup.size / 1024).toFixed(1)} KB)
+                        <SelectItem key={backup.id} value={backup.id}>
+                          {new Date(backup.created_at).toLocaleString()} (
+                          {(backup.size / 1024).toFixed(1)} KB)
                         </SelectItem>
                       ))
                     )}
@@ -270,20 +196,30 @@ export const BackupManager: React.FC = () => {
                   variant="secondary"
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  {isImporting ? 'Importing…' : 'Import'}
+                  {isImporting ? 'Obnovuji…' : 'Obnovit'}
                 </Button>
                 {selectedBackup && (
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => handleDeleteBackup(selectedBackup)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDownloadBackup(selectedBackup)}
+                      title="Stáhnout JSON"
+                    >
+                      <DownloadCloud className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => handleDeleteBackup(selectedBackup)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                {backups.length} backup{backups.length !== 1 ? 's' : ''} available
+                {backups.length} {backups.length === 1 ? 'záloha' : 'záloh'} k dispozici
               </p>
             </div>
           </div>
@@ -293,16 +229,16 @@ export const BackupManager: React.FC = () => {
       <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Import Backup</AlertDialogTitle>
+            <AlertDialogTitle>Obnovit zálohu</AlertDialogTitle>
             <AlertDialogDescription>
-              This will replace all current data with the selected backup. This action cannot be undone.
-              Are you sure you want to continue?
+              Tímto se přepíšou všechna současná data vybranou zálohou. Akci nelze vzít
+              zpět. Opravdu chcete pokračovat?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
             <AlertDialogAction onClick={handleImportConfirm}>
-              Import Backup
+              Obnovit zálohu
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

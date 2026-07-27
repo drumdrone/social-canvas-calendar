@@ -4,7 +4,7 @@ import { SocialPost } from '../SocialCalendar';
 import { Facebook, Instagram, Twitter, Linkedin, Image, Share2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { toast } from 'sonner';
 import { useImageHover } from '@/hooks/useImageHover';
 
@@ -45,14 +45,11 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
     const fetchAuthorData = async () => {
       if (post.author) {
         try {
-          const { data, error } = await supabase
-            .from('authors')
-            .select('initials, color')
-            .eq('initials', post.author)
-            .maybeSingle();
+          const authors = await convex.query(api.settings.list, { table: 'authors' });
+          const data = authors.find((author) => author.initials === post.author);
 
           if (data) {
-            setAuthorData(data);
+            setAuthorData({ initials: data.initials ?? '', color: data.color });
           }
         } catch (error) {
           console.error('Error fetching author data:', error);
@@ -66,11 +63,8 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
   useEffect(() => {
     const fetchStatusColor = async () => {
       try {
-        const { data, error } = await supabase
-          .from('post_statuses')
-          .select('color')
-          .eq('name', post.status)
-          .maybeSingle();
+        const statuses = await convex.query(api.settings.list, { table: 'post_statuses' });
+        const data = statuses.find((status) => status.name === post.status);
 
         if (data) {
           setStatusColor(data.color);

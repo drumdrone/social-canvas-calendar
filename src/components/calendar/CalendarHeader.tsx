@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, LogOut } from 'lucide-react';
 import { format, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns';
 import { ViewMode } from '../SocialCalendar';
-import { useAuth } from '@/contexts/AuthContext';
+import { logoutApp } from '@/components/SimpleAuthGate';
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -18,7 +18,6 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   viewMode,
   onViewModeChange,
 }) => {
-  const { logout } = useAuth();
   const handlePrevious = () => {
     if (viewMode === 'month') {
       onDateChange(subMonths(currentDate, 1));
@@ -111,7 +110,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           </Button>
         </div>
         
-        <Button variant="outline" onClick={logout} size="sm">
+        <Button variant="outline" onClick={logoutApp} size="sm">
           <LogOut className="h-4 w-4 mr-2" />
           Logout
         </Button>

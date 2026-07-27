@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
@@ -37,13 +37,8 @@ export const AuthorManager: React.FC = () => {
 
   const fetchAuthors = async () => {
     try {
-      const { data, error } = await supabase
-        .from('authors')
-        .select('id, name, initials, color, email, is_active')
-        .order('name');
-      
-      if (error) throw error;
-      setAuthors(data || []);
+      const data = await convex.query(api.settings.list, { table: 'authors' });
+      setAuthors(data as unknown as Parameters<typeof setAuthors>[0]);
     } catch (error) {
       console.error('Error fetching authors:', error);
       toast.error('Failed to load authors');
@@ -68,20 +63,15 @@ export const AuthorManager: React.FC = () => {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('authors')
-        .insert([{
-          user_id: user.id,
+      await convex.mutation(api.settings.create, {
+        table: 'authors',
+        values: {
           name: newAuthor.name,
           initials: newAuthor.initials.toUpperCase(),
           email: newAuthor.email || null,
           color: newAuthor.color
-        }]);
-
-      if (error) throw error;
+        },
+      });
 
       toast.success('Author created successfully!');
       setIsCreating(false);
@@ -97,12 +87,11 @@ export const AuthorManager: React.FC = () => {
 
   const handleUpdate = async (id: string, updates: Partial<Author>) => {
     try {
-      const { error } = await supabase
-        .from('authors')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.update, {
+        table: 'authors',
+        id,
+        values: updates,
+      });
 
       toast.success('Author updated successfully!');
       setEditingId(null);
@@ -122,12 +111,10 @@ export const AuthorManager: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('authors')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.remove, {
+        table: 'authors',
+        id,
+      });
 
       toast.success('Author deleted successfully!');
       fetchAuthors();

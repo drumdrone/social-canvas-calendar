@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { X, Upload, Image, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadFileToConvex } from "@/lib/uploadFile";
 import { toast } from "sonner";
 
 interface MultiImageUploadProps {
@@ -28,29 +28,14 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
 
     setUploading(slotIndex);
     try {
-      const fileExt = file.name.split('.').pop() || 'png';
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `public/${fileName}`;
+      console.log('Uploading image, file size:', file.size);
 
-      console.log('Uploading image to:', filePath, 'File size:', file.size);
+      const { url } = await uploadFileToConvex(file);
 
-      const { error: uploadError } = await supabase.storage
-        .from('social-media-images')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        console.error('Upload error details:', uploadError);
-        throw uploadError;
-      }
-
-      const { data } = supabase.storage
-        .from('social-media-images')
-        .getPublicUrl(filePath);
-
-      console.log('Image uploaded, public URL:', data.publicUrl);
+      console.log('Image uploaded, URL:', url);
 
       const newImages = [...images];
-      newImages[slotIndex] = data.publicUrl;
+      newImages[slotIndex] = url;
       onImagesChange(newImages);
 
       toast.success('Image uploaded successfully');

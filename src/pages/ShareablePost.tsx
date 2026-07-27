@@ -4,8 +4,9 @@ import { format } from 'date-fns';
 import { Facebook, Instagram, Twitter, Linkedin, Calendar, Clock, Image as ImageIcon, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { SocialPost } from '@/components/SocialCalendar';
+import type { Id } from '../../convex/_generated/dataModel';
 
 const platformIcons = {
   facebook: Facebook,
@@ -43,27 +44,24 @@ const ShareablePost = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('social_media_posts')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle();
+        const data = (await convex.query(api.posts.get, {
+          id: id as Id<'social_media_posts'>,
+        })) as unknown as SocialPost | null;
 
-        if (error) {
-          setError('Post not found');
-        } else if (data) {
-          setPost(data as SocialPost);
+        if (data) {
+          setPost(data);
 
           // Fetch author data if author is set
           if (data.author) {
-            const { data: authorInfo, error: authorError } = await supabase
-              .from('authors')
-              .select('initials, name, color')
-              .eq('initials', data.author)
-              .maybeSingle();
+            const authors = await convex.query(api.settings.list, { table: 'authors' });
+            const authorInfo = authors.find((a) => a.initials === data.author);
 
             if (authorInfo) {
-              setAuthorData(authorInfo);
+              setAuthorData({
+                initials: authorInfo.initials ?? '',
+                name: authorInfo.name,
+                color: authorInfo.color,
+              });
             }
           }
         } else {

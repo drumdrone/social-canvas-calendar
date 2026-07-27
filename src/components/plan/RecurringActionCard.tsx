@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Edit2, Check, X, Circle, Calendar, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, addMonths, addWeeks } from 'date-fns';
@@ -12,7 +12,6 @@ import { cs } from 'date-fns/locale';
 
 export interface RecurringAction {
   id: string;
-  user_id: string;
   action_type: 'monthly' | 'weekly' | 'quarterly';
   title: string;
   description: string;
@@ -110,37 +109,37 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   }, [statusConfigs, posts]);
 
   useEffect(() => {
-    const subscription = supabase
-      .channel(`recurring_action_${action.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'social_media_posts',
-          filter: `recurring_action_id=eq.${action.id}`,
-        },
-        (payload) => {
-          console.log('Post changed for action:', action.id, payload);
-          loadPosts();
-        }
-      )
-      .subscribe();
+    // Live updates: Convex pushes a new result whenever a matching post changes.
+    const watch = convex.watchQuery(api.posts.list, {
+      recurringActionId: action.id,
+    });
+
+    const unsubscribe = watch.onUpdate(() => {
+      const data = watch.localQueryResult() ?? [];
+
+      setPosts(
+        data.map((post) => ({
+          id: post.id,
+          title: post.title,
+          scheduled_date: post.scheduled_date,
+          status: post.status,
+        }))
+      );
+    });
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, [action.id]);
 
   const loadStatuses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('post_statuses')
-        .select('name, color')
-        .eq('is_active', true);
+      const data = await convex.query(api.settings.list, {
+        table: 'post_statuses',
+        activeOnly: true,
+      });
 
-      if (error) throw error;
-      setStatusConfigs(data || []);
+      setStatusConfigs(data.map((s) => ({ name: s.name, color: s.color })));
     } catch (error) {
       console.error('Error loading statuses:', error);
     }
@@ -286,15 +285,18 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
 
   const loadPosts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('social_media_posts')
-        .select('id, title, scheduled_date, status')
-        .eq('recurring_action_id', action.id)
-        .not('scheduled_date', 'is', null)
-        .order('scheduled_date', { ascending: true });
+      const data = await convex.query(api.posts.list, {
+        recurringActionId: action.id,
+      });
 
-      if (error) throw error;
-      setPosts(data || []);
+      setPosts(
+        data.map((post) => ({
+          id: post.id,
+          title: post.title,
+          scheduled_date: post.scheduled_date,
+          status: post.status,
+        }))
+      );
     } catch (error) {
       console.error('Error loading posts:', error);
     }

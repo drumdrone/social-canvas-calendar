@@ -9,8 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Platform, PostStatus, SocialPost, Category } from '../SocialCalendar';
-import { supabase } from '@/integrations/supabase/client';
-import { ensureSupabaseSession } from '../SimpleAuthGate';
+import { api, convex } from '@/lib/convex';
+import { uploadFileToConvex } from '@/lib/uploadFile';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { toast } from 'sonner';
 
 interface PostsTableProps {
@@ -72,32 +73,23 @@ export const PostsTable: React.FC<PostsTableProps> = ({
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('social_media_posts')
-        .select('*')
-        .order('scheduled_date', { ascending: true });
+      const data = (await convex.query(api.posts.list, {})) as unknown as SocialPost[];
+      setPosts(data || []);
 
-      if (error) {
-        console.error('Error fetching posts:', error);
-      } else {
-        setPosts((data as SocialPost[]) || []);
-
-        // Fetch authors data
-        const authorInitials = data?.map(post => post.author).filter(Boolean) || [];
-        if (authorInitials.length > 0) {
-          const { data: authorsData, error: authorsError } = await supabase
-            .from('authors')
-            .select('initials, color')
-            .in('initials', authorInitials);
-          
-          if (authorsData) {
-            const authorsMap = authorsData.reduce((acc, author) => {
-              acc[author.initials] = author;
-              return acc;
-            }, {} as Record<string, { initials: string; color: string }>);
-            setAuthorsData(authorsMap);
-          }
-        }
+      // Fetch authors data
+      const authorInitials = data?.map(post => post.author).filter(Boolean) || [];
+      if (authorInitials.length > 0) {
+        const allAuthors = await convex.query(api.settings.list, { table: 'authors' });
+        const authorsMap = allAuthors
+          .filter((author) => authorInitials.includes(author.initials ?? ''))
+          .reduce((acc, author) => {
+            acc[author.initials ?? ''] = {
+              initials: author.initials ?? '',
+              color: author.color,
+            };
+            return acc;
+          }, {} as Record<string, { initials: string; color: string }>);
+        setAuthorsData(authorsMap);
       }
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -108,15 +100,15 @@ export const PostsTable: React.FC<PostsTableProps> = ({
 
   const fetchDynamicData = async () => {
     try {
-      const [formatsResult, categoriesResult, pillarsResult] = await Promise.all([
-        supabase.from('formats').select('*').eq('is_active', true).order('name'),
-        supabase.from('categories').select('*').eq('is_active', true).order('name'),
-        supabase.from('pillars').select('name, color').eq('is_active', true).order('name')
+      const [formats, categories, pillars] = await Promise.all([
+        convex.query(api.settings.list, { table: 'formats', activeOnly: true }),
+        convex.query(api.settings.list, { table: 'categories', activeOnly: true }),
+        convex.query(api.settings.list, { table: 'pillars', activeOnly: true }),
       ]);
 
-      if (formatsResult.data) setAvailableFormats(formatsResult.data);
-      if (categoriesResult.data) setAvailableCategories(categoriesResult.data);
-      if (pillarsResult.data) setAvailablePillars(pillarsResult.data);
+      setAvailableFormats(formats);
+      setAvailableCategories(categories);
+      setAvailablePillars(pillars);
     } catch (error) {
       console.error('Error fetching dynamic data:', error);
     }
@@ -229,21 +221,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
   const handleImageUpload = async (postId: string, file: File) => {
     setUploadingImage(postId);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `public/${fileName}`;
+      const { url } = await uploadFileToConvex(file);
 
-      const { data, error } = await supabase.storage
-        .from('social-media-images')
-        .upload(filePath, file);
-
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('social-media-images')
-        .getPublicUrl(filePath);
-
-      await handleSaveField(postId, 'image_url', publicUrl);
+      await handleSaveField(postId, 'image_url', url);
       toast.success('Image uploaded successfully!');
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -255,14 +235,10 @@ export const PostsTable: React.FC<PostsTableProps> = ({
 
   const handleSaveField = async (postId: string, field: string, value: any) => {
     try {
-      const updateData: any = { [field]: value };
-      
-      const { error } = await supabase
-        .from('social_media_posts')
-        .update(updateData)
-        .eq('id', postId);
-
-      if (error) throw error;
+      await convex.mutation(api.posts.update, {
+        id: postId as Id<'social_media_posts'>,
+        values: { [field]: value },
+      });
 
       // Update local state
       setPosts(posts.map(post => 
@@ -278,19 +254,17 @@ export const PostsTable: React.FC<PostsTableProps> = ({
 
   const handleSave = async (post: SocialPost) => {
     try {
-      const { error } = await supabase
-        .from('social_media_posts')
-        .update({
+      await convex.mutation(api.posts.update, {
+        id: post.id as Id<'social_media_posts'>,
+        values: {
           title: post.title,
           content: post.content,
           platform: post.platform,
           status: post.status,
           category: post.category,
           scheduled_date: post.scheduled_date,
-        })
-        .eq('id', post.id);
-
-      if (error) throw error;
+        },
+      });
 
       toast.success('Post updated successfully!');
       fetchPosts();
@@ -302,12 +276,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
 
   const handleDelete = async (postId: string) => {
     try {
-      const { error } = await supabase
-        .from('social_media_posts')
-        .delete()
-        .eq('id', postId);
-
-      if (error) throw error;
+      await convex.mutation(api.posts.remove, {
+        id: postId as Id<'social_media_posts'>,
+      });
 
       toast.success('Post deleted successfully!');
       fetchPosts();
@@ -328,31 +299,14 @@ export const PostsTable: React.FC<PostsTableProps> = ({
       const [hours, minutes] = newPost.time.split(':').map(Number);
       scheduledDateTime.setHours(hours, minutes, 0, 0);
 
-      let imageUrl = null;
+      let imageUrl: string | null = null;
       if (newPost.image) {
-        const fileExt = newPost.image.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `public/${fileName}`;
-
-        const { data, error: uploadError } = await supabase.storage
-          .from('social-media-images')
-          .upload(filePath, newPost.image);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('social-media-images')
-          .getPublicUrl(filePath);
-
-        imageUrl = publicUrl;
+        const uploaded = await uploadFileToConvex(newPost.image);
+        imageUrl = uploaded.url;
       }
 
-      // Get user ID if available, but don't block on auth failure
-      const userId = await ensureSupabaseSession();
-
-      const { error } = await supabase
-        .from('social_media_posts')
-        .insert([{
+      await convex.mutation(api.posts.create, {
+        values: {
           title: newPost.title,
           content: newPost.content || null,
           platform: newPost.platform,
@@ -361,10 +315,9 @@ export const PostsTable: React.FC<PostsTableProps> = ({
           pillar: newPost.pillar,
           scheduled_date: scheduledDateTime.toISOString(),
           image_url: imageUrl,
-          user_id: userId || null,
-        }]);
-
-      if (error) throw error;
+          image_url_1: imageUrl,
+        },
+      });
 
       toast.success('Post created successfully!');
       setIsCreating(false);

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { toast } from 'sonner';
 
 interface Status {
@@ -26,13 +26,8 @@ export const StatusManager: React.FC = () => {
 
   const fetchStatuses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('post_statuses')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setStatuses(data || []);
+      const data = await convex.query(api.settings.list, { table: 'post_statuses' });
+      setStatuses(data as unknown as Parameters<typeof setStatuses>[0]);
     } catch (error) {
       console.error('Error fetching statuses:', error);
       toast.error('Failed to load statuses');
@@ -52,18 +47,13 @@ export const StatusManager: React.FC = () => {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('post_statuses')
-        .insert([{
-          user_id: user.id,
+      await convex.mutation(api.settings.create, {
+        table: 'post_statuses',
+        values: {
           name: newStatus.name.toLowerCase(),
           color: newStatus.color
-        }]);
-
-      if (error) throw error;
+        },
+      });
 
       toast.success('Status created successfully!');
       setIsCreating(false);
@@ -79,12 +69,11 @@ export const StatusManager: React.FC = () => {
 
   const handleUpdate = async (id: string, updates: Partial<Status>) => {
     try {
-      const { error } = await supabase
-        .from('post_statuses')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.update, {
+        table: 'post_statuses',
+        id,
+        values: updates,
+      });
 
       toast.success('Status updated successfully!');
       setEditingId(null);
@@ -104,12 +93,10 @@ export const StatusManager: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('post_statuses')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.remove, {
+        table: 'post_statuses',
+        id,
+      });
 
       toast.success('Status deleted successfully!');
       fetchStatuses();

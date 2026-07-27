@@ -12,8 +12,9 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
-import { supabase } from '@/integrations/supabase/client';
-import { ensureSupabaseSession, forceReauthenticate } from '../SimpleAuthGate';
+import { api, convex } from '@/lib/convex';
+import { uploadFileToConvex } from '@/lib/uploadFile';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
@@ -72,30 +73,33 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [platformsResult, statusesResult, pillarsResult, productLinesResult, categoriesResult, authorsResult, actionsResult] = await Promise.all([
-          supabase.from('platforms').select('name').eq('is_active', true).order('name'),
-          supabase.from('post_statuses').select('name, color').eq('is_active', true).order('name'),
-          supabase.from('pillars').select('name, color').eq('is_active', true).order('name'),
-          supabase.from('product_lines').select('name, color').eq('is_active', true).order('name'),
-          supabase.from('categories').select('name, color, format').eq('is_active', true).order('name'),
-          supabase.from('authors').select('initials, name, color, email').eq('is_active', true).order('name'),
-          supabase.from('recurring_actions').select('id, title, action_type').order('title'),
-        ]);
-        
-        const platforms = platformsResult.data?.map(p => p.name) || [];
+        const [platformRows, statusRows, pillarRows, productLineRows, categoryRows, authorRows, actionRows] =
+          await Promise.all([
+            convex.query(api.settings.list, { table: 'platforms', activeOnly: true }),
+            convex.query(api.settings.list, { table: 'post_statuses', activeOnly: true }),
+            convex.query(api.settings.list, { table: 'pillars', activeOnly: true }),
+            convex.query(api.settings.list, { table: 'product_lines', activeOnly: true }),
+            convex.query(api.settings.list, { table: 'categories', activeOnly: true }),
+            convex.query(api.settings.list, { table: 'authors', activeOnly: true }),
+            convex.query(api.plan.listActions, {}),
+          ]);
+
+        const platforms = platformRows.map((p) => p.name);
 
         setPlatformOptions(platforms);
-        setStatusOptions(statusesResult.data || []);
-        setPillarOptions(pillarsResult.data || []);
-        setProductLineOptions(productLinesResult.data || []);
-        setCategoryOptions(categoriesResult.data || []);
-        setAuthorOptions(authorsResult.data || []);
-        setRecurringActions(actionsResult.data || []);
+        setStatusOptions(statusRows);
+        setPillarOptions(pillarRows);
+        setProductLineOptions(productLineRows);
+        setCategoryOptions(categoryRows as Array<{ name: string; color: string; format: string }>);
+        setAuthorOptions(authorRows as Array<{ initials: string; name: string; color: string; email?: string }>);
+        setRecurringActions(
+          actionRows.map((a) => ({ id: a.id, title: a.title, action_type: a.action_type }))
+        );
 
         // Set defaults for new posts
         if (!post) {
           if (platforms.length && !platform) setPlatform(platforms[0]);
-          if (statusesResult.data && statusesResult.data.length && !status) setStatus(statusesResult.data[0].name);
+          if (statusRows.length && !status) setStatus(statusRows[0].name);
           if (!category) setCategory('Image');
         }
       } catch (error) {
@@ -163,22 +167,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
 
   const uploadImage = async (file: File) => {
-    const inferredExt = (file.name && file.name.includes('.')) ? file.name.split('.').pop() : (file.type ? file.type.split('/').pop() : 'png');
-    const fileExt = inferredExt || 'png';
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-    const filePath = `public/${fileName}`;
-
-    const { data, error } = await supabase.storage
-      .from('social-media-images')
-      .upload(filePath, file);
-
-    if (error) throw error;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('social-media-images')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
+    const { url } = await uploadFileToConvex(file);
+    return url;
   };
 
   const handleSave = async () => {
@@ -194,15 +184,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
-      // Try to get user ID, retry with force re-auth if needed
-      let userId = await ensureSupabaseSession();
-      if (!userId) {
-        console.log('Initial auth failed, forcing re-authentication...');
-        userId = await forceReauthenticate();
-      }
       console.log('=== SAVING POST DATA ===');
       console.log('Post ID:', post?.id);
-      console.log('User ID from session:', userId || '(none - saving without auth)');
 
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
@@ -226,61 +209,13 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         comments: comments || null,
       };
 
-      let result;
       if (post) {
-        // Update existing post
-        const { error, data } = await supabase
-          .from('social_media_posts')
-          .update({
-            ...postData,
-            user_id: post.user_id || userId || null,
-          })
-          .eq('id', post.id)
-          .select();
-
-        result = { error, data };
+        await convex.mutation(api.posts.update, {
+          id: post.id as Id<'social_media_posts'>,
+          values: postData,
+        });
       } else {
-        // Create new post - user_id can be null (RLS allows it)
-        const { error, data } = await supabase
-          .from('social_media_posts')
-          .insert([{
-            ...postData,
-            user_id: userId || null,
-          }])
-          .select();
-
-        result = { error, data };
-      }
-
-      // If save failed due to null user_id constraint, retry with force re-auth
-      if (result.error?.message?.includes('null value in column') && result.error?.message?.includes('user_id')) {
-        console.log('Save failed due to null user_id, retrying with force re-auth...');
-        const retryUserId = await forceReauthenticate();
-        if (retryUserId) {
-          const retryData = {
-            ...postData,
-            user_id: retryUserId,
-          };
-          if (post) {
-            const { error, data } = await supabase
-              .from('social_media_posts')
-              .update(retryData)
-              .eq('id', post.id)
-              .select();
-            result = { error, data };
-          } else {
-            const { error, data } = await supabase
-              .from('social_media_posts')
-              .insert([retryData])
-              .select();
-            result = { error, data };
-          }
-        }
-      }
-
-      if (result.error) {
-        console.error('Save error:', result.error);
-        throw result.error;
+        await convex.mutation(api.posts.create, { values: postData });
       }
 
       toast({
@@ -309,12 +244,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     if (!post || !confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      const { error } = await supabase
-        .from('social_media_posts')
-        .delete()
-        .eq('id', post.id);
-
-      if (error) throw error;
+      await convex.mutation(api.posts.remove, {
+        id: post.id as Id<'social_media_posts'>,
+      });
 
       toast({
         title: 'Success',
@@ -374,12 +306,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       // Save updated comments to database if post exists
       if (post?.id) {
         try {
-          const { error } = await supabase
-            .from('social_media_posts')
-            .update({ comments: updatedComments })
-            .eq('id', post.id);
-
-          if (error) throw error;
+          await convex.mutation(api.posts.update, {
+            id: post.id as Id<'social_media_posts'>,
+            values: { comments: updatedComments },
+          });
         } catch (error) {
           console.error('Error saving updated comment to database:', error);
           toast({
@@ -414,12 +344,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       // Save updated comments to database if post exists
       if (post?.id) {
         try {
-          const { error } = await supabase
-            .from('social_media_posts')
-            .update({ comments: updatedComments })
-            .eq('id', post.id);
-
-          if (error) throw error;
+          await convex.mutation(api.posts.update, {
+            id: post.id as Id<'social_media_posts'>,
+            values: { comments: updatedComments },
+          });
         } catch (error) {
           console.error('Error deleting comment from database:', error);
           toast({
@@ -472,43 +400,25 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
 
     for (const mentionedAuthor of recipients) {
       try {
-        const { data, error } = await supabase.functions.invoke('send-mention-email', {
-          body: {
-            mentionedAuthorEmail: mentionedAuthor.email,
-            mentionedAuthorName: mentionedAuthor.name,
-            postId: post?.id ?? null,
-            postTitle: title,
-            commentText,
-            commenterName,
-          },
+        const result = await convex.action(api.email.sendMentionEmail, {
+          mentionedAuthorEmail: mentionedAuthor.email,
+          mentionedAuthorName: mentionedAuthor.name,
+          postId: post?.id ?? null,
+          postTitle: title,
+          commentText,
+          commenterName,
         });
 
-        let errorMessage: string | null = null;
-
-        if (error) {
-          errorMessage = error.message;
-          // Edge function returns the real reason in the response body
-          const context = (error as { context?: Response }).context;
-          if (context && typeof context.json === 'function') {
-            try {
-              const body = (await context.json()) as { error?: string };
-              if (body?.error) errorMessage = body.error;
-            } catch {
-              // keep the generic message
-            }
-          }
-        } else if (data && data.success === false) {
-          errorMessage = data.error || 'Neznámá chyba';
-        }
+        const errorMessage = result.success ? null : result.error || 'Neznámá chyba';
 
         if (errorMessage) {
-          console.error('send-mention-email failed:', errorMessage, data);
+          console.error('sendMentionEmail failed:', errorMessage);
           failed.push(`${mentionedAuthor.name}: ${errorMessage}`);
         } else {
           notified.push(mentionedAuthor.name);
         }
       } catch (error) {
-        console.error('Exception calling send-mention-email:', error);
+        console.error('Exception calling sendMentionEmail:', error);
         failed.push(
           `${mentionedAuthor.name}: ${error instanceof Error ? error.message : 'Neznámá chyba'}`
         );
@@ -544,12 +454,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       // Save comment to database if post exists
       if (post?.id) {
         try {
-          const { error } = await supabase
-            .from('social_media_posts')
-            .update({ comments: updatedComments })
-            .eq('id', post.id);
-
-          if (error) throw error;
+          await convex.mutation(api.posts.update, {
+            id: post.id as Id<'social_media_posts'>,
+            values: { comments: updatedComments },
+          });
         } catch (error) {
           console.error('Error saving comment to database:', error);
           toast({

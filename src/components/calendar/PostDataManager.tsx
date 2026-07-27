@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Download, Upload, FileText, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -28,12 +28,7 @@ export const PostDataManager: React.FC<PostDataManagerProps> = ({ onImportComple
   const handleExport = async () => {
     setExporting(true);
     try {
-      const { data: posts, error } = await supabase
-        .from('social_media_posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const posts = await convex.query(api.posts.list, {});
 
       // Include metadata
       const exportData = {
@@ -115,12 +110,8 @@ export const PostDataManager: React.FC<PostDataManagerProps> = ({ onImportComple
         
         for (const post of batch) {
           try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Not authenticated');
-
             // Clean and validate post data
             const cleanPost = {
-              user_id: user.id,
               title: post.title || 'Imported Post',
               content: post.content || null,
               platform: post.platform || 'facebook',
@@ -132,16 +123,8 @@ export const PostDataManager: React.FC<PostDataManagerProps> = ({ onImportComple
               image_url: post.image_url || null,
             };
 
-            const { error } = await supabase
-              .from('social_media_posts')
-              .insert([cleanPost]);
-
-            if (error) {
-              stats.failed++;
-              stats.errors.push(`Post "${cleanPost.title}": ${error.message}`);
-            } else {
-              stats.successful++;
-            }
+            await convex.mutation(api.posts.create, { values: cleanPost });
+            stats.successful++;
           } catch (postError) {
             stats.failed++;
             stats.errors.push(`Post processing error: ${postError}`);

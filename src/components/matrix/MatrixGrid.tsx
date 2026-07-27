@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { format, startOfYear, endOfYear, eachWeekOfInterval, startOfWeek, endOfWeek, getMonth, getWeek, startOfQuarter, endOfQuarter } from 'date-fns';
 
 interface SocialPost {
@@ -59,24 +59,21 @@ export const MatrixGrid: React.FC<MatrixGridProps> = ({ currentYear, currentQuar
       const startDate = startOfQuarter(new Date(currentYear, quarterStartMonth, 1));
       const endDate = endOfQuarter(new Date(currentYear, quarterStartMonth, 1));
       
-      const { data, error } = await supabase
-        .from('social_media_posts')
-        .select('*')
-        .gte('scheduled_date', startDate.toISOString())
-        .lte('scheduled_date', endDate.toISOString())
-        .order('scheduled_date', { ascending: true });
+      const data = (await convex.query(api.posts.list, {
+        from: startDate.toISOString(),
+        to: endDate.toISOString(),
+      })) as unknown as SocialPost[];
 
-      if (error) throw error;
       setPosts(data || []);
 
       // Fetch authors data
       const authorInitials = data?.map(post => post.author).filter(Boolean) || [];
       if (authorInitials.length > 0) {
-        const { data: authorsData, error: authorsError } = await supabase
-          .from('authors')
-          .select('initials, color')
-          .in('initials', authorInitials);
-        
+        const allAuthors = await convex.query(api.settings.list, { table: 'authors' });
+        const authorsData = allAuthors
+          .filter((author) => authorInitials.includes(author.initials ?? ''))
+          .map((author) => ({ initials: author.initials ?? '', color: author.color }));
+
         if (authorsData) {
           const authorsMap = authorsData.reduce((acc, author) => {
             acc[author.initials] = author;

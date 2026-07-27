@@ -1,8 +1,0 @@
-# Musí odpovídat projektu, na který míří src/integrations/supabase/client.ts
-project_id = "ejcjdhtgdjyuucknefvp"
-
-[functions.send-mention-email]
-verify_jwt = false
-
-[functions.send-post-pdf]
-verify_jwt = false

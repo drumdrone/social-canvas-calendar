@@ -3,7 +3,8 @@ import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { useToast } from '@/components/ui/use-toast';
 
 interface MoodBoardItem {
@@ -43,17 +44,8 @@ export const MoodBoard: React.FC = () => {
   const loadMoodBoardData = async () => {
     try {
       setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('mood_board_items')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setItems(data || []);
+      const data = await convex.query(api.moodboard.listItems, {});
+      setItems(data as unknown as MoodBoardItem[]);
     } catch (error) {
       console.error('Error loading mood board data:', error);
       toast({
@@ -68,22 +60,17 @@ export const MoodBoard: React.FC = () => {
 
   const saveItem = async (item: MoodBoardItem) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // Rows always exist in Convex before they can be edited, so `id` is set.
+      const { id } = await convex.mutation(api.moodboard.saveItem, {
+        id: item.id ? (item.id as Id<'mood_board_items'>) : undefined,
+        napad: item.napad,
+        text: item.text,
+        popis: item.popis,
+        image_prompt: item.image_prompt,
+        format: item.format,
+      });
 
-      const { error } = await supabase
-        .from('mood_board_items')
-        .upsert({
-          id: item.id,
-          user_id: user.id,
-          napad: item.napad,
-          text: item.text,
-          popis: item.popis,
-          image_prompt: item.image_prompt,
-          format: item.format
-        });
-
-      if (error) throw error;
+      return id as string;
     } catch (error) {
       console.error('Error saving item:', error);
       toast({
@@ -95,31 +82,32 @@ export const MoodBoard: React.FC = () => {
   };
 
   const addNewItem = async () => {
-    const newItem: MoodBoardItem = {
-      id: crypto.randomUUID(),
+    const draft: MoodBoardItem = {
+      id: '',
       napad: '',
       text: '',
       popis: '',
       image_prompt: '',
       format: ''
     };
-    
+
+    // Convex assigns the id, so create the row first and then render it.
+    const newId = await saveItem(draft);
+    if (!newId) return;
+
+    const newItem = { ...draft, id: newId };
     setItems([...items, newItem]);
-    await saveItem(newItem);
-    
+
     // Start editing the first cell of the new row
-    setEditingCell({ rowId: newItem.id, column: 'napad' });
+    setEditingCell({ rowId: newId, column: 'napad' });
   };
 
   const deleteItem = async (id: string) => {
     setItems(items.filter(item => item.id !== id));
     try {
-      const { error } = await supabase
-        .from('mood_board_items')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.moodboard.removeItem, {
+        id: id as Id<'mood_board_items'>,
+      });
     } catch (error) {
       console.error('Error deleting item:', error);
       toast({

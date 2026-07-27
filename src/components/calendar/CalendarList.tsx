@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { SocialPost, Platform, PostStatus } from '../SocialCalendar';
 import { Button } from '@/components/ui/button';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -38,14 +38,12 @@ export const CalendarList: React.FC<CalendarListProps> = ({
     const startDate = startOfMonth(subMonths(currentDate, 6));
     const endDate = endOfMonth(addMonths(currentDate, 6));
 
-    const { data, error } = await supabase
-      .from('social_media_posts')
-      .select('*')
-      .gte('scheduled_date', startDate.toISOString())
-      .lte('scheduled_date', endDate.toISOString())
-      .order('scheduled_date', { ascending: true });
+    const data = (await convex.query(api.posts.list, {
+      from: startDate.toISOString(),
+      to: endDate.toISOString(),
+    })) as unknown as SocialPost[];
 
-    if (!error && data) {
+    if (data) {
       // Group posts by month
       const grouped: { [key: string]: SocialPost[] } = {};
       

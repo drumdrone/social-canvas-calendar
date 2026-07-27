@@ -4,6 +4,23 @@
 
 **URL**: https://lovable.dev/projects/fa7baba5-07d6-4037-b003-53d0cccdbe37
 
+## Backend (Convex)
+
+Aplikace běží na [Convexu](https://convex.dev) – databáze, soubory (obrázky),
+emailové notifikace i heslo do aplikace.
+
+```sh
+npm install
+npx convex dev      # v jednom terminálu (nahrává funkce z convex/)
+npm run dev         # v druhém terminálu
+```
+
+Frontend potřebuje `VITE_CONVEX_URL` (vytvoří ho `npx convex dev` v `.env.local`,
+vzor je v `.env.example`).
+
+- Přechod ze Supabase a přenos dat: [CONVEX_MIGRATION.md](./CONVEX_MIGRATION.md)
+- Emaily z komentářů: [EMAIL_NOTIFICATION_SETUP.md](./EMAIL_NOTIFICATION_SETUP.md)
+
 ## How can I edit this code?
 
 There are several ways of editing your application.

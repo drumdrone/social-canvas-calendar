@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { SocialPost, Platform, PostStatus } from '../SocialCalendar';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { PostSlidingSidebar } from './PostSlidingSidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -37,18 +37,12 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
 
-        const { data, error } = await supabase
-          .from('social_media_posts')
-          .select('*')
-          .gte('scheduled_date', startOfWeek.toISOString())
-          .lte('scheduled_date', endOfWeek.toISOString())
-          .order('scheduled_date', { ascending: true });
+        const data = await convex.query(api.posts.list, {
+          from: startOfWeek.toISOString(),
+          to: endOfWeek.toISOString(),
+        });
 
-        if (error) {
-          console.error('Error fetching posts:', error);
-        } else {
-          setPosts((data as SocialPost[]) || []);
-        }
+        setPosts((data as unknown as SocialPost[]) || []);
       } catch (error) {
         console.error('Error fetching posts:', error);
       } finally {

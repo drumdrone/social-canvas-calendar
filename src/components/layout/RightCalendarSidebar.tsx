@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { SocialPost } from '../SocialCalendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -21,15 +21,13 @@ export const RightCalendarSidebar: React.FC = () => {
 
   useEffect(() => {
     const fetchStatusColors = async () => {
-      const { data } = await supabase
-        .from('post_statuses')
-        .select('name, color')
-        .eq('is_active', true);
-      if (data) {
-        const map: Record<string, string> = {};
-        data.forEach(s => { map[s.name] = s.color; });
-        setStatusColors(map);
-      }
+      const data = await convex.query(api.settings.list, {
+        table: 'post_statuses',
+        activeOnly: true,
+      });
+      const map: Record<string, string> = {};
+      data.forEach((s) => { map[s.name] = s.color; });
+      setStatusColors(map);
     };
     fetchStatusColors();
   }, []);
@@ -41,14 +39,12 @@ export const RightCalendarSidebar: React.FC = () => {
     const startDate = startOfMonth(currentDate);
     const endDate = endOfMonth(addMonths(currentDate, 2));
 
-    const { data, error } = await supabase
-      .from('social_media_posts')
-      .select('*')
-      .gte('scheduled_date', startDate.toISOString())
-      .lte('scheduled_date', endDate.toISOString())
-      .order('scheduled_date', { ascending: true });
+    const data = (await convex.query(api.posts.list, {
+      from: startDate.toISOString(),
+      to: endDate.toISOString(),
+    })) as unknown as SocialPost[];
 
-    if (!error && data) {
+    if (data) {
       // Group posts by month
       const grouped: { [key: string]: SocialPost[] } = {};
 
@@ -89,17 +85,14 @@ export const RightCalendarSidebar: React.FC = () => {
 
     window.addEventListener('postsChanged', handlePostsChanged);
 
-    // Also try realtime subscription as backup
-    const channel = supabase
-      .channel('quick-calendar-posts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'social_media_posts' }, () => {
-        fetchPosts();
-      })
-      .subscribe();
+    // Live updates straight from Convex
+    const unsubscribe = convex.watchQuery(api.posts.list, {}).onUpdate(() => {
+      fetchPosts();
+    });
 
     return () => {
       window.removeEventListener('postsChanged', handlePostsChanged);
-      supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [currentDate]);
 

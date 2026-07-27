@@ -3,7 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { ConvexProvider } from "convex/react";
+import { convex } from "@/lib/convex";
 import { RightCalendarSidebar } from "./components/layout/RightCalendarSidebar";
 import SimpleAuthGate from "./components/SimpleAuthGate";
 import { useEffect } from "react";
@@ -38,7 +39,7 @@ const App = () => (
       <Sonner />
       <SimpleAuthGate>
         <BrowserRouter basename="/">
-          <AuthProvider>
+          <ConvexProvider client={convex}>
             <RedirectHandler />
             <div className="flex h-screen overflow-hidden">
               <div className="flex-1 overflow-auto">
@@ -57,7 +58,7 @@ const App = () => (
               </div>
               <RightCalendarSidebar />
             </div>
-          </AuthProvider>
+          </ConvexProvider>
         </BrowserRouter>
       </SimpleAuthGate>
     </TooltipProvider>

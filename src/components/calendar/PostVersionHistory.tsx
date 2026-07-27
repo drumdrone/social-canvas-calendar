@@ -5,7 +5,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, RotateCcw, Save } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -54,12 +55,8 @@ export const PostVersionHistory: React.FC<PostVersionHistoryProps> = ({
     
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_post_versions', {
-        p_post_id: postId
-      });
-
-      if (error) throw error;
-      setVersions(data || []);
+      const data = await convex.query(api.versions.listForPost, { postId });
+      setVersions(data as unknown as PostVersion[]);
     } catch (error) {
       console.error('Error fetching versions:', error);
       toast({
@@ -77,12 +74,10 @@ export const PostVersionHistory: React.FC<PostVersionHistoryProps> = ({
 
     setRestoring(versionNumber);
     try {
-      const { data, error } = await supabase.rpc('restore_post_from_backup', {
-        p_post_id: postId,
-        p_version_number: versionNumber
+      await convex.mutation(api.versions.restore, {
+        postId: postId as Id<'social_media_posts'>,
+        versionNumber,
       });
-
-      if (error) throw error;
 
       toast({
         title: 'Success',
@@ -107,12 +102,10 @@ export const PostVersionHistory: React.FC<PostVersionHistoryProps> = ({
     if (!postId) return;
 
     try {
-      const { data, error } = await supabase.rpc('create_post_backup', {
-        p_post_id: postId,
-        p_backup_reason: 'manual_backup'
+      await convex.mutation(api.versions.createBackup, {
+        postId: postId as Id<'social_media_posts'>,
+        reason: 'manual_backup',
       });
-
-      if (error) throw error;
 
       toast({
         title: 'Success',

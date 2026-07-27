@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { toast } from 'sonner';
 
 interface ProductLine {
@@ -26,13 +26,8 @@ export const ProductLineManager: React.FC = () => {
 
   const fetchProductLines = async () => {
     try {
-      const { data, error } = await supabase
-        .from('product_lines')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setProductLines(data || []);
+      const data = await convex.query(api.settings.list, { table: 'product_lines' });
+      setProductLines(data as unknown as Parameters<typeof setProductLines>[0]);
     } catch (error) {
       console.error('Error fetching product lines:', error);
       toast.error('Failed to load product lines');
@@ -52,18 +47,13 @@ export const ProductLineManager: React.FC = () => {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('product_lines')
-        .insert([{
-          user_id: user.id,
+      await convex.mutation(api.settings.create, {
+        table: 'product_lines',
+        values: {
           name: newProductLine.name.trim(),
           color: newProductLine.color
-        }]);
-
-      if (error) throw error;
+        },
+      });
 
       toast.success('Product line created successfully!');
       setIsCreating(false);
@@ -79,12 +69,11 @@ export const ProductLineManager: React.FC = () => {
 
   const handleUpdate = async (id: string, updates: Partial<ProductLine>) => {
     try {
-      const { error } = await supabase
-        .from('product_lines')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.update, {
+        table: 'product_lines',
+        id,
+        values: updates,
+      });
 
       toast.success('Product line updated successfully!');
       setEditingId(null);
@@ -104,12 +93,10 @@ export const ProductLineManager: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('product_lines')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.remove, {
+        table: 'product_lines',
+        id,
+      });
 
       toast.success('Product line deleted successfully!');
       fetchProductLines();

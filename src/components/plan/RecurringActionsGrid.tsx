@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw, Trash2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { RecurringActionCard, RecurringAction } from './RecurringActionCard';
 import { AddActionDialog } from './AddActionDialog';
 import { toast } from 'sonner';
@@ -31,14 +32,8 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
   const loadActions = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('recurring_actions')
-        .select('*')
-        .order('order_index', { ascending: true });
-
-      if (error) throw error;
-
-      setActions(data || []);
+      const data = await convex.query(api.plan.listActions, {});
+      setActions(data as unknown as RecurringAction[]);
     } catch (error) {
       console.error('Error loading actions:', error);
       toast.error('Chyba při načítání akcí');
@@ -60,21 +55,16 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
     if (!pendingActionType) return;
 
     try {
-      const { data, error } = await supabase
-        .from('recurring_actions')
-        .insert([{
-          action_type: pendingActionType,
-          title,
-          frequency,
-          description: '',
-          data: {},
-          order_index: 0,
-        }])
-        .select();
+      const created = await convex.mutation(api.plan.createAction, {
+        action_type: pendingActionType,
+        title,
+        frequency,
+        description: '',
+        data: {},
+        order_index: 0,
+      });
 
-      if (error) throw error;
-
-      setActions([...actions, ...(data || [])]);
+      setActions([...actions, ...(created ? [created as unknown as RecurringAction] : [])]);
       toast.success('Akce vytvořena');
     } catch (error) {
       console.error('Error creating action:', error);
@@ -84,12 +74,12 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
 
   const updateAction = async (id: string, updates: Partial<RecurringAction>) => {
     try {
-      const { error } = await supabase
-        .from('recurring_actions')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id);
+      const { id: _ignored, created_at, updated_at, user_id, ...values } = updates as Record<string, unknown>;
 
-      if (error) throw error;
+      await convex.mutation(api.plan.updateAction, {
+        id: id as Id<'recurring_actions'>,
+        values,
+      });
 
       setActions(actions.map(a => a.id === id ? { ...a, ...updates } : a));
       toast.success('Akce aktualizována');
@@ -101,12 +91,9 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
 
   const deleteAction = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('recurring_actions')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.plan.removeAction, {
+        id: id as Id<'recurring_actions'>,
+      });
 
       setActions(actions.filter(a => a.id !== id));
       toast.success('Akce smazána');
@@ -118,13 +105,8 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
 
   const deleteAllActions = async () => {
     try {
-      const actionIds = actions.map(a => a.id);
-      const { error } = await supabase
-        .from('recurring_actions')
-        .delete()
-        .in('id', actionIds);
-
-      if (error) throw error;
+      const actionIds = actions.map((a) => a.id as Id<'recurring_actions'>);
+      await convex.mutation(api.plan.removeActions, { ids: actionIds });
 
       setActions([]);
       toast.success('Všechny akce byly smazány');

@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Image, Trash2, FolderOpen } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api, convex } from "@/lib/convex";
+import { uploadFileToConvex } from "@/lib/uploadFile";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
 interface MediaGalleryProps {
@@ -15,6 +17,7 @@ interface MediaGalleryProps {
 }
 
 interface MediaFile {
+  id: string;
   name: string;
   url: string;
   created_at: string;
@@ -39,25 +42,17 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
 
   const loadMediaFiles = async () => {
     try {
-      const { data: files, error } = await supabase.storage
-        .from('media-gallery')
-        .list('', {
-          limit: 100,
-          offset: 0,
-        });
+      const files = await convex.query(api.files.listMedia, {});
 
-      if (error) throw error;
-
-      const mediaFiles: MediaFile[] = files
-        .filter(file => file.name !== '.emptyFolderPlaceholder')
-        .map(file => ({
+      setMediaFiles(
+        files.map((file) => ({
+          id: file.id,
           name: file.name,
-          url: supabase.storage.from('media-gallery').getPublicUrl(file.name).data.publicUrl,
-          created_at: file.created_at || '',
-          size: file.metadata?.size
-        }));
-
-      setMediaFiles(mediaFiles);
+          url: file.url,
+          created_at: file.created_at,
+          size: file.size,
+        }))
+      );
     } catch (error) {
       console.error('Error loading media files:', error);
       toast.error('Failed to load media files');
@@ -70,15 +65,16 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
 
     setUploading(true);
     const uploadPromises = Array.from(files).map(async (file) => {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const { storageId } = await uploadFileToConvex(file);
 
-      const { error } = await supabase.storage
-        .from('media-gallery')
-        .upload(fileName, file);
+      await convex.mutation(api.files.addMedia, {
+        storageId,
+        name: file.name,
+        size: file.size,
+        contentType: file.type || null,
+      });
 
-      if (error) throw error;
-      return fileName;
+      return file.name;
     });
 
     try {
@@ -93,14 +89,12 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
     }
   };
 
-  const handleDeleteFile = async (fileName: string) => {
+  const handleDeleteFile = async (fileId: string) => {
     try {
-      const { error } = await supabase.storage
-        .from('media-gallery')
-        .remove([fileName]);
+      await convex.mutation(api.files.removeMedia, {
+        id: fileId as Id<'media_files'>,
+      });
 
-      if (error) throw error;
-      
       toast.success('File deleted successfully');
       loadMediaFiles();
     } catch (error) {
@@ -139,7 +133,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
           <TabsContent value="gallery" className="mt-4">
             <div className="grid grid-cols-4 gap-4 max-h-96 overflow-y-auto">
               {mediaFiles.map((file) => (
-                <div key={file.name} className="relative group">
+                <div key={file.id} className="relative group">
                   <div 
                     className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
                       selectedFile === file.url 
@@ -163,7 +157,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                       className="h-6 w-6 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteFile(file.name);
+                        handleDeleteFile(file.id);
                       }}
                     >
                       <Trash2 className="w-3 h-3" />

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { api, convex } from '@/lib/convex';
 import { toast } from 'sonner';
 
 interface Category {
@@ -28,13 +28,8 @@ export const CategoryManager: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setCategories(data || []);
+      const data = await convex.query(api.settings.list, { table: 'categories' });
+      setCategories(data as unknown as Parameters<typeof setCategories>[0]);
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast.error('Failed to load categories');
@@ -54,19 +49,14 @@ export const CategoryManager: React.FC = () => {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('categories')
-        .insert([{
-          user_id: user.id,
+      await convex.mutation(api.settings.create, {
+        table: 'categories',
+        values: {
           name: newCategory.name.toLowerCase(),
           color: newCategory.color,
           format: newCategory.format
-        }]);
-
-      if (error) throw error;
+        },
+      });
 
       toast.success('Category created successfully!');
       setIsCreating(false);
@@ -82,12 +72,11 @@ export const CategoryManager: React.FC = () => {
 
   const handleUpdate = async (id: string, updates: Partial<Category>) => {
     try {
-      const { error } = await supabase
-        .from('categories')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.update, {
+        table: 'categories',
+        id,
+        values: updates,
+      });
 
       toast.success('Category updated successfully!');
       setEditingId(null);
@@ -107,12 +96,10 @@ export const CategoryManager: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await convex.mutation(api.settings.remove, {
+        table: 'categories',
+        id,
+      });
 
       toast.success('Category deleted successfully!');
       fetchCategories();

@@ -23,4 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
-.supabase-token
+.env.local
+.env.*.local
+
+# Convex
+.convex/
