@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { socialPostToConvexPatch } from '@/integrations/convex/adapter';
 import { useUploadImage } from '@/integrations/convex/useUploadImage';
@@ -250,11 +250,22 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         author: author || null,
         comments: comments || null,
       });
-      // Attach storage ids for any images uploaded via Convex in this session
-      // (adapter only maps URL strings; ids need to go on directly).
-      if (postImageStorageIds[0] !== null) patch.imageStorageId = postImageStorageIds[0];
-      if (postImageStorageIds[1] !== null) patch.imageStorageId2 = postImageStorageIds[1];
-      if (postImageStorageIds[2] !== null) patch.imageStorageId3 = postImageStorageIds[2];
+      // Storage ids: three cases per slot —
+      //   image cleared (postImages[i] === null): send null so the stored id
+      //     is wiped too, otherwise the Convex query would resolve it back
+      //     into imageUrl and the "deleted" photo would reappear.
+      //   new upload in this session: send the fresh storage id.
+      //   unchanged: skip the field so ctx.db.patch keeps the existing id.
+      const applyImageSlot = (
+        idx: number,
+        idKey: 'imageStorageId' | 'imageStorageId2' | 'imageStorageId3',
+      ) => {
+        if (postImages[idx] === null) patch[idKey] = null;
+        else if (postImageStorageIds[idx] !== null) patch[idKey] = postImageStorageIds[idx];
+      };
+      applyImageSlot(0, 'imageStorageId');
+      applyImageSlot(1, 'imageStorageId2');
+      applyImageSlot(2, 'imageStorageId3');
       // recurring_action_id still uses the Supabase UUID during migration —
       // once recurring actions get their own legacyId lookup we'll thread it
       // through. Skip it for now rather than sending an incompatible value.
