@@ -1,93 +1,94 @@
-// Follow this setup guide to integrate the Deno runtime into your project:
+// Supabase Edge Function: send-mention-email
+// Sends an email notification via Resend when a team member is @mentioned in a comment.
+// Stateless: receives the recipient and comment content directly in the request body.
 // https://deno.land/manual/getting_started/setup_your_environment
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+// Sender address. Use a verified Resend domain in production.
+// Falls back to Resend's shared test sender (only delivers to your own verified address).
+const RESEND_FROM = Deno.env.get('RESEND_FROM') || 'Social Canvas Calendar <onboarding@resend.dev>'
+// Base URL of the deployed app, used for links in the email.
+const APP_URL = (Deno.env.get('APP_URL') || 'https://drumdrone.github.io/social-canvas-calendar').replace(/\/$/, '')
 
-interface NotificationPayload {
-  notification_id: string
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+
+interface MentionPayload {
+  mentionedAuthorEmail: string
+  mentionedAuthorName?: string
+  postTitle?: string
+  commentText: string
+  commenterName?: string
+  postId?: string
+}
+
+// Escape user-supplied text before interpolating into HTML.
+function escapeHtml(input: string): string {
+  return String(input)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }
 
 serve(async (req) => {
+  // CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, 405)
+  }
+
   try {
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 })
+    if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY is not set')
+      return json({ error: 'Email service not configured: RESEND_API_KEY missing' }, 500)
     }
 
-    // Parse request body
-    const { notification_id } = await req.json() as NotificationPayload
+    const payload = (await req.json()) as Partial<MentionPayload>
+    const {
+      mentionedAuthorEmail,
+      mentionedAuthorName,
+      postTitle,
+      commentText,
+      commenterName,
+      postId,
+    } = payload
 
-    if (!notification_id) {
-      return new Response(
-        JSON.stringify({ error: 'notification_id is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+    // Validate required fields
+    if (!mentionedAuthorEmail || !commentText) {
+      return json(
+        { error: 'mentionedAuthorEmail and commentText are required' },
+        400,
       )
     }
 
-    // Initialize Supabase client with service role key (bypasses RLS)
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    const recipientName = mentionedAuthorName?.trim() || 'Team Member'
+    const authorName = commenterName?.trim() || 'Someone'
+    const safePostTitle = postTitle?.trim() || 'a post'
 
-    // Fetch notification details with all related data
-    const { data: notification, error: notificationError } = await supabase
-      .from('notifications')
-      .select(`
-        *,
-        user:user_profiles!notifications_user_id_fkey(*),
-        comment:comments!notifications_comment_id_fkey(
-          *,
-          author:user_profiles!comments_author_id_fkey(*)
-        ),
-        post:social_media_posts!notifications_post_id_fkey(*)
-      `)
-      .eq('id', notification_id)
-      .single()
+    // Build email content (escape all user-supplied values)
+    const eRecipient = escapeHtml(recipientName)
+    const eAuthor = escapeHtml(authorName)
+    const eTitle = escapeHtml(safePostTitle)
+    const eComment = escapeHtml(commentText)
+    const postUrl = `${APP_URL}/post/${encodeURIComponent(postId || '')}`
+    const settingsUrl = `${APP_URL}/settings`
 
-    if (notificationError || !notification) {
-      console.error('Error fetching notification:', notificationError)
-      return new Response(
-        JSON.stringify({ error: 'Notification not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Check if email already sent
-    if (notification.email_sent) {
-      return new Response(
-        JSON.stringify({ message: 'Email already sent' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Check if user has notifications enabled
-    if (!notification.user?.notification_enabled) {
-      console.log('User has notifications disabled')
-
-      // Mark as sent so we don't try again
-      await supabase
-        .from('notifications')
-        .update({ email_sent: true })
-        .eq('id', notification_id)
-
-      return new Response(
-        JSON.stringify({ message: 'User has notifications disabled' }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Extract data
-    const recipientEmail = notification.user?.email
-    const recipientName = notification.user?.full_name || 'Team Member'
-    const authorName = notification.comment?.author?.full_name || 'Someone'
-    const commentContent = notification.comment?.content || ''
-    const postTitle = notification.post?.title || 'a post'
-    const postId = notification.post?.id
-
-    // Create email HTML
     const emailHtml = `
 <!DOCTYPE html>
 <html>
@@ -103,19 +104,19 @@ serve(async (req) => {
 
   <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
     <p style="font-size: 16px; margin-bottom: 20px;">
-      Hi <strong>${recipientName}</strong>,
+      Hi <strong>${eRecipient}</strong>,
     </p>
 
     <p style="font-size: 16px; margin-bottom: 25px;">
-      <strong>${authorName}</strong> mentioned you in a comment on <strong>"${postTitle}"</strong>:
+      <strong>${eAuthor}</strong> mentioned you in a comment on <strong>"${eTitle}"</strong>:
     </p>
 
     <div style="background: #f9fafb; border-left: 4px solid #667eea; padding: 20px; margin: 25px 0; border-radius: 4px;">
-      <p style="margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${commentContent}</p>
+      <p style="margin: 0; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${eComment}</p>
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="https://drumdrone.github.io/social-canvas-calendar/post/${postId || ''}"
+      <a href="${postUrl}"
          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
         View Comment
       </a>
@@ -125,64 +126,51 @@ serve(async (req) => {
 
     <p style="font-size: 13px; color: #6b7280; margin: 0;">
       You're receiving this email because you were mentioned in a comment.
-      To stop receiving these notifications, go to <a href="https://drumdrone.github.io/social-canvas-calendar/settings" style="color: #667eea;">Settings</a> and disable notifications.
+      To stop receiving these notifications, go to <a href="${settingsUrl}" style="color: #667eea;">Settings</a> and disable notifications.
     </p>
   </div>
 </body>
 </html>
     `
 
-    // Send email via Resend
+    // Send via Resend
     const resendResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Social Canvas Calendar <notifications@yourdomain.com>',
-        to: [recipientEmail],
-        subject: `${authorName} mentioned you in "${postTitle}"`,
+        from: RESEND_FROM,
+        to: [mentionedAuthorEmail],
+        subject: `${authorName} mentioned you in "${safePostTitle}"`,
         html: emailHtml,
       }),
     })
 
+    const resendData = await resendResponse.json().catch(() => ({}))
+
     if (!resendResponse.ok) {
-      const errorText = await resendResponse.text()
-      console.error('Resend API error:', errorText)
-      throw new Error(`Resend API error: ${errorText}`)
+      console.error('Resend API error:', resendResponse.status, resendData)
+      // Surface Resend's message so the client can distinguish domain/test-mode issues.
+      const message =
+        (resendData && (resendData.message || resendData.error)) ||
+        `Resend API error (status ${resendResponse.status})`
+      return json({ error: message }, 502)
     }
 
-    const resendData = await resendResponse.json()
-    console.log('Email sent successfully:', resendData)
+    console.log('Email sent successfully:', resendData?.id)
 
-    // Mark email as sent in database
-    const { error: updateError } = await supabase
-      .from('notifications')
-      .update({ email_sent: true })
-      .eq('id', notification_id)
-
-    if (updateError) {
-      console.error('Error updating notification:', updateError)
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Email sent successfully',
-        email_id: resendData.id
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    )
-
+    return json({
+      success: true,
+      message: 'Email sent successfully',
+      email_id: resendData?.id,
+    })
   } catch (error) {
     console.error('Error in send-mention-email function:', error)
-
-    return new Response(
-      JSON.stringify({
-        error: error.message || 'Internal server error'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    return json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      500,
     )
   }
 })

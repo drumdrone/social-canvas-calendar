@@ -115,13 +115,14 @@ Edge funkci udělat **bezstavovou**: přijme přímo příjemce a obsah, ověř�
 - [ ] `supabase secrets set RESEND_API_KEY=re_...` pro projekt `ejcjdhtgdjyuucknefvp`.
 - [ ] (Produkce) Ověřit vlastní doménu v Resend (SPF/DKIM/DMARC).
 
-### Fáze 1 — Oprava edge funkce (P0 + P1) — *jádro opravy*
-- [ ] Přepsat `send-mention-email/index.ts` tak, aby přijímal payload Systému B:
+### Fáze 1 — Oprava edge funkce (P0 + P1) — *jádro opravy* ✅ HOTOVO
+- [x] Přepsat `send-mention-email/index.ts` tak, aby přijímal payload Systému B:
       `{ mentionedAuthorEmail, mentionedAuthorName, postTitle, commentText, commenterName, postId? }`.
-- [ ] Přidat CORS hlavičky + obsluhu `OPTIONS` (preflight).
-- [ ] `from` číst z env `RESEND_FROM` (fallback `onboarding@resend.dev` pro test režim).
-- [ ] Validace vstupů + čitelné chybové hlášky (rozlišit „test mode/doména" vs. ostatní).
-- [ ] Odkazy v e-mailu z env `APP_URL` (fallback na aktuální produkční URL).
+- [x] Přidat CORS hlavičky + obsluhu `OPTIONS` (preflight).
+- [x] `from` číst z env `RESEND_FROM` (fallback `onboarding@resend.dev` pro test režim).
+- [x] Validace vstupů + čitelné chybové hlášky (Resend zpráva se propíše do klienta → rozliší „test mode/doména").
+- [x] Odkazy v e-mailu z env `APP_URL` (fallback na produkční URL) + HTML-escape uživatelského obsahu.
+- [x] Odstranění závislosti na `notifications` tabulce a service-role klientovi (funkce je bezstavová).
 
 ### Fáze 2 — Konfigurace prostředí
 - [ ] `supabase secrets set RESEND_FROM="Social Canvas Calendar <notifications@ověřená-doména>"`.
