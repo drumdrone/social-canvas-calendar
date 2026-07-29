@@ -41,6 +41,8 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
       })),
     [rawUsers],
   );
+  // Temporary diagnostic — remove once @ dropdown is confirmed working.
+  console.log('[CommentEditor] rawUsers=', rawUsers, 'users=', users.length);
 
   // Resolve the incoming postId to a Convex Id. If it looks like a legacy
   // UUID, look it up; otherwise trust it.
@@ -62,6 +64,15 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
     const cursorPosition = e.target.selectionStart;
     const textBeforeCursor = text.substring(0, cursorPosition);
     const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    // Temporary diagnostic — remove once @ dropdown is confirmed working.
+    console.log(
+      '[CommentEditor] change text=',
+      JSON.stringify(text),
+      'match=',
+      mentionMatch,
+      'users=',
+      users.length,
+    );
 
     if (mentionMatch) {
       setMentionSearch(mentionMatch[1].toLowerCase());
