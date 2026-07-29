@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { convexToSocialPost } from '@/integrations/convex/adapter';
 import { SocialPost } from '../SocialCalendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -15,10 +18,10 @@ interface MonthlyPosts {
 export const RightCalendarSidebar: React.FC = () => {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [monthlyPosts, setMonthlyPosts] = useState<MonthlyPosts[]>([]);
-  const [loading, setLoading] = useState(true);
   const [statusColors, setStatusColors] = useState<Record<string, string>>({});
 
+  // Status colors still come from Supabase (`post_statuses` taxonomy moves
+  // in a later migration step).
   useEffect(() => {
     const fetchStatusColors = async () => {
       const { data } = await supabase
@@ -34,74 +37,32 @@ export const RightCalendarSidebar: React.FC = () => {
     fetchStatusColors();
   }, []);
 
-  const fetchPosts = async () => {
-    setLoading(true);
-
-    // Fetch posts from current month + 2 months ahead (no past months)
+  // Reactive Convex read replaces the manual fetchPosts + realtime channel
+  // + custom "postsChanged" event listener. Window: current month + next 2.
+  const raw = useQuery(api.posts.list);
+  const loading = raw === undefined;
+  const monthlyPosts = useMemo<MonthlyPosts[]>(() => {
+    if (!raw) return [];
     const startDate = startOfMonth(currentDate);
     const endDate = endOfMonth(addMonths(currentDate, 2));
-
-    const { data, error } = await supabase
-      .from('social_media_posts')
-      .select('*')
-      .gte('scheduled_date', startDate.toISOString())
-      .lte('scheduled_date', endDate.toISOString())
-      .order('scheduled_date', { ascending: true });
-
-    if (!error && data) {
-      // Group posts by month
-      const grouped: { [key: string]: SocialPost[] } = {};
-
-      data.forEach((post) => {
-        const postDate = new Date(post.scheduled_date);
-        const monthKey = format(postDate, 'yyyy-MM');
-
-        if (!grouped[monthKey]) {
-          grouped[monthKey] = [];
-        }
-        grouped[monthKey].push(post as SocialPost);
-      });
-
-      // Convert to array of MonthlyPosts
-      const monthsWithPosts: MonthlyPosts[] = Object.keys(grouped)
-        .sort()
-        .map((monthKey) => ({
-          month: new Date(monthKey + '-01'),
-          posts: grouped[monthKey],
-        }));
-
-      setMonthlyPosts(monthsWithPosts);
+    const grouped: { [key: string]: SocialPost[] } = {};
+    for (const doc of raw) {
+      const post = convexToSocialPost(doc);
+      if (!post.scheduled_date) continue;
+      const postDate = new Date(post.scheduled_date);
+      if (postDate < startDate || postDate > endDate) continue;
+      const monthKey = format(postDate, 'yyyy-MM');
+      (grouped[monthKey] ||= []).push(post);
     }
-
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchPosts();
-  }, [currentDate]);
-
-  // Listen for post updates via custom event (more reliable than realtime)
-  useEffect(() => {
-    const handlePostsChanged = () => {
-      console.log('Posts changed event received, refreshing Quick Calendar');
-      fetchPosts();
-    };
-
-    window.addEventListener('postsChanged', handlePostsChanged);
-
-    // Also try realtime subscription as backup
-    const channel = supabase
-      .channel('quick-calendar-posts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'social_media_posts' }, () => {
-        fetchPosts();
-      })
-      .subscribe();
-
-    return () => {
-      window.removeEventListener('postsChanged', handlePostsChanged);
-      supabase.removeChannel(channel);
-    };
-  }, [currentDate]);
+    for (const key of Object.keys(grouped)) {
+      grouped[key].sort(
+        (a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime(),
+      );
+    }
+    return Object.keys(grouped)
+      .sort()
+      .map((monthKey) => ({ month: new Date(monthKey + '-01'), posts: grouped[monthKey] }));
+  }, [raw, currentDate]);
 
   const goToPreviousMonth = () => {
     setCurrentDate(prev => subMonths(prev, 1));

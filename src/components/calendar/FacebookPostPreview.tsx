@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Heart, MessageCircle, Share, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { SocialPost, Platform, PostStatus } from '../SocialCalendar';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { convexToSocialPost } from '@/integrations/convex/adapter';
 import { PostSlidingSidebar } from './PostSlidingSidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -19,45 +21,31 @@ export const FacebookPostPreview: React.FC<FacebookPostPreviewProps> = ({
   selectedStatuses,
   currentDate,
 }) => {
-  const [posts, setPosts] = useState<SocialPost[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(false);
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
 
-  useEffect(() => {
-    const fetchPosts = async () => {
-      setLoading(true);
-      try {
-        // Calculate week range from currentDate
-        const startOfWeek = new Date(currentDate);
-        startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-
-        const { data, error } = await supabase
-          .from('social_media_posts')
-          .select('*')
-          .gte('scheduled_date', startOfWeek.toISOString())
-          .lte('scheduled_date', endOfWeek.toISOString())
-          .order('scheduled_date', { ascending: true });
-
-        if (error) {
-          console.error('Error fetching posts:', error);
-        } else {
-          setPosts((data as SocialPost[]) || []);
-        }
-      } catch (error) {
-        console.error('Error fetching posts:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPosts();
-  }, [currentDate]);
+  // Reactive Convex read; window (current week) is filtered client-side.
+  const raw = useQuery(api.posts.list);
+  const loading = raw === undefined;
+  const posts = useMemo<SocialPost[]>(() => {
+    if (!raw) return [];
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    return raw
+      .map(convexToSocialPost)
+      .filter((p) => {
+        if (!p.scheduled_date) return false;
+        const d = new Date(p.scheduled_date);
+        return d >= startOfWeek && d <= endOfWeek;
+      })
+      .sort(
+        (a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime(),
+      );
+  }, [raw, currentDate]);
 
   const handleEditPost = (post: SocialPost) => {
     setEditingPost(post);
