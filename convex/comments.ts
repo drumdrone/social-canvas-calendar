@@ -113,29 +113,12 @@ export const addComment = action({
   // Explicit return type breaks the circular type dependency that Convex's
   // codegen creates when an action calls its own module's internal mutation.
   handler: async (ctx, args): Promise<{ commentId: string }> => {
-    // Temporary diagnostic — remove once emails are confirmed flowing.
-    console.log(
-      "[addComment] called with postId=" +
-        args.postId +
-        " authorId=" +
-        args.authorId +
-        " mentions=" +
-        JSON.stringify(args.mentionedUserIds) +
-        " content=" +
-        JSON.stringify(args.content),
-    );
     // 1. Persist the comment + mentions + notifications.
     const result = (await ctx.runMutation(
       internal.comments.insertCommentWithMentions,
       args,
     )) as { commentId: string; notificationIds: string[] };
     const { commentId, notificationIds } = result;
-    console.log(
-      "[addComment] persisted commentId=" +
-        commentId +
-        " notifications=" +
-        notificationIds.length,
-    );
 
     // 2. Best-effort email each mentioned user via the existing Resend edge
     //    function. The edge function is stateless (accepts recipient + text),
@@ -155,16 +138,7 @@ export const addComment = action({
       );
       await Promise.all(
         mentionedUsers.map(async (u) => {
-          if (!u?.email || u.notificationEnabled === false) {
-            console.log(
-              "[addComment] skipping user email=" +
-                (u?.email || "(none)") +
-                " notif=" +
-                u?.notificationEnabled,
-            );
-            return;
-          }
-          console.log("[addComment] emailing " + u.email);
+          if (!u?.email || u.notificationEnabled === false) return;
           try {
             await sendMentionEmail({
               mentionedAuthorEmail: u.email,
@@ -262,26 +236,26 @@ async function sendMentionEmail(payload: {
 
   const html = `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>You were mentioned in a comment</title></head>
+<html lang="cs">
+<head><meta charset="utf-8"><title>Byli jste zmíněni v komentáři</title></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px;">
   <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;border-radius:10px 10px 0 0;text-align:center;">
-    <h1 style="color:white;margin:0;font-size:24px;">📢 You were mentioned!</h1>
+    <h1 style="color:white;margin:0;font-size:24px;">📢 Byli jste zmíněni!</h1>
   </div>
   <div style="background:#fff;padding:30px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;">
-    <p style="font-size:16px;margin-bottom:20px;">Hi <strong>${escapeHtml(recipient)}</strong>,</p>
+    <p style="font-size:16px;margin-bottom:20px;">Ahoj <strong>${escapeHtml(recipient)}</strong>,</p>
     <p style="font-size:16px;margin-bottom:25px;">
-      <strong>${escapeHtml(author)}</strong> mentioned you in a comment on
-      <strong>"${escapeHtml(title)}"</strong>:
+      <strong>${escapeHtml(author)}</strong> vás zmínil/a v komentáři u příspěvku
+      <strong>„${escapeHtml(title)}"</strong>:
     </p>
     <div style="background:#f9fafb;border-left:4px solid #667eea;padding:20px;margin:25px 0;border-radius:4px;">
       <p style="margin:0;font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(payload.commentText)}</p>
     </div>
-    ${postUrl ? `<div style="text-align:center;margin:30px 0;"><a href="${postUrl}" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:14px 32px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;font-size:16px;">View comment</a></div>` : ""}
+    ${postUrl ? `<div style="text-align:center;margin:30px 0;"><a href="${postUrl}" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:14px 32px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;font-size:16px;">Otevřít příspěvek</a></div>` : ""}
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:30px 0;">
     <p style="font-size:13px;color:#6b7280;margin:0;">
-      You're receiving this because you were mentioned in a comment.
-      ${settingsUrl ? `To stop, go to <a href="${settingsUrl}" style="color:#667eea;">Settings</a> and disable notifications.` : ""}
+      Tento e-mail vám přišel, protože vás někdo zmínil v komentáři.
+      ${settingsUrl ? `Notifikace můžete vypnout v <a href="${settingsUrl}" style="color:#667eea;">nastavení</a>.` : ""}
     </p>
   </div>
 </body>
@@ -298,7 +272,7 @@ async function sendMentionEmail(payload: {
     body: JSON.stringify({
       sender: from,
       to: [{ email: payload.mentionedAuthorEmail, name: recipient }],
-      subject: `${author} mentioned you in "${title}"`,
+      subject: `${author} vás zmínil/a v „${title}"`,
       htmlContent: html,
     }),
   });
