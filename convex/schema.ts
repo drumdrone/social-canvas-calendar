@@ -44,12 +44,14 @@ export default defineSchema({
     productLine: v.optional(v.union(v.string(), v.null())),
     comments: v.optional(v.union(v.string(), v.null())), // inline text comment log
     imageUrl: v.optional(v.union(v.string(), v.null())),
-    imageStorageId: v.optional(v.id("_storage")),
+    // Storage ids allow null so the UI can clear an image via a patch that
+    // sets it back to null (parity with imageUrl).
+    imageStorageId: v.optional(v.union(v.id("_storage"), v.null())),
     // Multi-image support (up to 3 images per post).
     imageUrl2: v.optional(v.union(v.string(), v.null())),
     imageUrl3: v.optional(v.union(v.string(), v.null())),
-    imageStorageId2: v.optional(v.id("_storage")),
-    imageStorageId3: v.optional(v.id("_storage")),
+    imageStorageId2: v.optional(v.union(v.id("_storage"), v.null())),
+    imageStorageId3: v.optional(v.union(v.id("_storage"), v.null())),
     recurringActionId: v.optional(v.union(v.id("recurringActions"), v.null())),
     userId: v.optional(v.union(v.string(), v.null())),
     ...timestamps,
