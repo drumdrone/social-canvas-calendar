@@ -14,6 +14,7 @@ import { Settings, Plus, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { convexToSocialPost } from '@/integrations/convex/adapter';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, addWeeks } from 'date-fns';
 
 export type ViewMode = 'month' | 'week' | 'list';
@@ -52,24 +53,39 @@ export const SocialCalendar: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showPlanning, setShowPlanning] = useState(false);
-  const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
+  // We used to cache the whole clicked post in state, which meant the sidebar
+  // kept showing whatever the post looked like at click time — even after a
+  // Convex mutation updated it (e.g. clearing an image would stick in the
+  // calendar but the sidebar re-opened with the stale image). Keep only the
+  // id here and derive the live post from the reactive Convex query below.
+  const [sidebarPostId, setSidebarPostId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const postsQ = useQuery(api.posts.list);
+  const sidebarPost = React.useMemo<SocialPost | null>(() => {
+    if (!sidebarPostId || !postsQ) return null;
+    const doc = postsQ.find(
+      (p: any) => (p.legacyId ?? p._id) === sidebarPostId,
+    );
+    return doc ? (convexToSocialPost(doc) as unknown as SocialPost) : null;
+  }, [sidebarPostId, postsQ]);
 
   // Handle edit parameter from URL (e.g., from Quick Calendar)
   useEffect(() => {
     const editPostId = searchParams.get('edit');
     if (editPostId) {
-      // Fetch the post and open the sidebar
+      // Open the sidebar for the given post; the sidebar reads live post data
+      // from the Convex query via sidebarPostId, so we don't need to fetch
+      // anything here anymore. We still touch Supabase only to look up the
+      // scheduled_date for the initial view (Convex would need a second query).
       const fetchAndEditPost = async () => {
         const { data, error } = await supabase
           .from('social_media_posts')
-          .select('*')
+          .select('scheduled_date')
           .eq('id', editPostId)
           .single();
 
         if (data && !error) {
-          setSidebarPost(data as SocialPost);
-          setEditingPost(data as SocialPost);
+          setSidebarPostId(editPostId);
           setSelectedDate(new Date(data.scheduled_date));
           setShowSidebar(true);
           // Clear the URL parameter
@@ -134,13 +150,13 @@ export const SocialCalendar: React.FC = () => {
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     setEditingPost(null);
-    setSidebarPost(null);
+    setSidebarPostId(null);
     setShowSidebar(true);
   };
 
   const handlePostClick = (post: SocialPost) => {
     console.log('Post clicked for editing:', post);
-    setSidebarPost(post);
+    setSidebarPostId(post.id);
     setEditingPost(post);
     setSelectedDate(new Date(post.scheduled_date));
     setShowSidebar(true);
@@ -148,7 +164,7 @@ export const SocialCalendar: React.FC = () => {
 
   const handleCloseSidebar = () => {
     setShowSidebar(false);
-    setSidebarPost(null);
+    setSidebarPostId(null);
     setEditingPost(null);
     setSelectedDate(null);
   };
