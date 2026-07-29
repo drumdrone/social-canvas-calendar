@@ -209,8 +209,11 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
       </form>
 
       {showMentions && filteredUsers.length > 0 && (
+        // `position: fixed` (instead of absolute) so the dropdown escapes the
+        // sidebar's overflow clipping — mentionPosition already holds
+        // viewport coordinates from getBoundingClientRect().
         <div
-          className="absolute z-50 w-64 bg-white border rounded-lg shadow-lg max-h-48 overflow-auto"
+          className="fixed z-[100] w-64 bg-white border rounded-lg shadow-lg max-h-48 overflow-auto"
           style={{
             top: mentionPosition.top + 4,
             left: mentionPosition.left,
@@ -222,7 +225,12 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
               className={`px-4 py-2 cursor-pointer ${
                 index === selectedMentionIndex ? 'bg-blue-100' : 'hover:bg-gray-100'
               }`}
-              onClick={() => insertMention(user)}
+              onMouseDown={(e) => {
+                // onMouseDown fires before the textarea's blur, so clicking
+                // the item doesn't kill the dropdown before insertMention runs.
+                e.preventDefault();
+                insertMention(user);
+              }}
             >
               <div className="font-medium">{user.fullName}</div>
               <div className="text-xs text-gray-500">{user.email}</div>
