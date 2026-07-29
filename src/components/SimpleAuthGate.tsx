@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAction } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { supabase } from '@/integrations/supabase/client';
 
 const SIMPLE_AUTH_KEY = 'simple_auth_verified';
-const VALID_PASSWORD = 'socka';
 
 // Supabase auth account used for database operations
 const SUPABASE_EMAIL = 'admin@socialcanvas.app';
@@ -131,23 +132,37 @@ const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
   });
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  // Password is now verified server-side by the Convex `auth:verifyPassword`
+  // action against APP_PASSWORD. Nothing sensitive stays in the client bundle.
+  const verifyPassword = useAction(api.auth.verifyPassword);
 
-  // Ensure Supabase session exists when gate is already verified
+  // Ensure Supabase session exists when gate is already verified.
+  // (Kept while other components still read/write via Supabase; removed once
+  // the migration to Convex data access is complete.)
   useEffect(() => {
     if (isVerified) {
       ensureSupabaseSession();
     }
   }, [isVerified]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (password === VALID_PASSWORD) {
-      localStorage.setItem(SIMPLE_AUTH_KEY, 'true');
-      setIsVerified(true);
-    } else {
-      setError('Nesprávné heslo');
+    setSubmitting(true);
+    try {
+      const { ok } = await verifyPassword({ password });
+      if (ok) {
+        localStorage.setItem(SIMPLE_AUTH_KEY, 'true');
+        setIsVerified(true);
+      } else {
+        setError('Nesprávné heslo');
+      }
+    } catch (err) {
+      console.error('Convex password check failed:', err);
+      setError('Nepodařilo se ověřit heslo. Zkuste to znovu.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -182,8 +197,8 @@ const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
-            <Button type="submit" className="w-full">
-              Vstoupit
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? 'Ověřuji…' : 'Vstoupit'}
             </Button>
           </form>
         </CardContent>
