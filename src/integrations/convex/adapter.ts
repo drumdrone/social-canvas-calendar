@@ -97,9 +97,11 @@ export function socialPostToConvexPatch(input: SocialPostWrite): Record<string, 
   set('productLine', input.product_line);
   set('comments', input.comments);
   // The UI uses image_url_1 as the canonical first image and mirrors it into
-  // image_url; accept either.
-  const first = input.image_url_1 ?? input.image_url;
-  if (first !== undefined) patch.imageUrl = first;
+  // image_url; accept either. `??` would coalesce null into undefined and
+  // drop the field entirely — check for "provided at all" instead, so an
+  // explicit null (image cleared) survives into the patch.
+  if (input.image_url_1 !== undefined) patch.imageUrl = input.image_url_1;
+  else if (input.image_url !== undefined) patch.imageUrl = input.image_url;
   set('imageUrl2', input.image_url_2);
   set('imageUrl3', input.image_url_3);
   // recurringActionId in Convex is an Id<"recurringActions"> — the UI still
