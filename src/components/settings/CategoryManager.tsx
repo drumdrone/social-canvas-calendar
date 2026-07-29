@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { convexToTaxonomy, sortTaxonomyByName } from '@/integrations/convex/adapter';
 import { toast } from 'sonner';
 
 interface Category {
-  id: string;
+  id: Id<'categories'>;
   name: string;
   color: string;
   format: string;
@@ -16,63 +19,38 @@ interface Category {
 }
 
 export const CategoryManager: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const raw = useQuery(api.taxonomy.listCategories);
+  const loading = raw === undefined;
+  const categories = useMemo<Category[]>(
+    () => sortTaxonomyByName((raw ?? []).map((d) => convexToTaxonomy<Category>(d))),
+    [raw],
+  );
+  const createCategory = useMutation(api.taxonomy.createCategory);
+  const updateCategory = useMutation(api.taxonomy.updateCategory);
+  const removeCategory = useMutation(api.taxonomy.removeCategory);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: '',
     color: '#3B82F6',
-    format: 'text'
+    format: 'text',
   });
-
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      toast.error('Failed to load categories');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
 
   const handleCreate = async () => {
     if (!newCategory.name.trim()) {
       toast.error('Category name is required');
       return;
     }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('categories')
-        .insert([{
-          user_id: user.id,
-          name: newCategory.name.toLowerCase(),
-          color: newCategory.color,
-          format: newCategory.format
-        }]);
-
-      if (error) throw error;
-
+      await createCategory({
+        name: newCategory.name.toLowerCase(),
+        color: newCategory.color,
+        format: newCategory.format,
+      });
       toast.success('Category created successfully!');
       setIsCreating(false);
       setNewCategory({ name: '', color: '#3B82F6', format: 'text' });
-      fetchCategories();
-
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating category:', error);
@@ -80,20 +58,19 @@ export const CategoryManager: React.FC = () => {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<Category>) => {
+  const handleUpdate = async (id: Id<'categories'>, patch: Partial<Category>) => {
     try {
-      const { error } = await supabase
-        .from('categories')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await updateCategory({
+        id,
+        patch: {
+          name: patch.name,
+          color: patch.color,
+          format: patch.format,
+          isActive: patch.is_active,
+        },
+      });
       toast.success('Category updated successfully!');
       setEditingId(null);
-      fetchCategories();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating category:', error);
@@ -101,23 +78,11 @@ export const CategoryManager: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this category?')) {
-      return;
-    }
-
+  const handleDelete = async (id: Id<'categories'>) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
     try {
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await removeCategory({ id });
       toast.success('Category deleted successfully!');
-      fetchCategories();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting category:', error);

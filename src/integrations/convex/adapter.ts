@@ -1,5 +1,33 @@
 import type { SocialPost } from '@/components/SocialCalendar';
 
+// ---------------------------------------------------------------------------
+// Taxonomy adapters (statuses, platforms, pillars, categories, formats,
+// product_lines, authors).
+// ---------------------------------------------------------------------------
+
+// Convex taxonomy document -> snake_case shape the Supabase-era UI expects.
+// Uses the Convex _id as the row id, so managers can pass it back into the
+// update/remove mutations without a legacyId lookup.
+export function convexToTaxonomy<T = any>(doc: any): T {
+  return {
+    id: doc._id,
+    name: doc.name,
+    color: doc.color,
+    is_active: doc.isActive !== false, // treat missing as active
+    // Optional per-taxonomy extras — undefined for taxonomies that don't use them.
+    icon_name: doc.iconName,
+    format: doc.format,
+    initials: doc.initials,
+    email: doc.email,
+  } as T;
+}
+
+export function sortTaxonomyByName<T extends { name?: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+}
+
+
+
 // Maps a Convex `social_media_posts` document to the snake_case `SocialPost`
 // shape the existing Supabase-era UI expects. Used during the incremental
 // migration — components can start reading from Convex without touching every

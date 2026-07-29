@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { convexToTaxonomy, sortTaxonomyByName } from '@/integrations/convex/adapter';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
 interface Author {
-  id: string;
+  id: Id<'authors'>;
   name: string;
   initials: string;
   color: string;
@@ -18,76 +21,50 @@ interface Author {
 }
 
 export const AuthorManager: React.FC = () => {
-  const [authors, setAuthors] = useState<Author[]>([]);
-  const [loading, setLoading] = useState(true);
+  const raw = useQuery(api.authors.list, {});
+  const loading = raw === undefined;
+  const authors = useMemo<Author[]>(
+    () => sortTaxonomyByName((raw ?? []).map((d) => convexToTaxonomy<Author>(d))),
+    [raw],
+  );
+  const createAuthor = useMutation(api.authors.create);
+  const updateAuthor = useMutation(api.authors.update);
+  const removeAuthor = useMutation(api.authors.remove);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newAuthor, setNewAuthor] = useState({
     name: '',
     initials: '',
     email: '',
-    color: '#3B82F6'
+    color: '#3B82F6',
   });
   const [editingAuthor, setEditingAuthor] = useState({
     name: '',
     initials: '',
     email: '',
-    color: '#3B82F6'
+    color: '#3B82F6',
   });
-
-  const fetchAuthors = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('authors')
-        .select('id, name, initials, color, email, is_active')
-        .order('name');
-      
-      if (error) throw error;
-      setAuthors(data || []);
-    } catch (error) {
-      console.error('Error fetching authors:', error);
-      toast.error('Failed to load authors');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAuthors();
-  }, []);
 
   const handleCreate = async () => {
     if (!newAuthor.name.trim() || !newAuthor.initials.trim()) {
       toast.error('Name and initials are required');
       return;
     }
-
     if (newAuthor.initials.length !== 3) {
       toast.error('Initials must be exactly 3 characters');
       return;
     }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('authors')
-        .insert([{
-          user_id: user.id,
-          name: newAuthor.name,
-          initials: newAuthor.initials.toUpperCase(),
-          email: newAuthor.email || null,
-          color: newAuthor.color
-        }]);
-
-      if (error) throw error;
-
+      await createAuthor({
+        name: newAuthor.name,
+        initials: newAuthor.initials.toUpperCase(),
+        email: newAuthor.email || null,
+        color: newAuthor.color,
+      });
       toast.success('Author created successfully!');
       setIsCreating(false);
       setNewAuthor({ name: '', initials: '', email: '', color: '#3B82F6' });
-      fetchAuthors();
-
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating author:', error);
@@ -95,20 +72,24 @@ export const AuthorManager: React.FC = () => {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<Author>) => {
+  const handleUpdate = async (id: Id<'authors'>, patch: Partial<Author>) => {
     try {
-      const { error } = await supabase
-        .from('authors')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-
+      // The Convex authors.update mutation validator requires name+initials to
+      // be present, so we always send the current values from the row (falling
+      // back to whatever the caller supplied).
+      const current = authors.find((a) => a.id === id);
+      await updateAuthor({
+        id,
+        patch: {
+          name: patch.name ?? current?.name ?? '',
+          initials: patch.initials ?? current?.initials ?? '',
+          color: patch.color ?? current?.color,
+          email: patch.email ?? current?.email ?? null,
+          isActive: patch.is_active ?? current?.is_active,
+        },
+      });
       toast.success('Author updated successfully!');
       setEditingId(null);
-      fetchAuthors();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating author:', error);
@@ -116,23 +97,11 @@ export const AuthorManager: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this author?')) {
-      return;
-    }
-
+  const handleDelete = async (id: Id<'authors'>) => {
+    if (!confirm('Are you sure you want to delete this author?')) return;
     try {
-      const { error } = await supabase
-        .from('authors')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await removeAuthor({ id });
       toast.success('Author deleted successfully!');
-      fetchAuthors();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting author:', error);

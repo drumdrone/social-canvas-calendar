@@ -1,75 +1,50 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { convexToTaxonomy, sortTaxonomyByName } from '@/integrations/convex/adapter';
 import { toast } from 'sonner';
 
 interface ProductLine {
-  id: string;
+  id: Id<'product_lines'>;
   name: string;
   color: string;
   is_active: boolean;
 }
 
 export const ProductLineManager: React.FC = () => {
-  const [productLines, setProductLines] = useState<ProductLine[]>([]);
-  const [loading, setLoading] = useState(true);
+  const raw = useQuery(api.taxonomy.listProductLines);
+  const loading = raw === undefined;
+  const productLines = useMemo<ProductLine[]>(
+    () => sortTaxonomyByName((raw ?? []).map((d) => convexToTaxonomy<ProductLine>(d))),
+    [raw],
+  );
+  const createProductLine = useMutation(api.taxonomy.createProductLine);
+  const updateProductLine = useMutation(api.taxonomy.updateProductLine);
+  const removeProductLine = useMutation(api.taxonomy.removeProductLine);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [newProductLine, setNewProductLine] = useState({
-    name: '',
-    color: '#3B82F6'
-  });
-
-  const fetchProductLines = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('product_lines')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setProductLines(data || []);
-    } catch (error) {
-      console.error('Error fetching product lines:', error);
-      toast.error('Failed to load product lines');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProductLines();
-  }, []);
+  const [newProductLine, setNewProductLine] = useState({ name: '', color: '#3B82F6' });
 
   const handleCreate = async () => {
     if (!newProductLine.name.trim()) {
       toast.error('Product line name is required');
       return;
     }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('product_lines')
-        .insert([{
-          user_id: user.id,
-          name: newProductLine.name.trim(),
-          color: newProductLine.color
-        }]);
-
-      if (error) throw error;
-
+      await createProductLine({
+        name: newProductLine.name.trim(),
+        color: newProductLine.color,
+      });
       toast.success('Product line created successfully!');
       setIsCreating(false);
       setNewProductLine({ name: '', color: '#3B82F6' });
-      fetchProductLines();
-
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating product line:', error);
@@ -77,20 +52,14 @@ export const ProductLineManager: React.FC = () => {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<ProductLine>) => {
+  const handleUpdate = async (id: Id<'product_lines'>, patch: Partial<ProductLine>) => {
     try {
-      const { error } = await supabase
-        .from('product_lines')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await updateProductLine({
+        id,
+        patch: { name: patch.name, color: patch.color, isActive: patch.is_active },
+      });
       toast.success('Product line updated successfully!');
       setEditingId(null);
-      fetchProductLines();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating product line:', error);
@@ -98,23 +67,11 @@ export const ProductLineManager: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product line?')) {
-      return;
-    }
-
+  const handleDelete = async (id: Id<'product_lines'>) => {
+    if (!confirm('Are you sure you want to delete this product line?')) return;
     try {
-      const { error } = await supabase
-        .from('product_lines')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await removeProductLine({ id });
       toast.success('Product line deleted successfully!');
-      fetchProductLines();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting product line:', error);
@@ -169,9 +126,9 @@ export const ProductLineManager: React.FC = () => {
                 <Save className="h-3 w-3 mr-1" />
                 Save
               </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => {
                   setIsCreating(false);
                   setNewProductLine({ name: '', color: '#3B82F6' });
@@ -191,7 +148,7 @@ export const ProductLineManager: React.FC = () => {
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div 
+                  <div
                     className="w-3 h-3 rounded-full border"
                     style={{ backgroundColor: productLine.color }}
                   />
@@ -200,7 +157,7 @@ export const ProductLineManager: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <Button
                     size="sm"
-                    variant={productLine.is_active ? "default" : "outline"}
+                    variant={productLine.is_active ? 'default' : 'outline'}
                     onClick={() => toggleActive(productLine)}
                   >
                     {productLine.is_active ? 'Active' : 'Inactive'}

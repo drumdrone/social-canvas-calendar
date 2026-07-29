@@ -1,75 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { convexToTaxonomy, sortTaxonomyByName } from '@/integrations/convex/adapter';
 import { toast } from 'sonner';
 
 interface Pillar {
-  id: string;
+  id: Id<'pillars'>;
   name: string;
   color: string;
   is_active: boolean;
 }
 
 export const PillarManager: React.FC = () => {
-  const [pillars, setPillars] = useState<Pillar[]>([]);
-  const [loading, setLoading] = useState(true);
+  const raw = useQuery(api.taxonomy.listPillars);
+  const loading = raw === undefined;
+  const pillars = useMemo<Pillar[]>(
+    () => sortTaxonomyByName((raw ?? []).map((d) => convexToTaxonomy<Pillar>(d))),
+    [raw],
+  );
+  const createPillar = useMutation(api.taxonomy.createPillar);
+  const updatePillar = useMutation(api.taxonomy.updatePillar);
+  const removePillar = useMutation(api.taxonomy.removePillar);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [newPillar, setNewPillar] = useState({
-    name: '',
-    color: '#3B82F6'
-  });
-
-  const fetchPillars = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('pillars')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setPillars(data || []);
-    } catch (error) {
-      console.error('Error fetching pillars:', error);
-      toast.error('Failed to load pillars');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPillars();
-  }, []);
+  const [newPillar, setNewPillar] = useState({ name: '', color: '#3B82F6' });
 
   const handleCreate = async () => {
     if (!newPillar.name.trim()) {
       toast.error('Pillar name is required');
       return;
     }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('pillars')
-        .insert([{
-          user_id: user.id,
-          name: newPillar.name.trim(),
-          color: newPillar.color
-        }]);
-
-      if (error) throw error;
-
+      await createPillar({ name: newPillar.name.trim(), color: newPillar.color });
       toast.success('Pillar created successfully!');
       setIsCreating(false);
       setNewPillar({ name: '', color: '#3B82F6' });
-      fetchPillars();
-
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating pillar:', error);
@@ -77,20 +49,14 @@ export const PillarManager: React.FC = () => {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<Pillar>) => {
+  const handleUpdate = async (id: Id<'pillars'>, patch: Partial<Pillar>) => {
     try {
-      const { error } = await supabase
-        .from('pillars')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await updatePillar({
+        id,
+        patch: { name: patch.name, color: patch.color, isActive: patch.is_active },
+      });
       toast.success('Pillar updated successfully!');
       setEditingId(null);
-      fetchPillars();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating pillar:', error);
@@ -98,23 +64,11 @@ export const PillarManager: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this pillar?')) {
-      return;
-    }
-
+  const handleDelete = async (id: Id<'pillars'>) => {
+    if (!confirm('Are you sure you want to delete this pillar?')) return;
     try {
-      const { error } = await supabase
-        .from('pillars')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await removePillar({ id });
       toast.success('Pillar deleted successfully!');
-      fetchPillars();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting pillar:', error);

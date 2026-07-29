@@ -1,75 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { convexToTaxonomy, sortTaxonomyByName } from '@/integrations/convex/adapter';
 import { toast } from 'sonner';
 
 interface Status {
-  id: string;
+  id: Id<'post_statuses'>;
   name: string;
   color: string;
   is_active: boolean;
 }
 
 export const StatusManager: React.FC = () => {
-  const [statuses, setStatuses] = useState<Status[]>([]);
-  const [loading, setLoading] = useState(true);
+  const raw = useQuery(api.taxonomy.listStatuses);
+  const loading = raw === undefined;
+  const statuses = useMemo<Status[]>(
+    () => sortTaxonomyByName((raw ?? []).map((d) => convexToTaxonomy<Status>(d))),
+    [raw],
+  );
+  const createStatus = useMutation(api.taxonomy.createStatus);
+  const updateStatus = useMutation(api.taxonomy.updateStatus);
+  const removeStatus = useMutation(api.taxonomy.removeStatus);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [newStatus, setNewStatus] = useState({
-    name: '',
-    color: '#6B7280'
-  });
-
-  const fetchStatuses = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('post_statuses')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setStatuses(data || []);
-    } catch (error) {
-      console.error('Error fetching statuses:', error);
-      toast.error('Failed to load statuses');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStatuses();
-  }, []);
+  const [newStatus, setNewStatus] = useState({ name: '', color: '#6B7280' });
 
   const handleCreate = async () => {
     if (!newStatus.name.trim()) {
       toast.error('Status name is required');
       return;
     }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('post_statuses')
-        .insert([{
-          user_id: user.id,
-          name: newStatus.name.toLowerCase(),
-          color: newStatus.color
-        }]);
-
-      if (error) throw error;
-
+      await createStatus({ name: newStatus.name.toLowerCase(), color: newStatus.color });
       toast.success('Status created successfully!');
       setIsCreating(false);
       setNewStatus({ name: '', color: '#6B7280' });
-      fetchStatuses();
-
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating status:', error);
@@ -77,20 +49,18 @@ export const StatusManager: React.FC = () => {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<Status>) => {
+  const handleUpdate = async (id: Id<'post_statuses'>, patch: Partial<Status>) => {
     try {
-      const { error } = await supabase
-        .from('post_statuses')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await updateStatus({
+        id,
+        patch: {
+          name: patch.name,
+          color: patch.color,
+          isActive: patch.is_active,
+        },
+      });
       toast.success('Status updated successfully!');
       setEditingId(null);
-      fetchStatuses();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating status:', error);
@@ -98,23 +68,11 @@ export const StatusManager: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this status?')) {
-      return;
-    }
-
+  const handleDelete = async (id: Id<'post_statuses'>) => {
+    if (!confirm('Are you sure you want to delete this status?')) return;
     try {
-      const { error } = await supabase
-        .from('post_statuses')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await removeStatus({ id });
       toast.success('Status deleted successfully!');
-      fetchStatuses();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting status:', error);
