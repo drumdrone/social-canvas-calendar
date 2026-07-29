@@ -181,13 +181,14 @@ export const markEmailSent = internalMutation({
   },
 });
 
-// -------- Email dispatch (Resend, direct HTTP — no Supabase dependency) ----
+// -------- Email dispatch (Brevo, direct HTTP — no Supabase dependency) -----
 
 // Convex deployment env vars (set with `npx convex env set NAME value`):
-//   RESEND_API_KEY = re_...                  (required to send)
-//   RESEND_FROM    = "Name <hello@domain>"   (optional; falls back to onboarding@resend.dev)
+//   BREVO_API_KEY  = xkeysib-...             (required to send)
+//   MAIL_FROM      = "Name <hello@domain>"   (required; must be on a
+//                                             Brevo-authenticated domain)
 //   APP_URL        = https://your.app        (optional; for "View comment" link)
-// If RESEND_API_KEY is missing the comment still saves — the email is just skipped.
+// If BREVO_API_KEY is missing the comment still saves — the email is just skipped.
 
 function escapeHtml(s: string): string {
   return String(s)
@@ -198,6 +199,14 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#039;");
 }
 
+// Parses "Name <email@domain>" into { name, email }. Also accepts a bare
+// email; falls back to a default name.
+function parseFromAddress(input: string): { name: string; email: string } {
+  const match = input.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  if (match) return { name: match[1] || "Notifications", email: match[2] };
+  return { name: "Notifications", email: input.trim() };
+}
+
 async function sendMentionEmail(payload: {
   mentionedAuthorEmail: string;
   mentionedAuthorName?: string;
@@ -206,13 +215,17 @@ async function sendMentionEmail(payload: {
   commenterName?: string;
   postId?: string;
 }) {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
-    console.warn("RESEND_API_KEY not set — skipping email");
+    console.warn("BREVO_API_KEY not set — skipping email");
     return;
   }
-  const from =
-    process.env.RESEND_FROM || "Social Canvas Calendar <onboarding@resend.dev>";
+  const fromStr = process.env.MAIL_FROM;
+  if (!fromStr) {
+    console.warn("MAIL_FROM not set — skipping email");
+    return;
+  }
+  const from = parseFromAddress(fromStr);
   const appUrl = (process.env.APP_URL || "").replace(/\/$/, "");
 
   const recipient = payload.mentionedAuthorName?.trim() || "Team Member";
@@ -248,20 +261,22 @@ async function sendMentionEmail(payload: {
 </body>
 </html>`;
 
-  const res = await fetch("https://api.resend.com/emails", {
+  // Brevo Transactional Email API
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      accept: "application/json",
+      "api-key": apiKey,
     },
     body: JSON.stringify({
-      from,
-      to: [payload.mentionedAuthorEmail],
+      sender: from,
+      to: [{ email: payload.mentionedAuthorEmail, name: recipient }],
       subject: `${author} mentioned you in "${title}"`,
-      html,
+      htmlContent: html,
     }),
   });
   if (!res.ok) {
-    throw new Error(`Resend ${res.status}: ${await res.text()}`);
+    throw new Error(`Brevo ${res.status}: ${await res.text()}`);
   }
 }
