@@ -266,6 +266,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       applyImageSlot(0, 'imageStorageId');
       applyImageSlot(1, 'imageStorageId2');
       applyImageSlot(2, 'imageStorageId3');
+      // Debug: verify what we're actually sending to Convex when images change.
+      // Remove once the image-clear bug is confirmed fixed.
+      console.log('[handleSave] postImages', postImages, 'ids', postImageStorageIds, 'patch', patch);
       // recurring_action_id still uses the Supabase UUID during migration —
       // once recurring actions get their own legacyId lookup we'll thread it
       // through. Skip it for now rather than sending an incompatible value.
