@@ -1,45 +1,42 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { UserProfile } from '@/types/comments';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+
+interface UiUser {
+  id: Id<'user_profiles'>;
+  email: string;
+  full_name: string;
+  notification_enabled: boolean;
+}
 
 export function UserManagement() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const raw = useQuery(api.userProfiles.list);
+  const loading = raw === undefined;
+  const users = useMemo<UiUser[]>(
+    () =>
+      (raw ?? []).map((u: any) => ({
+        id: u._id,
+        email: u.email,
+        full_name: u.fullName,
+        notification_enabled: u.notificationEnabled !== false,
+      })),
+    [raw],
+  );
+  const createUser = useMutation(api.userProfiles.create);
+  const updateUser = useMutation(api.userProfiles.update);
+  const removeUser = useMutation(api.userProfiles.remove);
+
   const [newUser, setNewUser] = useState({ email: '', full_name: '' });
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  async function loadUsers() {
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (error: any) {
-      toast({
-        title: 'Chyba',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleAddUser(e: React.FormEvent) {
     e.preventDefault();
-
     if (!newUser.email || !newUser.full_name) {
       toast({
         title: 'Chyba',
@@ -48,81 +45,47 @@ export function UserManagement() {
       });
       return;
     }
-
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .insert({
-          email: newUser.email,
-          full_name: newUser.full_name,
-          notification_enabled: true,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Úspěch',
-        description: 'Uživatel byl přidán',
+      await createUser({
+        email: newUser.email,
+        fullName: newUser.full_name,
+        notificationEnabled: true,
       });
-
+      toast({ title: 'Úspěch', description: 'Uživatel byl přidán' });
       setNewUser({ email: '', full_name: '' });
-      loadUsers();
     } catch (error: any) {
-      toast({
-        title: 'Chyba',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Chyba', description: error?.message, variant: 'destructive' });
     }
   }
 
-  async function handleDeleteUser(userId: string) {
+  async function handleDeleteUser(userId: Id<'user_profiles'>) {
     if (!confirm('Opravdu chcete smazat tohoto uživatele?')) return;
-
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Úspěch',
-        description: 'Uživatel byl smazán',
-      });
-
-      loadUsers();
+      await removeUser({ id: userId });
+      toast({ title: 'Úspěch', description: 'Uživatel byl smazán' });
     } catch (error: any) {
-      toast({
-        title: 'Chyba',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Chyba', description: error?.message, variant: 'destructive' });
     }
   }
 
-  async function toggleNotifications(userId: string, currentState: boolean) {
+  async function toggleNotifications(user: UiUser) {
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ notification_enabled: !currentState })
-        .eq('id', userId);
-
-      if (error) throw error;
-
+      // update expects a full patch (all fields are optional but present in the
+      // validator); pass through the current values and flip only the toggle.
+      await updateUser({
+        id: user.id,
+        patch: {
+          email: user.email,
+          fullName: user.full_name,
+          notificationEnabled: !user.notification_enabled,
+        },
+      });
       toast({
         title: 'Úspěch',
         description: 'Nastavení notifikací bylo změněno',
       });
-
-      loadUsers();
     } catch (error: any) {
-      toast({
-        title: 'Chyba',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Chyba', description: error?.message, variant: 'destructive' });
     }
   }
 
@@ -135,7 +98,6 @@ export function UserManagement() {
       <div>
         <h2 className="text-2xl font-bold mb-4">Správa uživatelů</h2>
 
-        {/* Add new user form */}
         <form onSubmit={handleAddUser} className="space-y-4 mb-8 p-4 border rounded-lg">
           <h3 className="font-semibold">Přidat nového uživatele</h3>
 
@@ -167,7 +129,6 @@ export function UserManagement() {
           </Button>
         </form>
 
-        {/* Users list */}
         <div className="space-y-2">
           <h3 className="font-semibold mb-4">Uživatelé ({users.length})</h3>
 
@@ -185,8 +146,12 @@ export function UserManagement() {
                 <Button
                   variant={user.notification_enabled ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => toggleNotifications(user.id, user.notification_enabled)}
-                  title={user.notification_enabled ? 'Notifikace zapnuty' : 'Notifikace vypnuty'}
+                  onClick={() => toggleNotifications(user)}
+                  title={
+                    user.notification_enabled
+                      ? 'Notifikace zapnuty'
+                      : 'Notifikace vypnuty'
+                  }
                 >
                   <Mail className="h-4 w-4" />
                 </Button>
