@@ -2,22 +2,30 @@ import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { X, Upload, Image, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUploadImage } from "@/integrations/convex/useUploadImage";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 interface MultiImageUploadProps {
   images: (string | null)[];
   onImagesChange: (images: (string | null)[]) => void;
+  // Optional: parent can also track the Convex storage id per slot, so the
+  // saved post persists the id (stable) rather than only the served URL.
+  onImageIdsChange?: (ids: (Id<'_storage'> | null)[]) => void;
+  imageIds?: (Id<'_storage'> | null)[];
   maxImages?: number;
 }
 
 export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
   images,
   onImagesChange,
+  onImageIdsChange,
+  imageIds,
   maxImages = 3
 }) => {
   const [uploading, setUploading] = useState<number | null>(null);
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const uploadToConvex = useUploadImage();
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
     const file = event.target.files?.[0];
@@ -28,30 +36,18 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
 
     setUploading(slotIndex);
     try {
-      const fileExt = file.name.split('.').pop() || 'png';
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `public/${fileName}`;
-
-      console.log('Uploading image to:', filePath, 'File size:', file.size);
-
-      const { error: uploadError } = await supabase.storage
-        .from('social-media-images')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        console.error('Upload error details:', uploadError);
-        throw uploadError;
-      }
-
-      const { data } = supabase.storage
-        .from('social-media-images')
-        .getPublicUrl(filePath);
-
-      console.log('Image uploaded, public URL:', data.publicUrl);
+      const { url, storageId } = await uploadToConvex(file);
 
       const newImages = [...images];
-      newImages[slotIndex] = data.publicUrl;
+      newImages[slotIndex] = url;
       onImagesChange(newImages);
+
+      if (onImageIdsChange) {
+        const currentIds = imageIds ?? [null, null, null];
+        const newIds = [...currentIds];
+        newIds[slotIndex] = storageId;
+        onImageIdsChange(newIds);
+      }
 
       toast.success('Image uploaded successfully');
     } catch (error: any) {
@@ -66,10 +62,17 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('Removing image at slot:', slotIndex);
     const newImages = [...images];
     newImages[slotIndex] = null;
     onImagesChange(newImages);
+
+    if (onImageIdsChange) {
+      const currentIds = imageIds ?? [null, null, null];
+      const newIds = [...currentIds];
+      newIds[slotIndex] = null;
+      onImageIdsChange(newIds);
+    }
+
     toast.success('Image removed');
   };
 

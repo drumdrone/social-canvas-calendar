@@ -636,6 +636,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     <MultiImageUpload
                       images={postImages}
                       onImagesChange={setPostImages}
+                      imageIds={postImageStorageIds}
+                      onImageIdsChange={setPostImageStorageIds}
                       maxImages={3}
                     />
                   </div>
