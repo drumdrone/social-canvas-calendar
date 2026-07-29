@@ -25,7 +25,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
 import { MultiImageUpload } from './MultiImageUpload';
-import { MentionInput } from './MentionInput';
 import { CommentEditor } from '../comments/CommentEditor';
 import { CommentList } from '../comments/CommentList';
 import { SendPostPdfDialog } from './SendPostPdfDialog';
@@ -78,11 +77,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [recurringActions, setRecurringActions] = useState<Array<{id: string, title: string, action_type: string}>>([]);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showPdfDialog, setShowPdfDialog] = useState(false);
-  const [comments, setComments] = useState('');
-  const [newComment, setNewComment] = useState('');
-  const [selectedCommentAuthor, setSelectedCommentAuthor] = useState('');
-  const [editingCommentIndex, setEditingCommentIndex] = useState<number | null>(null);
-  const [editingCommentText, setEditingCommentText] = useState('');
   const [activeTab, setActiveTab] = useState('content');
   const [commentRefresh, setCommentRefresh] = useState(0);
   const { toast } = useToast();
@@ -171,8 +165,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setProductLine((post as any).product_line || 'none');
       setAuthor(post.author || '');
       setRecurringActionId((post as any).recurring_action_id || 'none');
-      setComments((post as any).comments || '');
-      
+
       // Set existing images
       const images: (string | null)[] = [
         post.image_url_1 || post.image_url || null,
@@ -196,7 +189,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setScheduledDate(selectedDate);
       setTime('12:00');
       setPostImages([null, null, null]);
-      setComments('');
     }
   }, [post, selectedDate]);
 
@@ -248,7 +240,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
         author: author || null,
-        comments: comments || null,
       });
       // Storage ids: three cases per slot —
       //   image cleared (postImages[i] === null): send null so the stored id
@@ -321,267 +312,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     }
   };
 
-  // Comment management functions
-  const handleEditComment = (index: number) => {
-    const commentArray = comments.split('\n\n').filter(comment => comment.trim());
-    const comment = commentArray[index];
-    const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
-    if (match) {
-      setEditingCommentText(match[4]); // Extract comment text
-    } else {
-      setEditingCommentText(comment); // Fallback for old format
-    }
-    setEditingCommentIndex(index);
-  };
-
-
-  const handleSaveEditComment = async () => {
-    if (editingCommentIndex !== null && editingCommentText.trim()) {
-      const commentArray = comments.split('\n\n').filter(comment => comment.trim());
-      const comment = commentArray[editingCommentIndex];
-      const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
-
-      let authorName = '';
-      if (match) {
-        const [, timestamp, originalAuthorName, authorInitials] = match;
-        authorName = originalAuthorName;
-        const updatedComment = `[${timestamp}] ${originalAuthorName} (${authorInitials}): ${editingCommentText.trim()}`;
-        commentArray[editingCommentIndex] = updatedComment;
-      } else {
-        // Fallback for old format
-        commentArray[editingCommentIndex] = editingCommentText.trim();
-        authorName = 'Unknown User';
-      }
-
-      const updatedComments = commentArray.join('\n\n');
-      setComments(updatedComments);
-
-      // Save updated comments to database if post exists
-      if (post?.id) {
-        try {
-          const { error } = await supabase
-            .from('social_media_posts')
-            .update({ comments: updatedComments })
-            .eq('id', post.id);
-
-          if (error) throw error;
-        } catch (error) {
-          console.error('Error saving updated comment to database:', error);
-          toast({
-            title: 'Warning',
-            description: 'Comment updated but not saved to database.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      }
-
-      // Detect mentions and send emails for updated comment
-      await detectMentionsAndSendEmails(editingCommentText.trim(), authorName);
-
-      setEditingCommentIndex(null);
-      setEditingCommentText('');
-
-      toast({
-        title: 'Comment Updated',
-        description: post?.id ? 'Comment has been saved and mentions notified.' : 'Comment updated. Save the post to persist it.',
-      });
-    }
-  };
-
-  const handleDeleteComment = async (index: number) => {
-    if (confirm('Are you sure you want to delete this comment?')) {
-      const commentArray = comments.split('\n\n').filter(comment => comment.trim());
-      commentArray.splice(index, 1);
-      const updatedComments = commentArray.join('\n\n');
-      setComments(updatedComments);
-
-      // Save updated comments to database if post exists
-      if (post?.id) {
-        try {
-          const { error } = await supabase
-            .from('social_media_posts')
-            .update({ comments: updatedComments })
-            .eq('id', post.id);
-
-          if (error) throw error;
-        } catch (error) {
-          console.error('Error deleting comment from database:', error);
-          toast({
-            title: 'Warning',
-            description: 'Comment deleted but not saved to database.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      }
-
-      toast({
-        title: 'Comment Deleted',
-        description: post?.id ? 'Comment has been deleted and saved.' : 'Comment deleted. Save the post to persist changes.',
-      });
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingCommentIndex(null);
-    setEditingCommentText('');
-  };
-
-  // Function to detect mentions and send emails
-  const detectMentionsAndSendEmails = async (commentText: string, commenterName: string) => {
-    console.log('=== MENTION DETECTION STARTED ===');
-    console.log('Comment text:', commentText);
-    console.log('Available authors:', authorOptions);
-
-    // Use the same regex as MentionInput component for consistency
-    const mentionRegex = /@([A-Z]{2,})/g;
-    const mentions = [...commentText.matchAll(mentionRegex)];
-    
-    console.log('Mentions found with regex:', mentions);
-    
-    if (mentions.length === 0) {
-      console.log('No mentions detected in comment');
-      toast({
-        title: "No mentions found",
-        description: "No valid mentions (@INITIALS format) detected in comment",
-      });
-      return;
-    }
-    
-    for (const mention of mentions) {
-      const mentionedInitials = mention[1].toUpperCase();
-      console.log('Processing mention for initials:', mentionedInitials);
-      
-      const mentionedAuthor = authorOptions.find(a => 
-        a.initials.toUpperCase() === mentionedInitials
-      );
-      
-      console.log('Found author for initials:', mentionedAuthor);
-      
-      if (mentionedAuthor && mentionedAuthor.email) {
-        try {
-          console.log('=== CALLING EDGE FUNCTION ===');
-          console.log('Sending email to:', mentionedAuthor.email);
-          console.log('Function parameters:', {
-            mentionedAuthorEmail: mentionedAuthor.email,
-            mentionedAuthorName: mentionedAuthor.name,
-            postTitle: title,
-            commentText,
-            commenterName,
-          });
-          
-          const { data, error } = await supabase.functions.invoke('send-mention-email', {
-            body: {
-              mentionedAuthorEmail: mentionedAuthor.email,
-              mentionedAuthorName: mentionedAuthor.name,
-              postTitle: title,
-              commentText,
-              commenterName,
-            },
-          });
-
-          console.log('=== EDGE FUNCTION RESPONSE ===');
-          console.log('Data:', data);
-          console.log('Error:', error);
-          console.log('=== END EDGE FUNCTION RESPONSE ===');
-
-          if (error) {
-            console.error('Edge function returned error:', error);
-
-            // Check if it's a Resend domain verification issue
-            const isDomainIssue = error.message?.includes("verify a domain") ||
-                                  error.message?.includes("testing emails") ||
-                                  error.message?.includes("test mode");
-
-            toast({
-              title: isDomainIssue ? "Email service not configured" : "Email notification failed",
-              description: isDomainIssue
-                ? "Resend is in test mode. Verify your domain at resend.com/domains to send emails to team members."
-                : `Could not send notification to ${mentionedAuthor.name}: ${error.message}`,
-              variant: "destructive",
-              duration: isDomainIssue ? 10000 : 5000,
-            });
-          } else if (data?.success) {
-            console.log(`SUCCESS: Mention email sent to ${mentionedAuthor.email}`);
-            toast({
-              title: "Email sent successfully",
-              description: `${mentionedAuthor.name} has been notified at ${mentionedAuthor.email}`,
-            });
-          } else if (data?.error) {
-            // Handle error in response data
-            const isDomainIssue = data.error.includes("verify a domain") ||
-                                  data.error.includes("testing emails") ||
-                                  data.error.includes("test mode");
-
-            toast({
-              title: isDomainIssue ? "Email service not configured" : "Email notification failed",
-              description: isDomainIssue
-                ? "Resend is in test mode. Verify your domain at resend.com/domains to send emails to team members."
-                : data.error,
-              variant: "destructive",
-              duration: isDomainIssue ? 10000 : 5000,
-            });
-          }
-        } catch (error) {
-          console.error('Exception calling edge function:', error);
-          toast({
-            title: "Email notification failed",
-            description: `Unable to send mention notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            variant: "destructive",
-          });
-        }
-      } else if (mentionedAuthor && !mentionedAuthor.email) {
-        toast({
-          title: "No email address",
-          description: `${mentionedAuthor.name} doesn't have an email address set`,
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (newComment.trim() && selectedCommentAuthor) {
-      const selectedAuthor = authorOptions.find(a => a.initials === selectedCommentAuthor);
-      const timestamp = new Date().toLocaleString();
-      const commentEntry = `[${timestamp}] ${selectedAuthor?.name} (${selectedCommentAuthor}): ${newComment.trim()}`;
-
-      const updatedComments = comments ? `${comments}\n\n${commentEntry}` : commentEntry;
-      setComments(updatedComments);
-
-      // Save comment to database if post exists
-      if (post?.id) {
-        try {
-          const { error } = await supabase
-            .from('social_media_posts')
-            .update({ comments: updatedComments })
-            .eq('id', post.id);
-
-          if (error) throw error;
-        } catch (error) {
-          console.error('Error saving comment to database:', error);
-          toast({
-            title: 'Warning',
-            description: 'Comment added but not saved to database. Please save the post manually.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      }
-
-      // Detect mentions and send emails
-      await detectMentionsAndSendEmails(newComment.trim(), selectedAuthor?.name || selectedCommentAuthor);
-
-      setNewComment('');
-      setSelectedCommentAuthor('');
-
-      toast({
-        title: 'Comment Added',
-        description: post?.id ? 'Comment has been saved.' : 'Comment added. Save the post to persist it.',
-      });
-    }
-  };
+  // (The old inline-text comment system + initials-based Supabase mention
+  // emails were removed here in favor of the Convex-backed CommentEditor /
+  // CommentList components rendered in the sidebar's right column.)
 
   if (!isOpen) return null;
 
@@ -974,165 +707,13 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
               
               <ScrollArea className="flex-1">
                 <div className="p-6 space-y-6">
-                  {/* Existing Comments Display */}
-                  {comments && (
-                    <div className="space-y-4">
-                      <Label className="text-sm font-medium">Comments</Label>
-                      <div className="space-y-3">
-                        {comments.split('\n\n').filter(comment => comment.trim()).map((comment, index) => {
-                          // Parse comment format: [timestamp] Author Name (INITIALS): comment text
-                          const match = comment.match(/^\[(.*?)\]\s+(.*?)\s+\(([^)]+)\):\s*(.*)$/);
-                          if (match) {
-                            const [, timestamp, authorName, authorInitials, commentText] = match;
-                            const author = authorOptions.find(a => a.initials === authorInitials);
-                            
-                            return (
-                              <div key={index} className="border rounded-lg p-4 bg-muted/30">
-                                <div className="flex items-start gap-3">
-                                  <div 
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5"
-                                    style={{ backgroundColor: author?.color || '#3B82F6' }}
-                                  >
-                                    {authorInitials}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-sm">{authorName}</span>
-                                        <span className="text-xs text-muted-foreground">{timestamp}</span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                          onClick={() => handleEditComment(index)}
-                                          title="Edit comment"
-                                        >
-                                          <Edit3 className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                          onClick={() => handleDeleteComment(index)}
-                                          title="Delete comment"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                    {editingCommentIndex === index ? (
-                                      <div className="space-y-2">
-                                        <Textarea
-                                          value={editingCommentText}
-                                          onChange={(e) => setEditingCommentText(e.target.value)}
-                                          className="text-sm resize-none"
-                                          rows={2}
-                                        />
-                                        <div className="flex items-center gap-2">
-                                          <Button
-                                            size="sm"
-                                            className="h-6 px-2"
-                                            onClick={handleSaveEditComment}
-                                          >
-                                            <Check className="h-3 w-3 mr-1" />
-                                            Save
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-6 px-2"
-                                            onClick={handleCancelEdit}
-                                          >
-                                            <X className="h-3 w-3 mr-1" />
-                                            Cancel
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="text-sm text-foreground whitespace-pre-wrap">{commentText}</div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          }
-                          
-                          // Fallback for old format comments or malformed comments
-                          return (
-                            <div key={index} className="border rounded-lg p-4 bg-muted/30">
-                              <div className="text-sm whitespace-pre-wrap">{comment}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* New Comment Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Add New Comment</Label>
-                      <div className="flex items-center gap-2">
-                        <Label className="text-xs text-muted-foreground">Author:</Label>
-                        <Select value={selectedCommentAuthor} onValueChange={setSelectedCommentAuthor}>
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-background border border-border shadow-lg z-[60]">
-                            {authorOptions.map((author) => (
-                              <SelectItem key={author.initials} value={author.initials}>
-                                <div className="flex items-center gap-2">
-                                  <div 
-                                    className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                                    style={{ backgroundColor: author.color }}
-                                  >
-                                    {author.initials}
-                                  </div>
-                                  {author.name}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <MentionInput
-                      value={newComment}
-                      onChange={setNewComment}
-                      authors={authorOptions}
-                      rows={4}
-                      className="text-base resize-none"
-                    />
-                    
-                    <Button
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim() || !selectedCommentAuthor}
-                      size="sm"
-                      className="self-start"
-                    >
-                      Add Comment
-                    </Button>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      Comments are for internal team communication. Use @initials or @name to mention team members and send them email notifications.
-                    </p>
-                  </div>
-
-                  {/* New @Mention Comment System */}
-                  {post && (
-                    <div className="space-y-4 pt-6 border-t">
-                      <div>
-                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4" />
-                          Team Mentions & Notifications
-                        </h4>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Použijte @ pro označení členů týmu. Email notifikace budou odeslány automaticky.
-                        </p>
-                      </div>
+                  {post ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        Použijte <strong>@Jméno</strong> pro označení člena týmu.
+                        Zmínění dostanou e-mail (pokud mají zapnuté notifikace).
+                        Uživatele spravuj v Settings → Správa uživatelů.
+                      </p>
 
                       <CommentList
                         postId={post.id}
@@ -1143,7 +724,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                         postId={post.id}
                         onCommentAdded={() => setCommentRefresh(prev => prev + 1)}
                       />
-                    </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Uložte nejdřív příspěvek — komentáře se aktivují po vytvoření.
+                    </p>
                   )}
                 </div>
               </ScrollArea>
