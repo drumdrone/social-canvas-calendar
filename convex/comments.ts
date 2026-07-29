@@ -113,12 +113,29 @@ export const addComment = action({
   // Explicit return type breaks the circular type dependency that Convex's
   // codegen creates when an action calls its own module's internal mutation.
   handler: async (ctx, args): Promise<{ commentId: string }> => {
+    // Temporary diagnostic — remove once emails are confirmed flowing.
+    console.log(
+      "[addComment] called with postId=" +
+        args.postId +
+        " authorId=" +
+        args.authorId +
+        " mentions=" +
+        JSON.stringify(args.mentionedUserIds) +
+        " content=" +
+        JSON.stringify(args.content),
+    );
     // 1. Persist the comment + mentions + notifications.
     const result = (await ctx.runMutation(
       internal.comments.insertCommentWithMentions,
       args,
     )) as { commentId: string; notificationIds: string[] };
     const { commentId, notificationIds } = result;
+    console.log(
+      "[addComment] persisted commentId=" +
+        commentId +
+        " notifications=" +
+        notificationIds.length,
+    );
 
     // 2. Best-effort email each mentioned user via the existing Resend edge
     //    function. The edge function is stateless (accepts recipient + text),
@@ -138,7 +155,16 @@ export const addComment = action({
       );
       await Promise.all(
         mentionedUsers.map(async (u) => {
-          if (!u?.email || u.notificationEnabled === false) return;
+          if (!u?.email || u.notificationEnabled === false) {
+            console.log(
+              "[addComment] skipping user email=" +
+                (u?.email || "(none)") +
+                " notif=" +
+                u?.notificationEnabled,
+            );
+            return;
+          }
+          console.log("[addComment] emailing " + u.email);
           try {
             await sendMentionEmail({
               mentionedAuthorEmail: u.email,
