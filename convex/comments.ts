@@ -181,11 +181,23 @@ export const markEmailSent = internalMutation({
   },
 });
 
-// -------- Email dispatch (Resend, via the existing edge function) ----------
+// -------- Email dispatch (Resend, direct HTTP — no Supabase dependency) ----
 
-// The edge function URL + anon key are configured on the Convex deployment
-// (env vars). We call it as a plain HTTP POST — the function is stateless and
-// takes the mention payload directly.
+// Convex deployment env vars (set with `npx convex env set NAME value`):
+//   RESEND_API_KEY = re_...                  (required to send)
+//   RESEND_FROM    = "Name <hello@domain>"   (optional; falls back to onboarding@resend.dev)
+//   APP_URL        = https://your.app        (optional; for "View comment" link)
+// If RESEND_API_KEY is missing the comment still saves — the email is just skipped.
+
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 async function sendMentionEmail(payload: {
   mentionedAuthorEmail: string;
   mentionedAuthorName?: string;
@@ -194,21 +206,62 @@ async function sendMentionEmail(payload: {
   commenterName?: string;
   postId?: string;
 }) {
-  const url = process.env.SEND_MENTION_EMAIL_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  if (!url) {
-    console.warn("SEND_MENTION_EMAIL_URL not set — skipping email");
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("RESEND_API_KEY not set — skipping email");
     return;
   }
-  const res = await fetch(url, {
+  const from =
+    process.env.RESEND_FROM || "Social Canvas Calendar <onboarding@resend.dev>";
+  const appUrl = (process.env.APP_URL || "").replace(/\/$/, "");
+
+  const recipient = payload.mentionedAuthorName?.trim() || "Team Member";
+  const author = payload.commenterName?.trim() || "Someone";
+  const title = payload.postTitle?.trim() || "a post";
+  const postUrl = appUrl ? `${appUrl}/post/${encodeURIComponent(payload.postId || "")}` : "";
+  const settingsUrl = appUrl ? `${appUrl}/settings` : "";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>You were mentioned in a comment</title></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px;">
+  <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:30px;border-radius:10px 10px 0 0;text-align:center;">
+    <h1 style="color:white;margin:0;font-size:24px;">📢 You were mentioned!</h1>
+  </div>
+  <div style="background:#fff;padding:30px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;">
+    <p style="font-size:16px;margin-bottom:20px;">Hi <strong>${escapeHtml(recipient)}</strong>,</p>
+    <p style="font-size:16px;margin-bottom:25px;">
+      <strong>${escapeHtml(author)}</strong> mentioned you in a comment on
+      <strong>"${escapeHtml(title)}"</strong>:
+    </p>
+    <div style="background:#f9fafb;border-left:4px solid #667eea;padding:20px;margin:25px 0;border-radius:4px;">
+      <p style="margin:0;font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(payload.commentText)}</p>
+    </div>
+    ${postUrl ? `<div style="text-align:center;margin:30px 0;"><a href="${postUrl}" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:14px 32px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;font-size:16px;">View comment</a></div>` : ""}
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:30px 0;">
+    <p style="font-size:13px;color:#6b7280;margin:0;">
+      You're receiving this because you were mentioned in a comment.
+      ${settingsUrl ? `To stop, go to <a href="${settingsUrl}" style="color:#667eea;">Settings</a> and disable notifications.` : ""}
+    </p>
+  </div>
+</body>
+</html>`;
+
+  const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(anonKey ? { Authorization: `Bearer ${anonKey}` } : {}),
+      Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      from,
+      to: [payload.mentionedAuthorEmail],
+      subject: `${author} mentioned you in "${title}"`,
+      html,
+    }),
   });
   if (!res.ok) {
-    throw new Error(`Edge function ${res.status}: ${await res.text()}`);
+    throw new Error(`Resend ${res.status}: ${await res.text()}`);
   }
 }
