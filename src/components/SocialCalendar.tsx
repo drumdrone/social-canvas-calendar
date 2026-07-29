@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { CalendarHeader } from './calendar/CalendarHeader';
 import { CalendarGrid } from './calendar/CalendarGrid';
 import { CalendarList } from './calendar/CalendarList';
-import { PostsTable } from './calendar/PostsTable';
 import { CalendarFilters } from './calendar/CalendarFilters';
 import { FacebookPostPreview } from './calendar/FacebookPostPreview';
 import { PostSlidingSidebar } from './calendar/PostSlidingSidebar';
@@ -15,7 +14,7 @@ import { Settings, Plus, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, addWeeks } from 'date-fns';
 
-export type ViewMode = 'month' | 'week' | 'list' | 'table';
+export type ViewMode = 'month' | 'week' | 'list';
 export type Platform = string; // Changed to string to support dynamic platforms
 export type PostStatus = string; // Changed to string to support dynamic statuses
 export type Category = string; // Changed to string to support dynamic categories
@@ -248,13 +247,6 @@ export const SocialCalendar: React.FC = () => {
             selectedStatuses={selectedStatuses}
             onDateClick={handleDateClick}
             onPostClick={handlePostClick}
-          />
-        ) : viewMode === 'table' ? (
-          <PostsTable
-            key={refreshKey}
-            selectedPlatforms={selectedPlatforms}
-            selectedStatuses={selectedStatuses}
-            currentDate={currentDate}
           />
         ) : viewMode === 'week' ? (
           <FacebookPostPreview

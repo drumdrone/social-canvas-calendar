@@ -31,8 +31,8 @@ export function convexToSocialPost(doc: any): SocialPost {
 }
 
 // Payload the UI builds when saving a post. Kept in snake_case so the existing
-// PostSlidingSidebar / PostsTable code doesn't have to be restructured; the
-// helper below converts it to the camelCase shape Convex expects.
+// PostSlidingSidebar code doesn't have to be restructured; the helper below
+// converts it to the camelCase shape Convex expects.
 export interface SocialPostWrite {
   title?: string | null;
   content?: string | null;
