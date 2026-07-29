@@ -31,12 +31,14 @@ const lookup = {
 
 export default defineSchema({
   social_media_posts: defineTable({
-    title: v.string(),
+    // Real data has nulls in several "required" columns, so accept null/absent
+    // and let the UI enforce presence at write time.
+    title: v.optional(v.union(v.string(), v.null())),
     content: v.optional(v.union(v.string(), v.null())),
-    platform: v.string(),
-    category: v.string(),
-    status: v.string(),
-    scheduledDate: v.string(), // ISO date (kept as string to match existing UI)
+    platform: v.optional(v.union(v.string(), v.null())),
+    category: v.optional(v.union(v.string(), v.null())),
+    status: v.optional(v.union(v.string(), v.null())),
+    scheduledDate: v.optional(v.union(v.string(), v.null())), // ISO date string
     author: v.optional(v.union(v.string(), v.null())),
     pillar: v.optional(v.union(v.string(), v.null())),
     productLine: v.optional(v.union(v.string(), v.null())),
@@ -96,7 +98,7 @@ export default defineSchema({
   }).index("by_legacyId", ["legacyId"]),
 
   mood_board_items: defineTable({
-    format: v.string(),
+    format: v.optional(v.union(v.string(), v.null())),
     imagePrompt: v.optional(v.string()),
     napad: v.optional(v.string()),
     popis: v.optional(v.string()),
@@ -106,8 +108,8 @@ export default defineSchema({
   }).index("by_legacyId", ["legacyId"]),
 
   plan_sections: defineTable({
-    sectionData: v.any(),
-    sectionOrder: v.number(),
+    sectionData: v.optional(v.any()),
+    sectionOrder: v.optional(v.union(v.number(), v.null())),
     userId: v.optional(v.string()),
     ...timestamps,
   }).index("by_legacyId", ["legacyId"]),
