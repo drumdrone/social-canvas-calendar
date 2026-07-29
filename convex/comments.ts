@@ -110,12 +110,15 @@ export const addComment = action({
     content: v.string(),
     mentionedUserIds: v.array(v.id("user_profiles")),
   },
-  handler: async (ctx, args) => {
+  // Explicit return type breaks the circular type dependency that Convex's
+  // codegen creates when an action calls its own module's internal mutation.
+  handler: async (ctx, args): Promise<{ commentId: string }> => {
     // 1. Persist the comment + mentions + notifications.
-    const { commentId, notificationIds }: {
-      commentId: string;
-      notificationIds: string[];
-    } = await ctx.runMutation(internal.comments.insertCommentWithMentions, args);
+    const result = (await ctx.runMutation(
+      internal.comments.insertCommentWithMentions,
+      args,
+    )) as { commentId: string; notificationIds: string[] };
+    const { commentId, notificationIds } = result;
 
     // 2. Best-effort email each mentioned user via the existing Resend edge
     //    function. The edge function is stateless (accepts recipient + text),
