@@ -13,6 +13,9 @@ export function convexToSocialPost(doc: any): SocialPost {
     content: doc.content ?? undefined,
     platform: doc.platform ?? '',
     image_url: doc.imageUrl ?? undefined,
+    image_url_1: doc.imageUrl ?? undefined,
+    image_url_2: doc.imageUrl2 ?? undefined,
+    image_url_3: doc.imageUrl3 ?? undefined,
     scheduled_date: doc.scheduledDate ?? '',
     status: doc.status ?? '',
     category: doc.category ?? '',
@@ -25,4 +28,55 @@ export function convexToSocialPost(doc: any): SocialPost {
     product_line: doc.productLine ?? undefined,
     author: doc.author ?? undefined,
   };
+}
+
+// Payload the UI builds when saving a post. Kept in snake_case so the existing
+// PostSlidingSidebar / PostsTable code doesn't have to be restructured; the
+// helper below converts it to the camelCase shape Convex expects.
+export interface SocialPostWrite {
+  title?: string | null;
+  content?: string | null;
+  platform?: string | null;
+  category?: string | null;
+  status?: string | null;
+  scheduled_date?: string | null;
+  author?: string | null;
+  pillar?: string | null;
+  product_line?: string | null;
+  comments?: string | null;
+  image_url?: string | null;
+  image_url_1?: string | null;
+  image_url_2?: string | null;
+  image_url_3?: string | null;
+  recurring_action_id?: string | null;
+}
+
+// snake_case UI payload -> Convex patch. Drops keys that weren't supplied so
+// partial updates only touch the fields the caller actually set.
+export function socialPostToConvexPatch(input: SocialPostWrite): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  const set = (k: string, v: unknown) => {
+    if (v !== undefined) patch[k] = v;
+  };
+  set('title', input.title);
+  set('content', input.content);
+  set('platform', input.platform);
+  set('category', input.category);
+  set('status', input.status);
+  set('scheduledDate', input.scheduled_date);
+  set('author', input.author);
+  set('pillar', input.pillar);
+  set('productLine', input.product_line);
+  set('comments', input.comments);
+  // The UI uses image_url_1 as the canonical first image and mirrors it into
+  // image_url; accept either.
+  const first = input.image_url_1 ?? input.image_url;
+  if (first !== undefined) patch.imageUrl = first;
+  set('imageUrl2', input.image_url_2);
+  set('imageUrl3', input.image_url_3);
+  // recurringActionId in Convex is an Id<"recurringActions"> — the UI still
+  // sends the legacy Supabase UUID string here during the migration. Leave it
+  // unmapped for now; wire up a lookup once recurring actions get their own
+  // legacyId query.
+  return patch;
 }

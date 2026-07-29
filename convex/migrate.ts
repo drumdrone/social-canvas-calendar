@@ -137,21 +137,26 @@ export const runMigration = internalAction({
     const posts = await fetchAll("social_media_posts");
     maps["social_media_posts"] = {};
     let imagesMigrated = 0;
-    for (const row of posts) {
-      let imageStorageId: string | undefined;
-      const src: string | null = row.image_url;
-      // Only migrate real remote images (skip base64 data URLs, keep those as-is).
-      if (src && /^https?:\/\//.test(src)) {
-        try {
-          const res = await fetch(src);
-          if (res.ok) {
-            imageStorageId = await ctx.storage.store(await res.blob());
-            imagesMigrated++;
-          }
-        } catch {
-          /* leave imageUrl as the legacy URL if download fails */
-        }
+    // Pull one remote image URL into Convex storage; leave base64 / already-null
+    // sources alone. Returns the resulting storage id (or undefined).
+    async function pullImage(src: string | null): Promise<string | undefined> {
+      if (!src || !/^https?:\/\//.test(src)) return undefined;
+      try {
+        const res = await fetch(src);
+        if (!res.ok) return undefined;
+        const sid = await ctx.storage.store(await res.blob());
+        imagesMigrated++;
+        return sid;
+      } catch {
+        return undefined;
       }
+    }
+    for (const row of posts) {
+      const [sid1, sid2, sid3] = await Promise.all([
+        pullImage(row.image_url ?? row.image_url_1),
+        pullImage(row.image_url_2),
+        pullImage(row.image_url_3),
+      ]);
       const recRef = row.recurring_action_id
         ? maps["recurring_actions"]?.[row.recurring_action_id]
         : undefined;
@@ -166,8 +171,12 @@ export const runMigration = internalAction({
         pillar: row.pillar,
         productLine: row.product_line,
         comments: row.comments,
-        imageUrl: imageStorageId ? undefined : src,
-        imageStorageId,
+        imageUrl: sid1 ? undefined : (row.image_url ?? row.image_url_1 ?? null),
+        imageUrl2: sid2 ? undefined : (row.image_url_2 ?? null),
+        imageUrl3: sid3 ? undefined : (row.image_url_3 ?? null),
+        imageStorageId: sid1,
+        imageStorageId2: sid2,
+        imageStorageId3: sid3,
         recurringActionId: recRef ?? undefined,
         userId: row.user_id,
         legacyId: row.id,

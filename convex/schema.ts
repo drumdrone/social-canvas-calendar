@@ -45,6 +45,11 @@ export default defineSchema({
     comments: v.optional(v.union(v.string(), v.null())), // inline text comment log
     imageUrl: v.optional(v.union(v.string(), v.null())),
     imageStorageId: v.optional(v.id("_storage")),
+    // Multi-image support (up to 3 images per post).
+    imageUrl2: v.optional(v.union(v.string(), v.null())),
+    imageUrl3: v.optional(v.union(v.string(), v.null())),
+    imageStorageId2: v.optional(v.id("_storage")),
+    imageStorageId3: v.optional(v.id("_storage")),
     recurringActionId: v.optional(v.union(v.id("recurringActions"), v.null())),
     userId: v.optional(v.union(v.string(), v.null())),
     ...timestamps,
