@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Facebook, Instagram, Twitter, Linkedin, Calendar, Clock, Image as ImageIcon, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { convexToSocialPost } from '@/integrations/convex/adapter';
 import { SocialPost } from '@/components/SocialCalendar';
 
 const platformIcons = {
@@ -29,55 +31,27 @@ const statusColors = {
 
 const ShareablePost = () => {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost] = useState<SocialPost | null>(null);
-  const [authorData, setAuthorData] = useState<{ initials: string; name: string; color: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchPost = async () => {
-      if (!id) {
-        setError('No post ID provided');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('social_media_posts')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle();
-
-        if (error) {
-          setError('Post not found');
-        } else if (data) {
-          setPost(data as SocialPost);
-
-          // Fetch author data if author is set
-          if (data.author) {
-            const { data: authorInfo, error: authorError } = await supabase
-              .from('authors')
-              .select('initials, name, color')
-              .eq('initials', data.author)
-              .maybeSingle();
-
-            if (authorInfo) {
-              setAuthorData(authorInfo);
-            }
-          }
-        } else {
-          setError('Post not found');
-        }
-      } catch (err) {
-        setError('Failed to fetch post');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPost();
-  }, [id]);
+  // The URL still carries the original Supabase UUID; look it up as legacyId.
+  // Skip the query if there's no id in the URL (renders the error state below).
+  const rawPost = useQuery(api.posts.getByLegacyId, id ? { legacyId: id } : 'skip');
+  const authorsQ = useQuery(api.authors.list, {});
+  const loading = rawPost === undefined;
+  const post = useMemo<SocialPost | null>(
+    () => (rawPost ? (convexToSocialPost(rawPost) as unknown as SocialPost) : null),
+    [rawPost],
+  );
+  const authorData = useMemo<{ initials: string; name: string; color: string } | null>(() => {
+    if (!post?.author || !authorsQ) return null;
+    const match = authorsQ.find((a: any) => a.initials === post.author);
+    return match
+      ? { initials: match.initials, name: match.name, color: match.color ?? '' }
+      : null;
+  }, [post?.author, authorsQ]);
+  const error = !id
+    ? 'No post ID provided'
+    : !loading && !post
+    ? 'Post not found'
+    : null;
 
   if (loading) {
     return (

@@ -87,45 +87,65 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [commentRefresh, setCommentRefresh] = useState(0);
   const { toast } = useToast();
 
-  // Load options from database
+  // Taxonomy options are read reactively from Convex — a change in Settings
+  // shows up here on the next tick with no manual "reload". Only active rows
+  // are kept and names are sorted, matching the old .eq('is_active').order(name).
+  const platformsQ = useQuery(api.taxonomy.listPlatforms);
+  const statusesQ = useQuery(api.taxonomy.listStatuses);
+  const pillarsQ = useQuery(api.taxonomy.listPillars);
+  const productLinesQ = useQuery(api.taxonomy.listProductLines);
+  const categoriesQ = useQuery(api.taxonomy.listCategories);
+  const authorsQ = useQuery(api.authors.list, { activeOnly: true });
+
   useEffect(() => {
-    const loadOptions = async () => {
-      try {
-        const [platformsResult, statusesResult, pillarsResult, productLinesResult, categoriesResult, authorsResult, actionsResult] = await Promise.all([
-          supabase.from('platforms').select('name').eq('is_active', true).order('name'),
-          supabase.from('post_statuses').select('name, color').eq('is_active', true).order('name'),
-          supabase.from('pillars').select('name, color').eq('is_active', true).order('name'),
-          supabase.from('product_lines').select('name, color').eq('is_active', true).order('name'),
-          supabase.from('categories').select('name, color, format').eq('is_active', true).order('name'),
-          supabase.from('authors').select('initials, name, color, email').eq('is_active', true).order('name'),
-          supabase.from('recurring_actions').select('id, title, action_type').order('title'),
-        ]);
-        
-        const platforms = platformsResult.data?.map(p => p.name) || [];
+    const activeSorted = <T extends { name?: string; isActive?: boolean }>(rows: T[] | undefined) =>
+      (rows ?? [])
+        .filter((r) => r.isActive !== false)
+        .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    const platforms = activeSorted(platformsQ).map((p: any) => p.name);
+    const statuses = activeSorted(statusesQ).map((s: any) => ({ name: s.name, color: s.color }));
+    setPlatformOptions(platforms);
+    setStatusOptions(statuses);
+    setPillarOptions(activeSorted(pillarsQ).map((p: any) => ({ name: p.name, color: p.color })));
+    setProductLineOptions(
+      activeSorted(productLinesQ).map((p: any) => ({ name: p.name, color: p.color })),
+    );
+    setCategoryOptions(
+      activeSorted(categoriesQ).map((c: any) => ({
+        name: c.name,
+        color: c.color,
+        format: c.format,
+      })),
+    );
+    setAuthorOptions(
+      (authorsQ ?? []).map((a: any) => ({
+        initials: a.initials,
+        name: a.name,
+        color: a.color,
+        email: a.email ?? undefined,
+      })),
+    );
 
-        setPlatformOptions(platforms);
-        setStatusOptions(statusesResult.data || []);
-        setPillarOptions(pillarsResult.data || []);
-        setProductLineOptions(productLinesResult.data || []);
-        setCategoryOptions(categoriesResult.data || []);
-        setAuthorOptions(authorsResult.data || []);
-        setRecurringActions(actionsResult.data || []);
-
-        // Set defaults for new posts
-        if (!post) {
-          if (platforms.length && !platform) setPlatform(platforms[0]);
-          if (statusesResult.data && statusesResult.data.length && !status) setStatus(statusesResult.data[0].name);
-          if (!category) setCategory('Image');
-        }
-      } catch (error) {
-        console.error('Error loading options:', error);
-      }
-    };
-
-    if (isOpen) {
-      console.log('PostSlidingSidebar opened, loading options...');
-      loadOptions();
+    // Defaults for new posts (only run once we have data and only when the
+    // sidebar is open editing a fresh post).
+    if (isOpen && !post) {
+      if (platforms.length && !platform) setPlatform(platforms[0]);
+      if (statuses.length && !status) setStatus(statuses[0].name);
+      if (!category) setCategory('Image');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platformsQ, statusesQ, pillarsQ, productLinesQ, categoriesQ, authorsQ, isOpen, post]);
+
+  // recurring_actions is still Supabase-backed for now (the recurringActionId
+  // field in posts is stored as a legacy UUID during the migration window).
+  useEffect(() => {
+    if (!isOpen) return;
+    console.log('PostSlidingSidebar opened, loading recurring actions...');
+    supabase
+      .from('recurring_actions')
+      .select('id, title, action_type')
+      .order('title')
+      .then(({ data }) => setRecurringActions(data ?? []));
   }, [isOpen]);
 
   // Pre-fill form when post changes

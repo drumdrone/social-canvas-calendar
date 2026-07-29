@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Filter } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { convexToTaxonomy, sortTaxonomyByName } from '@/integrations/convex/adapter';
 import { Platform, PostStatus } from '../SocialCalendar';
 
 interface CalendarFiltersProps {
@@ -35,59 +37,28 @@ export const CalendarFilters: React.FC<CalendarFiltersProps> = ({
   selectedStatuses,
   onStatusesChange,
 }) => {
-  const [availablePlatforms, setAvailablePlatforms] = useState<DbPlatform[]>([]);
-  const [availableStatuses, setAvailableStatuses] = useState<DbStatus[]>([]);
-
-  // Fetch platforms and statuses from database
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [platformsResult, statusesResult] = await Promise.all([
-          supabase.from('platforms').select('*').eq('is_active', true).order('name'),
-          supabase.from('post_statuses').select('*').eq('is_active', true).order('name')
-        ]);
-        
-        if (platformsResult.data) {
-          setAvailablePlatforms(platformsResult.data);
-        }
-        if (statusesResult.data) {
-          setAvailableStatuses(statusesResult.data);
-        }
-      } catch (error) {
-        console.error('Error fetching filter data:', error);
-      }
-    };
-    
-    fetchData();
-  }, []);
-
-  // Listen for settings changes to refresh data
-  useEffect(() => {
-    const handleSettingsChange = () => {
-      const fetchData = async () => {
-        try {
-          const [platformsResult, statusesResult] = await Promise.all([
-            supabase.from('platforms').select('*').eq('is_active', true).order('name'),
-            supabase.from('post_statuses').select('*').eq('is_active', true).order('name')
-          ]);
-          
-          if (platformsResult.data) {
-            setAvailablePlatforms(platformsResult.data);
-          }
-          if (statusesResult.data) {
-            setAvailableStatuses(statusesResult.data);
-          }
-        } catch (error) {
-          console.error('Error fetching filter data:', error);
-        }
-      };
-      
-      fetchData();
-    };
-
-    window.addEventListener('settingsChanged', handleSettingsChange);
-    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
-  }, []);
+  // Reactive Convex reads — replaces the initial fetch + the `settingsChanged`
+  // event listener (Convex pushes updates on its own).
+  const platformsRaw = useQuery(api.taxonomy.listPlatforms);
+  const statusesRaw = useQuery(api.taxonomy.listStatuses);
+  const availablePlatforms = useMemo<DbPlatform[]>(
+    () =>
+      sortTaxonomyByName(
+        (platformsRaw ?? [])
+          .map((d) => convexToTaxonomy<DbPlatform>(d))
+          .filter((p) => p.is_active),
+      ),
+    [platformsRaw],
+  );
+  const availableStatuses = useMemo<DbStatus[]>(
+    () =>
+      sortTaxonomyByName(
+        (statusesRaw ?? [])
+          .map((d) => convexToTaxonomy<DbStatus>(d))
+          .filter((s) => s.is_active),
+      ),
+    [statusesRaw],
+  );
 
   const platformIcons = {
     facebook: Facebook,

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { SocialPost } from '../SocialCalendar';
 import { Facebook, Instagram, Twitter, Linkedin, Image, Share2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { toast } from 'sonner';
 import { useImageHover } from '@/hooks/useImageHover';
 
@@ -30,8 +31,6 @@ const platformColors = {
 
 export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact = false }) => {
   const Icon = platformIcons[post.platform as keyof typeof platformIcons] || Facebook;
-  const [authorData, setAuthorData] = useState<{ initials: string; color: string } | null>(null);
-  const [statusColor, setStatusColor] = useState<string>('#6B7280');
 
   const postImages = [
     post.image_url_1 || post.image_url,
@@ -41,47 +40,20 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
 
   const { currentImage, setIsHovering, hasMultipleImages } = useImageHover(postImages);
 
-  useEffect(() => {
-    const fetchAuthorData = async () => {
-      if (post.author) {
-        try {
-          const { data, error } = await supabase
-            .from('authors')
-            .select('initials, color')
-            .eq('initials', post.author)
-            .maybeSingle();
-
-          if (data) {
-            setAuthorData(data);
-          }
-        } catch (error) {
-          console.error('Error fetching author data:', error);
-        }
-      }
-    };
-
-    fetchAuthorData();
-  }, [post.author]);
-
-  useEffect(() => {
-    const fetchStatusColor = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('post_statuses')
-          .select('color')
-          .eq('name', post.status)
-          .maybeSingle();
-
-        if (data) {
-          setStatusColor(data.color);
-        }
-      } catch (error) {
-        console.error('Error fetching status color:', error);
-      }
-    };
-
-    fetchStatusColor();
-  }, [post.status]);
+  // Reactive Convex lookup — cached across every PostPreview instance so we
+  // aren't running a query per row. Two per-row lookups become two shared list
+  // reads that produce lookup maps.
+  const authorsQ = useQuery(api.authors.list, {});
+  const statusesQ = useQuery(api.taxonomy.listStatuses);
+  const authorData = useMemo(() => {
+    if (!post.author || !authorsQ) return null;
+    const match = authorsQ.find((a: any) => a.initials === post.author);
+    return match ? { initials: match.initials, color: match.color ?? '' } : null;
+  }, [post.author, authorsQ]);
+  const statusColor = useMemo(() => {
+    const match = (statusesQ ?? []).find((s: any) => s.name === post.status);
+    return match?.color ?? '#6B7280';
+  }, [post.status, statusesQ]);
   
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();

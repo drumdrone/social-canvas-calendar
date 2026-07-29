@@ -12,6 +12,8 @@ import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
 import { Settings, Plus, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, addWeeks } from 'date-fns';
 
 export type ViewMode = 'month' | 'week' | 'list';
@@ -78,52 +80,26 @@ export const SocialCalendar: React.FC = () => {
     }
   }, [searchParams, setSearchParams]);
 
-  // Load initial platform and status selections from database
+  // Reactive Convex reads of taxonomy — default the filter selection to
+  // "everything active" so nothing is hidden on first render. Since useQuery
+  // is reactive, the settingsChanged event listener is no longer needed:
+  // adding/removing a platform/status flows through automatically.
+  const platformsQ = useQuery(api.taxonomy.listPlatforms);
+  const statusesQ = useQuery(api.taxonomy.listStatuses);
   useEffect(() => {
-    const loadInitialSelections = async () => {
-      try {
-        const [platformsResult, statusesResult] = await Promise.all([
-          supabase.from('platforms').select('name').eq('is_active', true),
-          supabase.from('post_statuses').select('name').eq('is_active', true)
-        ]);
-        
-        if (platformsResult.data) {
-          setSelectedPlatforms(platformsResult.data.map(p => p.name));
-        }
-        if (statusesResult.data) {
-          setSelectedStatuses(statusesResult.data.map(s => s.name));
-        }
-      } catch (error) {
-        console.error('Error loading initial selections:', error);
-      }
-    };
-    
-    loadInitialSelections();
-  }, []);
-
-  // Listen for settings changes to refresh selections
+    if (platformsQ) {
+      setSelectedPlatforms(
+        platformsQ.filter((p: any) => p.isActive !== false).map((p: any) => p.name),
+      );
+    }
+  }, [platformsQ]);
   useEffect(() => {
-    const handleSettingsChange = async () => {
-      try {
-        const [platformsResult, statusesResult] = await Promise.all([
-          supabase.from('platforms').select('name').eq('is_active', true),
-          supabase.from('post_statuses').select('name').eq('is_active', true)
-        ]);
-        
-        if (platformsResult.data) {
-          setSelectedPlatforms(platformsResult.data.map(p => p.name));
-        }
-        if (statusesResult.data) {
-          setSelectedStatuses(statusesResult.data.map(s => s.name));
-        }
-      } catch (error) {
-        console.error('Error refreshing selections:', error);
-      }
-    };
-
-    window.addEventListener('settingsChanged', handleSettingsChange);
-    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
-  }, []);
+    if (statusesQ) {
+      setSelectedStatuses(
+        statusesQ.filter((s: any) => s.isActive !== false).map((s: any) => s.name),
+      );
+    }
+  }, [statusesQ]);
 
   const getDates = () => {
     const weekStartOptions = { weekStartsOn: 1 as const }; // Monday = 1

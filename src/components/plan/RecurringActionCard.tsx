@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,18 +91,24 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [periodStatuses, setPeriodStatuses] = useState<PeriodStatus[]>([]);
-  const [statusConfigs, setStatusConfigs] = useState<StatusConfig[]>([]);
   const [editData, setEditData] = useState({
     title: action.title,
     frequency: action.frequency || '1x',
   });
 
+  // Reactive Convex read of active statuses replaces loadStatuses.
+  const statusesQ = useQuery(api.taxonomy.listStatuses);
+  const statusConfigs = useMemo<StatusConfig[]>(
+    () =>
+      (statusesQ ?? [])
+        .filter((s: any) => s.isActive !== false)
+        .map((s: any) => ({ name: s.name, color: s.color })),
+    [statusesQ],
+  );
+
   useEffect(() => {
-    const loadData = async () => {
-      await loadStatuses();
-      await loadPosts();
-    };
-    loadData();
+    loadPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [action.id]);
 
   useEffect(() => {
@@ -131,20 +139,6 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
       subscription.unsubscribe();
     };
   }, [action.id]);
-
-  const loadStatuses = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('post_statuses')
-        .select('name, color')
-        .eq('is_active', true);
-
-      if (error) throw error;
-      setStatusConfigs(data || []);
-    } catch (error) {
-      console.error('Error loading statuses:', error);
-    }
-  };
 
   const getRequiredCount = (frequency: string): number => {
     if (!frequency) return 1;

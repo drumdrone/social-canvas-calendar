@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { convexToSocialPost } from '@/integrations/convex/adapter';
@@ -18,24 +17,17 @@ interface MonthlyPosts {
 export const RightCalendarSidebar: React.FC = () => {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [statusColors, setStatusColors] = useState<Record<string, string>>({});
 
-  // Status colors still come from Supabase (`post_statuses` taxonomy moves
-  // in a later migration step).
-  useEffect(() => {
-    const fetchStatusColors = async () => {
-      const { data } = await supabase
-        .from('post_statuses')
-        .select('name, color')
-        .eq('is_active', true);
-      if (data) {
-        const map: Record<string, string> = {};
-        data.forEach(s => { map[s.name] = s.color; });
-        setStatusColors(map);
-      }
-    };
-    fetchStatusColors();
-  }, []);
+  // Reactive status colors from Convex.
+  const statusesQ = useQuery(api.taxonomy.listStatuses);
+  const statusColors = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const s of statusesQ ?? []) {
+      if ((s as any).isActive === false) continue;
+      map[(s as any).name] = (s as any).color;
+    }
+    return map;
+  }, [statusesQ]);
 
   // Reactive Convex read replaces the manual fetchPosts + realtime channel
   // + custom "postsChanged" event listener. Window: current month + next 2.

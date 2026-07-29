@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { SocialPost } from '../SocialCalendar';
 import { Facebook, Instagram, Twitter, Linkedin, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 
 interface CalendarDayProps {
   date: Date;
@@ -28,33 +29,18 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
 }) => {
   const hasImage = posts.some(post => post.image_url);
   const firstImagePost = posts.find(post => post.image_url);
-  const [authorData, setAuthorData] = useState<{ [key: string]: { initials: string; color: string } }>({});
-  
-  useEffect(() => {
-    const fetchAuthorData = async () => {
-      const authors = new Set(posts.map(post => post.author).filter(Boolean));
-      if (authors.size === 0) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('authors')
-          .select('initials, color')
-          .in('initials', Array.from(authors));
-        
-        if (data) {
-          const authorMap = data.reduce((acc, author) => {
-            acc[author.initials] = author;
-            return acc;
-          }, {} as { [key: string]: { initials: string; color: string } });
-          setAuthorData(authorMap);
-        }
-      } catch (error) {
-        console.error('Error fetching author data:', error);
-      }
-    };
-
-    fetchAuthorData();
-  }, [posts]);
+  // Shared reactive Convex read across all CalendarDay cells.
+  const authorsQ = useQuery(api.authors.list, {});
+  const authorData = useMemo<{ [key: string]: { initials: string; color: string } }>(() => {
+    const map: { [key: string]: { initials: string; color: string } } = {};
+    for (const a of authorsQ ?? []) {
+      map[(a as any).initials] = {
+        initials: (a as any).initials,
+        color: (a as any).color ?? '',
+      };
+    }
+    return map;
+  }, [authorsQ]);
   
   const platformIcons = {
     facebook: Facebook,
