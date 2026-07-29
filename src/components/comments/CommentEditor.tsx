@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send } from 'lucide-react';
@@ -219,36 +220,49 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
         </Button>
       </form>
 
-      {showMentions && filteredUsers.length > 0 && (
-        // `position: fixed` (instead of absolute) so the dropdown escapes the
-        // sidebar's overflow clipping — mentionPosition already holds
-        // viewport coordinates from getBoundingClientRect().
-        <div
-          className="fixed z-[100] w-64 bg-white border rounded-lg shadow-lg max-h-48 overflow-auto"
-          style={{
-            top: mentionPosition.top + 4,
-            left: mentionPosition.left,
-          }}
-        >
-          {filteredUsers.map((user, index) => (
-            <div
-              key={user._id}
-              className={`px-4 py-2 cursor-pointer ${
-                index === selectedMentionIndex ? 'bg-blue-100' : 'hover:bg-gray-100'
-              }`}
-              onMouseDown={(e) => {
-                // onMouseDown fires before the textarea's blur, so clicking
-                // the item doesn't kill the dropdown before insertMention runs.
-                e.preventDefault();
-                insertMention(user);
-              }}
-            >
-              <div className="font-medium">{user.fullName}</div>
-              <div className="text-xs text-gray-500">{user.email}</div>
-            </div>
-          ))}
-        </div>
-      )}
+      {showMentions &&
+        filteredUsers.length > 0 &&
+        // Render outside every ancestor so overflow/clipping/z-index on the
+        // sidebar can't hide it. Coordinates come from
+        // textareaRef.getBoundingClientRect(), which is already viewport-relative.
+        createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              top: mentionPosition.top + 4,
+              left: mentionPosition.left,
+              width: 260,
+              maxHeight: 200,
+              overflow: 'auto',
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: 8,
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+              zIndex: 99999,
+            }}
+          >
+            {filteredUsers.map((user, index) => (
+              <div
+                key={user._id}
+                style={{
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  background: index === selectedMentionIndex ? '#dbeafe' : 'transparent',
+                }}
+                onMouseDown={(e) => {
+                  // onMouseDown fires before the textarea's blur — clicking
+                  // the item lands before the dropdown tears itself down.
+                  e.preventDefault();
+                  insertMention(user);
+                }}
+              >
+                <div style={{ fontWeight: 500 }}>{user.fullName}</div>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>{user.email}</div>
+              </div>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
