@@ -13,7 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureSupabaseSession, forceReauthenticate } from '../SimpleAuthGate';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { socialPostToConvexPatch } from '@/integrations/convex/adapter';
+import { useUploadImage } from '@/integrations/convex/useUploadImage';
+import type { Id } from '../../../convex/_generated/dataModel';
+// (Post writes moved to Convex; ensureSupabaseSession / forceReauthenticate
+// are no longer needed here. They remain in SimpleAuthGate for the remaining
+// Supabase-backed components — PostsTable, BackupManager — until they migrate.)
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { PostVersionHistory } from './PostVersionHistory';
@@ -45,7 +52,18 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [category, setCategory] = useState('');
   const [time, setTime] = useState('12:00');
   const [postImages, setPostImages] = useState<(string | null)[]>([null, null, null]);
+  // Storage ids for images uploaded to Convex during this editing session.
+  // Kept in sync with `postImages` so the saved post gets the stable id, not
+  // just the (Convex-signed) URL. Existing images loaded from the post keep
+  // whatever id already lives on the document — see `postData` in handleSave.
+  const [postImageStorageIds, setPostImageStorageIds] = useState<
+    (Id<'_storage'> | null)[]
+  >([null, null, null]);
   const [uploading, setUploading] = useState(false);
+  const createPost = useMutation(api.posts.create);
+  const updatePost = useMutation(api.posts.updateByLegacyId);
+  const removePost = useMutation(api.posts.removeByLegacyId);
+  const uploadToConvex = useUploadImage();
   const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
   const [platformOptions, setPlatformOptions] = useState<string[]>([]);
   const [statusOptions, setStatusOptions] = useState<Array<{name: string, color: string}>>([]);
@@ -163,24 +181,20 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   }, [post, selectedDate]);
 
 
-  const uploadImage = async (file: File) => {
-    const inferredExt = (file.name && file.name.includes('.')) ? file.name.split('.').pop() : (file.type ? file.type.split('/').pop() : 'png');
-    const fileExt = inferredExt || 'png';
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-    const filePath = `public/${fileName}`;
-
-    const { data, error } = await supabase.storage
-      .from('social-media-images')
-      .upload(filePath, file);
-
-    if (error) throw error;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('social-media-images')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
+  // Uploads to Convex file storage and returns just the served URL, matching
+  // the old signature so callers (MultiImageUpload, etc.) don't need to change.
+  // The corresponding storage id is stashed in the caller by way of the
+  // dedicated upload flow — see `handleImageChange` below.
+  const uploadImage = async (file: File): Promise<string> => {
+    const { url } = await uploadToConvex(file);
+    return url;
   };
+
+  // Preferred flow when we can plumb the storage id back into state, so the
+  // saved post stores the stable id (and gets a fresh URL every load).
+  const uploadImageWithId = async (
+    file: File,
+  ): Promise<{ url: string; storageId: Id<'_storage'> }> => uploadToConvex(file);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -195,104 +209,48 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     setUploading(true);
 
     try {
-      // Try to get user ID, retry with force re-auth if needed
-      let userId = await ensureSupabaseSession();
-      if (!userId) {
-        console.log('Initial auth failed, forcing re-authentication...');
-        userId = await forceReauthenticate();
-      }
-      console.log('=== SAVING POST DATA ===');
-      console.log('Post ID:', post?.id);
-      console.log('User ID from session:', userId || '(none - saving without auth)');
-
       const scheduledDateTime = new Date(scheduledDate);
       const [hours, minutes] = time.split(':').map(Number);
       scheduledDateTime.setHours(hours, minutes, 0, 0);
 
-      const postData = {
+      // Build a snake_case UI payload and convert it to a Convex patch. The
+      // adapter drops undefined keys so we only touch fields we actually set.
+      const patch = socialPostToConvexPatch({
         title: title.trim(),
         content: content.trim() || null,
         platform,
         status,
         category,
-        image_url_1: postImages[0] || null,
-        image_url_2: postImages[1] || null,
-        image_url_3: postImages[2] || null,
-        image_url: postImages[0] || null,
+        image_url_1: postImages[0] ?? null,
+        image_url_2: postImages[1] ?? null,
+        image_url_3: postImages[2] ?? null,
         scheduled_date: scheduledDateTime.toISOString(),
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
         author: author || null,
-        recurring_action_id: recurringActionId && recurringActionId !== 'none' ? recurringActionId : null,
         comments: comments || null,
-      };
-
-      let result;
+      });
+      // Attach storage ids for any images uploaded via Convex in this session
+      // (adapter only maps URL strings; ids need to go on directly).
+      if (postImageStorageIds[0] !== null) patch.imageStorageId = postImageStorageIds[0];
+      if (postImageStorageIds[1] !== null) patch.imageStorageId2 = postImageStorageIds[1];
+      if (postImageStorageIds[2] !== null) patch.imageStorageId3 = postImageStorageIds[2];
+      // recurring_action_id still uses the Supabase UUID during migration —
+      // once recurring actions get their own legacyId lookup we'll thread it
+      // through. Skip it for now rather than sending an incompatible value.
       if (post) {
-        // Update existing post
-        const { error, data } = await supabase
-          .from('social_media_posts')
-          .update({
-            ...postData,
-            user_id: post.user_id || userId || null,
-          })
-          .eq('id', post.id)
-          .select();
-
-        result = { error, data };
+        await updatePost({ legacyId: post.id, patch: patch as any });
       } else {
-        // Create new post - user_id can be null (RLS allows it)
-        const { error, data } = await supabase
-          .from('social_media_posts')
-          .insert([{
-            ...postData,
-            user_id: userId || null,
-          }])
-          .select();
-
-        result = { error, data };
-      }
-
-      // If save failed due to null user_id constraint, retry with force re-auth
-      if (result.error?.message?.includes('null value in column') && result.error?.message?.includes('user_id')) {
-        console.log('Save failed due to null user_id, retrying with force re-auth...');
-        const retryUserId = await forceReauthenticate();
-        if (retryUserId) {
-          const retryData = {
-            ...postData,
-            user_id: retryUserId,
-          };
-          if (post) {
-            const { error, data } = await supabase
-              .from('social_media_posts')
-              .update(retryData)
-              .eq('id', post.id)
-              .select();
-            result = { error, data };
-          } else {
-            const { error, data } = await supabase
-              .from('social_media_posts')
-              .insert([retryData])
-              .select();
-            result = { error, data };
-          }
-        }
-      }
-
-      if (result.error) {
-        console.error('Save error:', result.error);
-        throw result.error;
+        await createPost(patch as any);
       }
 
       toast({
         title: 'Success',
         description: post ? 'Post updated successfully!' : 'Post created successfully!',
       });
-
-      // Dispatch event to refresh Quick Calendar
+      // Convex useQuery in the calendar views auto-refreshes; the legacy
+      // postsChanged event is still dispatched for anything Supabase-backed.
       window.dispatchEvent(new Event('postsChanged'));
-
-      // Trigger refresh which will also handle closing
       onSave();
     } catch (error: any) {
       console.error('Error saving post:', error);
@@ -310,19 +268,14 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     if (!post || !confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      const { error } = await supabase
-        .from('social_media_posts')
-        .delete()
-        .eq('id', post.id);
-
-      if (error) throw error;
+      await removePost({ legacyId: post.id });
 
       toast({
         title: 'Success',
         description: 'Post deleted successfully!',
       });
 
-      // Dispatch event to refresh Quick Calendar
+      // Kept for parity with Supabase-era components still listening.
       window.dispatchEvent(new Event('postsChanged'));
 
       onSave();
