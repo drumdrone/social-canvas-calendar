@@ -163,12 +163,29 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
       return;
     }
     // Parse @mentions out of the content and map them to user ids.
-    const mentionedNames = Array.from(content.matchAll(/@(\w+(?:\s+\w+)*)/g)).map(
-      (m) => m[1],
-    );
+    // Use Unicode-aware regex (\p{L}) so diacritics like "Čuas" match too, and
+    // do the name comparison case-insensitively in both directions so any
+    // reasonable substring on either side counts as a mention.
+    const mentionedNames = Array.from(
+      content.matchAll(/@([\p{L}0-9_]+(?:\s+[\p{L}0-9_]+)*)/gu),
+    ).map((m) => m[1]);
     const mentionedUserIds = users
-      .filter((u) => mentionedNames.some((name) => u.fullName.includes(name)))
+      .filter((u) => {
+        const full = u.fullName.toLowerCase();
+        return mentionedNames.some((name) => {
+          const n = name.toLowerCase();
+          return full.includes(n) || n.includes(full);
+        });
+      })
       .map((u) => u._id);
+    console.log(
+      '[CommentEditor] submit mentionedNames=',
+      mentionedNames,
+      'matchedIds=',
+      mentionedUserIds,
+      'availableUsers=',
+      users.map((u) => u.fullName),
+    );
 
     try {
       await addComment({
