@@ -42,7 +42,7 @@ export const listPlanSections = query({
   args: {},
   handler: async (ctx) => {
     const rows = await ctx.db.query("plan_sections").collect();
-    return rows.sort((a, b) => a.sectionOrder - b.sectionOrder);
+    return rows.sort((a, b) => (a.sectionOrder ?? 0) - (b.sectionOrder ?? 0));
   },
 });
 
