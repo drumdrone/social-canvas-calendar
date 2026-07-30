@@ -141,9 +141,29 @@ Odpovědi na tyto otázky pak přesuň do §6.
 
 ---
 
-## 6. 📋 Rozhodnutí (až budou)
+## 6. 📋 Rozhodnutí (2026-07-30)
 
-_(zatím prázdné — vyplní se, až uživatel odpoví na §5)_
+**Features (§5.1):**
+- ❌ **Send Post PDF** — smazat (soubor `SendPostPdfDialog.tsx` + edge funkce `send-post-pdf`).
+- ✅ **Media Gallery** — zachovat, přepsat na Convex.
+- ❌ **Post Version History** — smazat (`PostVersionHistory.tsx`).
+- ✅ **Post Data Manager** (JSON import/export) — zachovat, přepsat na Convex.
+
+**Zálohy (§5.2):**
+- ❌ **`BackupManager.tsx` smazat** — Convex má vlastní denní snapshoty (4 dny na free).
+- ✅ **Přidat měsíční Convex cron** — 1. každého měsíce:
+  1. Convex scheduled function exportuje všechny tabulky do JSONu + seznam obrázků s URL.
+  2. Nahraje do Convex file storage.
+  3. Pošle email (Brevo, už nasazené) s odkazem ke stažení.
+  4. Drží posledních ~3 měsíční zálohy, starší maže.
+
+**Auth (§5.3):**
+- ✅ **Jednoheslový gate zůstává** (`APP_PASSWORD` proti Convexu, žádný per-user login).
+- V komentářích/mentions se jméno vybírá ze seznamu (jak je to teď).
+
+**Postup dokončení (§5.4):**
+- ✅ **Jeden velký PR** — všechny zbývající změny na feature branchi najednou, jeden merge do `main`.
+- Datová migrace (`convex run migrate:runMigration`) se spustí **před merge**, ne po — jinak by přepnutá appka neměla odkud brát data.
 
 ---
 
