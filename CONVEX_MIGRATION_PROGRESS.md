@@ -68,10 +68,10 @@ Tyto soubory už z většiny běží na Convexu, ale zbývá v nich ještě vol�
 
 | Soubor | Zbývá vyřešit | Poznámka |
 |---|---|---|
-| **`SimpleAuthGate.tsx`** | `supabase.auth.signIn/signUp/signOut/getSession` (řádky 22, 34, 49, 80, 104, 125) | Convex `verifyPassword` běží, ale gate zároveň udržuje stínovou Supabase session (asi kvůli RLS pro zbývající Supabase volání). Odejde až doříznou zbývající soubory ze §3. |
-| **`SocialCalendar.tsx`** | 1 zbylé `supabase` volání (řádek 81) | Zjistit co konkrétně — asi realtime kanál nebo fallback query. |
-| **`PostSlidingSidebar.tsx`** | 1 zbylé `supabase` volání (řádek 138) | Pravděpodobně realtime subscription na `postgres_changes`. Convex `useQuery` je reaktivní sám, kanál lze smazat. |
-| **`RecurringActionCard.tsx`** | Supabase subscription (řádek 121) + select (řádek 283) | Karta čte přes Supabase — přepnout na Convex `useQuery(api.recurringActions.*)` (funkce už existují). |
+| ~~`SimpleAuthGate.tsx`~~ | ~~6 volání~~ | ✅ **Doříznuto** (commit `e7a2b3e`) — celá stínová Supabase session pryč, zůstal jen Convex `verifyPassword`. |
+| ~~`SocialCalendar.tsx`~~ | ~~1~~ | ✅ **Doříznuto** (commit `97b04a1`) — bylo to `select scheduled_date` pro edit-via-URL flow, nahrazeno lookupem v už načteném `postsQ`. |
+| ~~`PostSlidingSidebar.tsx`~~ | ~~1~~ | ✅ **Doříznuto** (commit `4ff72d7`) — dropdown opakovaných akcí teď jede přes `api.recurringActions.list`. |
+| ~~`RecurringActionCard.tsx`~~ | ~~subscription + select~~ | ✅ **Doříznuto** (commit `84aff48`) — nová Convex query `posts.listByRecurringAction` (index `by_recurringAction`) nahradila fetch i realtime kanál. |
 
 ---
 
@@ -83,26 +83,26 @@ Podle rozhodnutí z §5 se určí, které z těchto se **přepíšou na Convex**
 | Soubor | Supabase usages | Co dělá |
 |---|---:|---|
 | **`src/integrations/supabase/client.ts`** | client | Umře úplně poslední, až nikdo nebude importovat. |
-| **`src/contexts/AuthContext.tsx`** | 11 | Auth stav pro aplikaci — po dořezání `SimpleAuthGate` a Supabase auth by šel odstranit / přepsat na jednoduchý Convex context. |
-| **`src/pages/Plan.tsx`** | 2 | Plan stránka. |
-| **`src/components/plan/RecurringActionsGrid.tsx`** | 6 | Grid opakovaných akcí. Convex `recurringActions.ts` už existuje. |
-| **`src/components/dashboard/MoodBoard.tsx`** | 6 | MoodBoard. Convex `misc.ts` (`mood_board_items`) už existuje. |
+| ~~`src/contexts/AuthContext.tsx`~~ | ~~11~~ | ✅ **Přepsáno** (commit `c011104`) — tenký wrapper okolo `simple_auth_verified` localStorage flagu, exportuje jen `logout()`. `src/pages/Login.tsx` smazán (byl mrtvý kód, `/login` route přesměrovává na `/`). |
+| ~~`src/pages/Plan.tsx`~~ | ~~2~~ | ✅ **Přepsáno** (commit `28b0312`) — post lookup přes už načtený `api.posts.list`. |
+| ~~`src/components/plan/RecurringActionsGrid.tsx`~~ | ~~6~~ | ✅ **Přepsáno** (commit `84aff48`) — CRUD přes `api.recurringActions.*`. |
+| ~~`src/components/dashboard/MoodBoard.tsx`~~ | ~~6~~ | ✅ **Přepsáno** (commit `0fe9c25`) — CRUD přes `api.misc.*MoodItem`. |
 
-### 3.2 Features k rozhodnutí (viz §5)
-| Soubor | Supabase usages | Co dělá | Rozhodnutí |
-|---|---:|---|---|
-| **`SendPostPdfDialog.tsx`** | 3 | Volá edge funkci `send-post-pdf` s Facebook-style náhledem | čeká |
-| **`MediaGallery.tsx`** | 5 | Galerie z bucketu `media-gallery` | čeká |
-| **`PostVersionHistory.tsx`** | 4 | Historie verzí postu | čeká |
-| **`PostDataManager.tsx`** | 4 | JSON import/export | čeká |
-| **`BackupManager.tsx`** | 15 | Zálohy do bucketu `backups` | čeká |
+### 3.2 Features k rozhodnutí (viz §5) — rozhodnuto ✅
+| Soubor | Supabase usages | Co dělá | Rozhodnutí | Stav |
+|---|---:|---|---|---|
+| ~~`SendPostPdfDialog.tsx`~~ | ~~3~~ | Volal edge funkci `send-post-pdf` s Facebook-style náhledem | smazat | ✅ **Smazáno** (commit `e7e7808`) — spolu s `PostPdfPreview.tsx` (orphan po smazání) a tlačítkem/state v `PostSlidingSidebar.tsx`. |
+| ~~`MediaGallery.tsx`~~ | ~~5~~ | Galerie z bucketu `media-gallery` | zachovat, přepsat na Convex | ✅ **Přepsáno** (commit `77454e1`) — nová tabulka `mediaGalleryItems` + `convex/mediaGallery.ts`. Pozn: komponenta zatím nemá konzumenta v appce (byla odpojená už předtím). |
+| ~~`PostVersionHistory.tsx`~~ | ~~4~~ | Historie verzí postu | smazat | ✅ **Smazáno** (commit `1e878ba`) — modal + tlačítko + state z `PostSlidingSidebar.tsx`. |
+| ~~`PostDataManager.tsx`~~ | ~~4~~ | JSON import/export | zachovat, přepsat na Convex | ✅ **Přepsáno** (commit `fbd11ca`) — export čte `api.posts.list`, import volá `api.posts.create` (chápe legacy i nové field names). |
+| ~~`BackupManager.tsx`~~ | ~~15~~ | Zálohy do bucketu `backups` | smazat, nahradit měsíčním cronem | ✅ **Smazáno** (commit `3d4c61f`) — Backup tab v `SettingsSidebar.tsx` pryč. Náhrada (D3) ještě čeká. |
 
 ### 3.3 Supabase edge funkce, které pořád běží na serveru
 | Funkce | Stav |
 |---|---|
-| `send-mention-email` | **Už se z UI nevolá.** Můžeme smazat ze `supabase/functions/` a undeploynout. |
-| `send-post-pdf` | Volá se z `SendPostPdfDialog.tsx` (řádek 180). Zůstává, dokud se ta feature nerozhodne. |
-| `create-test-user` | Pravděpodobně nepoužité — ověřit a smazat. |
+| `send-mention-email` | **Už se z UI nevolá.** Smazat ze `supabase/functions/` a undeploynout (součást F1). |
+| `send-post-pdf` | ✅ **Smazáno** (commit `e7e7808`) — `supabase/functions/send-post-pdf/` už neexistuje. |
+| `create-test-user` | Pravděpodobně nepoužité — ověřit a smazat (součást F1). |
 
 ---
 
@@ -151,11 +151,11 @@ Odpovědi na tyto otázky pak přesuň do §6.
 
 **Zálohy (§5.2):**
 - ❌ **`BackupManager.tsx` smazat** — Convex má vlastní denní snapshoty (4 dny na free).
-- ✅ **Přidat měsíční Convex cron** — 1. každého měsíce:
-  1. Convex scheduled function exportuje všechny tabulky do JSONu + seznam obrázků s URL.
+- ✅ **Přidat měsíční Convex cron** (commit `050a027`) — 1. každého měsíce v 3:00 UTC:
+  1. `convex/backups.ts` exportuje všechny tabulky (16 tabulek) do JSONu.
   2. Nahraje do Convex file storage.
-  3. Pošle email (Brevo, už nasazené) s odkazem ke stažení.
-  4. Drží posledních ~3 měsíční zálohy, starší maže.
+  3. Pošle email přes Brevo s odkazem ke stažení (`BACKUP_EMAIL` env, default Honzova adresa).
+  4. Drží posledních 3 měsíční zálohy, starší maže (storage i DB řádek).
 
 **Auth (§5.3):**
 - ✅ **Jednoheslový gate zůstává** (`APP_PASSWORD` proti Convexu, žádný per-user login).
