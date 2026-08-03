@@ -12,7 +12,6 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
-import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { socialPostToConvexPatch } from '@/integrations/convex/adapter';
@@ -123,17 +122,22 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platformsQ, statusesQ, pillarsQ, productLinesQ, categoriesQ, authorsQ, isOpen, post]);
 
-  // recurring_actions is still Supabase-backed for now (the recurringActionId
-  // field in posts is stored as a legacy UUID during the migration window).
+  // recurring_action_id on posts still stores the legacy Supabase UUID during
+  // the migration window (see adapter.ts), so we key each option by
+  // legacyId ?? _id to keep matching existing posts' selections.
+  const recurringActionsQ = useQuery(api.recurringActions.list);
   useEffect(() => {
-    if (!isOpen) return;
-    console.log('PostSlidingSidebar opened, loading recurring actions...');
-    supabase
-      .from('recurring_actions')
-      .select('id, title, action_type')
-      .order('title')
-      .then(({ data }) => setRecurringActions(data ?? []));
-  }, [isOpen]);
+    if (!recurringActionsQ) return;
+    setRecurringActions(
+      [...recurringActionsQ]
+        .sort((a: any, b: any) => (a.title ?? '').localeCompare(b.title ?? ''))
+        .map((a: any) => ({
+          id: a.legacyId ?? a._id,
+          title: a.title ?? '',
+          action_type: a.actionType,
+        })),
+    );
+  }, [recurringActionsQ]);
 
   // Pre-fill form when post changes
   useEffect(() => {
