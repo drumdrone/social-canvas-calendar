@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 .env
 .supabase-token
+
+# Convex — regenerated from schema.ts/convex/*.ts by `npx convex dev` or
+# `npx convex deploy`
+convex/_generated
