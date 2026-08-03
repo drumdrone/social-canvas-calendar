@@ -18,9 +18,6 @@ import { api } from '../../../convex/_generated/api';
 import { socialPostToConvexPatch } from '@/integrations/convex/adapter';
 import { useUploadImage } from '@/integrations/convex/useUploadImage';
 import type { Id } from '../../../convex/_generated/dataModel';
-// (Post writes moved to Convex; ensureSupabaseSession / forceReauthenticate
-// are no longer needed here. They remain in SimpleAuthGate for the remaining
-// Supabase-backed components — BackupManager — until they migrate.)
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MultiImageUpload } from './MultiImageUpload';
