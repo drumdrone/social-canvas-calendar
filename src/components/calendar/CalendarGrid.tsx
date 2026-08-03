@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { format, isSameMonth, isToday, isWeekend } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarDay } from './CalendarDay';
 import { ViewMode, Platform, PostStatus, SocialPost } from '../SocialCalendar';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { convexToSocialPost } from '@/integrations/convex/adapter';
 
 interface CalendarGridProps {
   dates: Date[];
@@ -24,32 +26,16 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   onDateClick,
   onPostClick,
 }) => {
-  const [posts, setPosts] = useState<SocialPost[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('social_media_posts')
-          .select('*')
-          .order('scheduled_date', { ascending: true });
-
-        if (error) {
-          console.error('Error fetching posts:', error);
-        } else {
-          setPosts((data as SocialPost[]) || []);
-        }
-      } catch (error) {
-        console.error('Error fetching posts:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPosts();
-  }, []);
+  // Reads posts from Convex. `useQuery` is reactive — when a post is
+  // added/edited/deleted anywhere (currently still through Supabase), those
+  // writes replicate to Convex during the migration window and this list
+  // updates on its own. Loading = query still resolving (data === undefined).
+  const raw = useQuery(api.posts.list);
+  const posts = useMemo<SocialPost[]>(
+    () => (raw ?? []).map(convexToSocialPost),
+    [raw],
+  );
+  const loading = raw === undefined;
 
   const getFilteredPostsForDate = (date: Date) => {
     return posts.filter(post => {

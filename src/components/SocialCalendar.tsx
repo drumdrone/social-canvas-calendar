@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { CalendarHeader } from './calendar/CalendarHeader';
 import { CalendarGrid } from './calendar/CalendarGrid';
 import { CalendarList } from './calendar/CalendarList';
-import { PostsTable } from './calendar/PostsTable';
 import { CalendarFilters } from './calendar/CalendarFilters';
 import { FacebookPostPreview } from './calendar/FacebookPostPreview';
 import { PostSlidingSidebar } from './calendar/PostSlidingSidebar';
@@ -12,10 +11,12 @@ import { PlanningPanel } from './calendar/PlanningPanel';
 import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
 import { Settings, Plus, FileText } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { convexToSocialPost } from '@/integrations/convex/adapter';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, addWeeks } from 'date-fns';
 
-export type ViewMode = 'month' | 'week' | 'list' | 'table';
+export type ViewMode = 'month' | 'week' | 'list';
 export type Platform = string; // Changed to string to support dynamic platforms
 export type PostStatus = string; // Changed to string to support dynamic statuses
 export type Category = string; // Changed to string to support dynamic categories
@@ -51,80 +52,60 @@ export const SocialCalendar: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showPlanning, setShowPlanning] = useState(false);
-  const [sidebarPost, setSidebarPost] = useState<SocialPost | null>(null);
+  // We used to cache the whole clicked post in state, which meant the sidebar
+  // kept showing whatever the post looked like at click time — even after a
+  // Convex mutation updated it (e.g. clearing an image would stick in the
+  // calendar but the sidebar re-opened with the stale image). Keep only the
+  // id here and derive the live post from the reactive Convex query below.
+  const [sidebarPostId, setSidebarPostId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const postsQ = useQuery(api.posts.list);
+  const sidebarPost = React.useMemo<SocialPost | null>(() => {
+    if (!sidebarPostId || !postsQ) return null;
+    const doc = postsQ.find(
+      (p: any) => (p.legacyId ?? p._id) === sidebarPostId,
+    );
+    return doc ? (convexToSocialPost(doc) as unknown as SocialPost) : null;
+  }, [sidebarPostId, postsQ]);
 
-  // Handle edit parameter from URL (e.g., from Quick Calendar)
+  // Handle edit parameter from URL (e.g., from Quick Calendar). The sidebar
+  // reads live post data from the Convex query via sidebarPostId, so we only
+  // need the scheduled_date here for the initial calendar view — looked up
+  // from the already-reactive `postsQ` rather than a separate fetch.
   useEffect(() => {
     const editPostId = searchParams.get('edit');
-    if (editPostId) {
-      // Fetch the post and open the sidebar
-      const fetchAndEditPost = async () => {
-        const { data, error } = await supabase
-          .from('social_media_posts')
-          .select('*')
-          .eq('id', editPostId)
-          .single();
-
-        if (data && !error) {
-          setSidebarPost(data as SocialPost);
-          setEditingPost(data as SocialPost);
-          setSelectedDate(new Date(data.scheduled_date));
-          setShowSidebar(true);
-          // Clear the URL parameter
-          setSearchParams({});
-        }
-      };
-      fetchAndEditPost();
+    if (editPostId && postsQ) {
+      const doc = postsQ.find((p: any) => (p.legacyId ?? p._id) === editPostId);
+      if (doc) {
+        setSidebarPostId(editPostId);
+        setSelectedDate(new Date(doc.scheduledDate));
+        setShowSidebar(true);
+        // Clear the URL parameter
+        setSearchParams({});
+      }
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, postsQ]);
 
-  // Load initial platform and status selections from database
+  // Reactive Convex reads of taxonomy — default the filter selection to
+  // "everything active" so nothing is hidden on first render. Since useQuery
+  // is reactive, the settingsChanged event listener is no longer needed:
+  // adding/removing a platform/status flows through automatically.
+  const platformsQ = useQuery(api.taxonomy.listPlatforms);
+  const statusesQ = useQuery(api.taxonomy.listStatuses);
   useEffect(() => {
-    const loadInitialSelections = async () => {
-      try {
-        const [platformsResult, statusesResult] = await Promise.all([
-          supabase.from('platforms').select('name').eq('is_active', true),
-          supabase.from('post_statuses').select('name').eq('is_active', true)
-        ]);
-        
-        if (platformsResult.data) {
-          setSelectedPlatforms(platformsResult.data.map(p => p.name));
-        }
-        if (statusesResult.data) {
-          setSelectedStatuses(statusesResult.data.map(s => s.name));
-        }
-      } catch (error) {
-        console.error('Error loading initial selections:', error);
-      }
-    };
-    
-    loadInitialSelections();
-  }, []);
-
-  // Listen for settings changes to refresh selections
+    if (platformsQ) {
+      setSelectedPlatforms(
+        platformsQ.filter((p: any) => p.isActive !== false).map((p: any) => p.name),
+      );
+    }
+  }, [platformsQ]);
   useEffect(() => {
-    const handleSettingsChange = async () => {
-      try {
-        const [platformsResult, statusesResult] = await Promise.all([
-          supabase.from('platforms').select('name').eq('is_active', true),
-          supabase.from('post_statuses').select('name').eq('is_active', true)
-        ]);
-        
-        if (platformsResult.data) {
-          setSelectedPlatforms(platformsResult.data.map(p => p.name));
-        }
-        if (statusesResult.data) {
-          setSelectedStatuses(statusesResult.data.map(s => s.name));
-        }
-      } catch (error) {
-        console.error('Error refreshing selections:', error);
-      }
-    };
-
-    window.addEventListener('settingsChanged', handleSettingsChange);
-    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
-  }, []);
+    if (statusesQ) {
+      setSelectedStatuses(
+        statusesQ.filter((s: any) => s.isActive !== false).map((s: any) => s.name),
+      );
+    }
+  }, [statusesQ]);
 
   const getDates = () => {
     const weekStartOptions = { weekStartsOn: 1 as const }; // Monday = 1
@@ -159,13 +140,13 @@ export const SocialCalendar: React.FC = () => {
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     setEditingPost(null);
-    setSidebarPost(null);
+    setSidebarPostId(null);
     setShowSidebar(true);
   };
 
   const handlePostClick = (post: SocialPost) => {
     console.log('Post clicked for editing:', post);
-    setSidebarPost(post);
+    setSidebarPostId(post.id);
     setEditingPost(post);
     setSelectedDate(new Date(post.scheduled_date));
     setShowSidebar(true);
@@ -173,7 +154,7 @@ export const SocialCalendar: React.FC = () => {
 
   const handleCloseSidebar = () => {
     setShowSidebar(false);
-    setSidebarPost(null);
+    setSidebarPostId(null);
     setEditingPost(null);
     setSelectedDate(null);
   };
@@ -248,13 +229,6 @@ export const SocialCalendar: React.FC = () => {
             selectedStatuses={selectedStatuses}
             onDateClick={handleDateClick}
             onPostClick={handlePostClick}
-          />
-        ) : viewMode === 'table' ? (
-          <PostsTable
-            key={refreshKey}
-            selectedPlatforms={selectedPlatforms}
-            selectedStatuses={selectedStatuses}
-            currentDate={currentDate}
           />
         ) : viewMode === 'week' ? (
           <FacebookPostPreview

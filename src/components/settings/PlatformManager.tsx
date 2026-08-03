@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,11 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { convexToTaxonomy, sortTaxonomyByName } from '@/integrations/convex/adapter';
 import { toast } from 'sonner';
 
 interface Platform {
-  id: string;
+  id: Id<'platforms'>;
   name: string;
   icon_name: string;
   color: string;
@@ -18,68 +21,43 @@ interface Platform {
 }
 
 const availableIcons = [
-  'Facebook', 'Instagram', 'Twitter', 'Linkedin', 'Youtube', 'Twitch', 
+  'Facebook', 'Instagram', 'Twitter', 'Linkedin', 'Youtube', 'Twitch',
   'MessageCircle', 'Share2', 'Users', 'Globe', 'Smartphone', 'Monitor'
 ];
 
 export const PlatformManager: React.FC = () => {
-  const [platforms, setPlatforms] = useState<Platform[]>([]);
-  const [loading, setLoading] = useState(true);
+  const raw = useQuery(api.taxonomy.listPlatforms);
+  const loading = raw === undefined;
+  const platforms = useMemo<Platform[]>(
+    () => sortTaxonomyByName((raw ?? []).map((d) => convexToTaxonomy<Platform>(d))),
+    [raw],
+  );
+  const createPlatform = useMutation(api.taxonomy.createPlatform);
+  const updatePlatform = useMutation(api.taxonomy.updatePlatform);
+  const removePlatform = useMutation(api.taxonomy.removePlatform);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newPlatform, setNewPlatform] = useState({
     name: '',
     icon_name: 'Share2',
-    color: '#1877F2'
+    color: '#1877F2',
   });
-
-  const fetchPlatforms = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('platforms')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setPlatforms(data || []);
-    } catch (error) {
-      console.error('Error fetching platforms:', error);
-      toast.error('Failed to load platforms');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPlatforms();
-  }, []);
 
   const handleCreate = async () => {
     if (!newPlatform.name.trim()) {
       toast.error('Platform name is required');
       return;
     }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('platforms')
-        .insert([{
-          user_id: user.id,
-          name: newPlatform.name.toLowerCase(),
-          icon_name: newPlatform.icon_name,
-          color: newPlatform.color
-        }]);
-
-      if (error) throw error;
-
+      await createPlatform({
+        name: newPlatform.name.toLowerCase(),
+        iconName: newPlatform.icon_name,
+        color: newPlatform.color,
+      });
       toast.success('Platform created successfully!');
       setIsCreating(false);
       setNewPlatform({ name: '', icon_name: 'Share2', color: '#1877F2' });
-      fetchPlatforms();
-
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating platform:', error);
@@ -87,20 +65,19 @@ export const PlatformManager: React.FC = () => {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<Platform>) => {
+  const handleUpdate = async (id: Id<'platforms'>, patch: Partial<Platform>) => {
     try {
-      const { error } = await supabase
-        .from('platforms')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await updatePlatform({
+        id,
+        patch: {
+          name: patch.name,
+          color: patch.color,
+          iconName: patch.icon_name,
+          isActive: patch.is_active,
+        },
+      });
       toast.success('Platform updated successfully!');
       setEditingId(null);
-      fetchPlatforms();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating platform:', error);
@@ -108,23 +85,11 @@ export const PlatformManager: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this platform?')) {
-      return;
-    }
-
+  const handleDelete = async (id: Id<'platforms'>) => {
+    if (!confirm('Are you sure you want to delete this platform?')) return;
     try {
-      const { error } = await supabase
-        .from('platforms')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await removePlatform({ id });
       toast.success('Platform deleted successfully!');
-      fetchPlatforms();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting platform:', error);

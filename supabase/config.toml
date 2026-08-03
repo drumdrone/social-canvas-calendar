@@ -1,7 +1,0 @@
-project_id = "nvehseiryrmpufftznam"
-
-[functions.send-mention-email]
-verify_jwt = false
-
-[functions.send-post-pdf]
-verify_jwt = false

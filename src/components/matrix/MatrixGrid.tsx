@@ -1,7 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { convexToSocialPost } from '@/integrations/convex/adapter';
 import { format, startOfYear, endOfYear, eachWeekOfInterval, startOfWeek, endOfWeek, getMonth, getWeek, startOfQuarter, endOfQuarter } from 'date-fns';
 
 interface SocialPost {
@@ -44,52 +46,40 @@ const statusAbbreviations: Record<string, string> = {
 };
 
 export const MatrixGrid: React.FC<MatrixGridProps> = ({ currentYear, currentQuarter }) => {
-  const [posts, setPosts] = useState<SocialPost[]>([]);
-  const [authorsData, setAuthorsData] = useState<Record<string, { initials: string; color: string }>>({});
-  const [loading, setLoading] = useState(false);
+  // Reactive Convex reads — the previous fetchQuarterData was called on every
+  // year/quarter change; now posts and authors flow in and are filtered
+  // client-side for the visible quarter.
+  const rawPosts = useQuery(api.posts.list);
+  const rawAuthors = useQuery(api.authors.list, {});
+  const loading = rawPosts === undefined;
 
-  useEffect(() => {
-    fetchQuarterData();
-  }, [currentYear, currentQuarter]);
+  const posts = useMemo<SocialPost[]>(() => {
+    if (!rawPosts) return [];
+    const quarterStartMonth = (currentQuarter - 1) * 3;
+    const startDate = startOfQuarter(new Date(currentYear, quarterStartMonth, 1));
+    const endDate = endOfQuarter(new Date(currentYear, quarterStartMonth, 1));
+    return rawPosts
+      .map((d) => convexToSocialPost(d) as unknown as SocialPost)
+      .filter((p) => {
+        if (!p.scheduled_date) return false;
+        const d = new Date(p.scheduled_date);
+        return d >= startDate && d <= endDate;
+      })
+      .sort(
+        (a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime(),
+      );
+  }, [rawPosts, currentYear, currentQuarter]);
 
-  const fetchQuarterData = async () => {
-    setLoading(true);
-    try {
-      const quarterStartMonth = (currentQuarter - 1) * 3;
-      const startDate = startOfQuarter(new Date(currentYear, quarterStartMonth, 1));
-      const endDate = endOfQuarter(new Date(currentYear, quarterStartMonth, 1));
-      
-      const { data, error } = await supabase
-        .from('social_media_posts')
-        .select('*')
-        .gte('scheduled_date', startDate.toISOString())
-        .lte('scheduled_date', endDate.toISOString())
-        .order('scheduled_date', { ascending: true });
-
-      if (error) throw error;
-      setPosts(data || []);
-
-      // Fetch authors data
-      const authorInitials = data?.map(post => post.author).filter(Boolean) || [];
-      if (authorInitials.length > 0) {
-        const { data: authorsData, error: authorsError } = await supabase
-          .from('authors')
-          .select('initials, color')
-          .in('initials', authorInitials);
-        
-        if (authorsData) {
-          const authorsMap = authorsData.reduce((acc, author) => {
-            acc[author.initials] = author;
-            return acc;
-          }, {} as Record<string, { initials: string; color: string }>);
-          setAuthorsData(authorsMap);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching quarter data:', error);
+  const authorsData = useMemo<Record<string, { initials: string; color: string }>>(() => {
+    const map: Record<string, { initials: string; color: string }> = {};
+    for (const a of rawAuthors ?? []) {
+      map[(a as any).initials] = {
+        initials: (a as any).initials,
+        color: (a as any).color ?? '',
+      };
     }
-    setLoading(false);
-  };
+    return map;
+  }, [rawAuthors]);
 
   const getWeeksInQuarter = () => {
     const quarterStartMonth = (currentQuarter - 1) * 3;

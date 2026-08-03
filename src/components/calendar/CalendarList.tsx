@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import { convexToSocialPost } from '@/integrations/convex/adapter';
 import { SocialPost, Platform, PostStatus } from '../SocialCalendar';
 import { Button } from '@/components/ui/button';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -27,55 +29,37 @@ export const CalendarList: React.FC<CalendarListProps> = ({
   onDateClick,
   onPostClick,
 }) => {
-  const [monthlyPosts, setMonthlyPosts] = useState<MonthlyPosts[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
 
-  const fetchPosts = async () => {
-    setLoading(true);
-    
-    // Fetch posts for the current year (6 months before and after current month)
+  // Reactive read from Convex. The visible window is a year (±6 months around
+  // currentDate); filtering happens in-memory since the whole set is small.
+  const raw = useQuery(api.posts.list);
+  const loading = raw === undefined;
+
+  const monthlyPosts = useMemo<MonthlyPosts[]>(() => {
+    if (!raw) return [];
     const startDate = startOfMonth(subMonths(currentDate, 6));
     const endDate = endOfMonth(addMonths(currentDate, 6));
 
-    const { data, error } = await supabase
-      .from('social_media_posts')
-      .select('*')
-      .gte('scheduled_date', startDate.toISOString())
-      .lte('scheduled_date', endDate.toISOString())
-      .order('scheduled_date', { ascending: true });
-
-    if (!error && data) {
-      // Group posts by month
-      const grouped: { [key: string]: SocialPost[] } = {};
-      
-      data.forEach((post) => {
-        const postDate = new Date(post.scheduled_date);
-        const monthKey = format(postDate, 'yyyy-MM');
-        
-        if (!grouped[monthKey]) {
-          grouped[monthKey] = [];
-        }
-        grouped[monthKey].push(post as SocialPost);
-      });
-
-      // Convert to array of MonthlyPosts and sort by month
-      const monthsWithPosts: MonthlyPosts[] = Object.keys(grouped)
-        .sort()
-        .map((monthKey) => ({
-          month: new Date(monthKey + '-01'),
-          posts: grouped[monthKey],
-        }));
-
-      setMonthlyPosts(monthsWithPosts);
+    const grouped: { [key: string]: SocialPost[] } = {};
+    for (const doc of raw) {
+      const post = convexToSocialPost(doc);
+      if (!post.scheduled_date) continue;
+      const postDate = new Date(post.scheduled_date);
+      if (postDate < startDate || postDate > endDate) continue;
+      const monthKey = format(postDate, 'yyyy-MM');
+      (grouped[monthKey] ||= []).push(post);
     }
-    
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchPosts();
-  }, [currentDate]);
+    // Sort posts within each month by date (asc), matching the old query.
+    for (const key of Object.keys(grouped)) {
+      grouped[key].sort(
+        (a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime(),
+      );
+    }
+    return Object.keys(grouped)
+      .sort()
+      .map((monthKey) => ({ month: new Date(monthKey + '-01'), posts: grouped[monthKey] }));
+  }, [raw, currentDate]);
 
   const filterPosts = (posts: SocialPost[]) => {
     return posts.filter((post) => {

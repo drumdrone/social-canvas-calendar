@@ -3,7 +3,9 @@ import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { supabase } from '@/integrations/supabase/client';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { useToast } from '@/components/ui/use-toast';
 
 interface MoodBoardItem {
@@ -17,10 +19,19 @@ interface MoodBoardItem {
 
 export const MoodBoard: React.FC = () => {
   const [items, setItems] = useState<MoodBoardItem[]>([]);
+  // The board is a fully local-state grid that persists on blur/Enter (like
+  // the old Supabase version, which never subscribed to realtime changes
+  // either) — so we seed from the reactive Convex query once, on first load,
+  // rather than resyncing on every server update and clobbering in-progress edits.
+  const [initialized, setInitialized] = useState(false);
   const [editingCell, setEditingCell] = useState<{ rowId: string; column: keyof MoodBoardItem } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const moodItemsQ = useQuery(api.misc.listMoodBoard);
+  const createMoodItem = useMutation(api.misc.createMoodItem);
+  const updateMoodItem = useMutation(api.misc.updateMoodItem);
+  const removeMoodItem = useMutation(api.misc.removeMoodItem);
 
   const columns: Array<{ key: keyof MoodBoardItem; label: string }> = [
     { key: 'napad', label: 'Nápad' },
@@ -31,8 +42,22 @@ export const MoodBoard: React.FC = () => {
   ];
 
   useEffect(() => {
-    loadMoodBoardData();
-  }, []);
+    if (moodItemsQ && !initialized) {
+      setItems(
+        moodItemsQ.map((i: any) => ({
+          id: i._id,
+          napad: i.napad ?? '',
+          text: i.text ?? '',
+          popis: i.popis ?? '',
+          image_prompt: i.imagePrompt ?? '',
+          format: i.format ?? '',
+        })),
+      );
+      setInitialized(true);
+    }
+  }, [moodItemsQ, initialized]);
+
+  const isLoading = !initialized;
 
   useEffect(() => {
     if (editingCell && inputRef.current) {
@@ -40,50 +65,18 @@ export const MoodBoard: React.FC = () => {
     }
   }, [editingCell]);
 
-  const loadMoodBoardData = async () => {
-    try {
-      setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('mood_board_items')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setItems(data || []);
-    } catch (error) {
-      console.error('Error loading mood board data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load mood board data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const saveItem = async (item: MoodBoardItem) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase
-        .from('mood_board_items')
-        .upsert({
-          id: item.id,
-          user_id: user.id,
+      await updateMoodItem({
+        id: item.id as Id<'mood_board_items'>,
+        patch: {
+          format: item.format || '',
+          imagePrompt: item.image_prompt,
           napad: item.napad,
-          text: item.text,
           popis: item.popis,
-          image_prompt: item.image_prompt,
-          format: item.format
-        });
-
-      if (error) throw error;
+          text: item.text,
+        },
+      });
     } catch (error) {
       console.error('Error saving item:', error);
       toast({
@@ -95,31 +88,41 @@ export const MoodBoard: React.FC = () => {
   };
 
   const addNewItem = async () => {
-    const newItem: MoodBoardItem = {
-      id: crypto.randomUUID(),
-      napad: '',
-      text: '',
-      popis: '',
-      image_prompt: '',
-      format: ''
-    };
-    
-    setItems([...items, newItem]);
-    await saveItem(newItem);
-    
-    // Start editing the first cell of the new row
-    setEditingCell({ rowId: newItem.id, column: 'napad' });
+    try {
+      const newId = await createMoodItem({
+        format: '',
+        imagePrompt: '',
+        napad: '',
+        popis: '',
+        text: '',
+      });
+      const newItem: MoodBoardItem = {
+        id: newId,
+        napad: '',
+        text: '',
+        popis: '',
+        image_prompt: '',
+        format: ''
+      };
+
+      setItems([...items, newItem]);
+
+      // Start editing the first cell of the new row
+      setEditingCell({ rowId: newItem.id, column: 'napad' });
+    } catch (error) {
+      console.error('Error creating item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create item",
+        variant: "destructive",
+      });
+    }
   };
 
   const deleteItem = async (id: string) => {
     setItems(items.filter(item => item.id !== id));
     try {
-      const { error } = await supabase
-        .from('mood_board_items')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await removeMoodItem({ id: id as Id<'mood_board_items'> });
     } catch (error) {
       console.error('Error deleting item:', error);
       toast({

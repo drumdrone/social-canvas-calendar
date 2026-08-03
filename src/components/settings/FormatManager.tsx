@@ -1,75 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
+import { convexToTaxonomy, sortTaxonomyByName } from '@/integrations/convex/adapter';
 import { toast } from 'sonner';
 
 interface Format {
-  id: string;
+  id: Id<'formats'>;
   name: string;
   color: string;
   is_active: boolean;
 }
 
 export const FormatManager: React.FC = () => {
-  const [formats, setFormats] = useState<Format[]>([]);
-  const [loading, setLoading] = useState(true);
+  const raw = useQuery(api.taxonomy.listFormats);
+  const loading = raw === undefined;
+  const formats = useMemo<Format[]>(
+    () => sortTaxonomyByName((raw ?? []).map((d) => convexToTaxonomy<Format>(d))),
+    [raw],
+  );
+  const createFormat = useMutation(api.taxonomy.createFormat);
+  const updateFormat = useMutation(api.taxonomy.updateFormat);
+  const removeFormat = useMutation(api.taxonomy.removeFormat);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [newFormat, setNewFormat] = useState({
-    name: '',
-    color: '#3B82F6'
-  });
-
-  const fetchFormats = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('formats')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setFormats(data || []);
-    } catch (error) {
-      console.error('Error fetching formats:', error);
-      toast.error('Failed to load formats');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFormats();
-  }, []);
+  const [newFormat, setNewFormat] = useState({ name: '', color: '#3B82F6' });
 
   const handleCreate = async () => {
     if (!newFormat.name.trim()) {
       toast.error('Format name is required');
       return;
     }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('formats')
-        .insert([{
-          user_id: user.id,
-          name: newFormat.name.toLowerCase(),
-          color: newFormat.color
-        }]);
-
-      if (error) throw error;
-
+      await createFormat({ name: newFormat.name.toLowerCase(), color: newFormat.color });
       toast.success('Format created successfully!');
       setIsCreating(false);
       setNewFormat({ name: '', color: '#3B82F6' });
-      fetchFormats();
-
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error creating format:', error);
@@ -77,20 +49,14 @@ export const FormatManager: React.FC = () => {
     }
   };
 
-  const handleUpdate = async (id: string, updates: Partial<Format>) => {
+  const handleUpdate = async (id: Id<'formats'>, patch: Partial<Format>) => {
     try {
-      const { error } = await supabase
-        .from('formats')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await updateFormat({
+        id,
+        patch: { name: patch.name, color: patch.color, isActive: patch.is_active },
+      });
       toast.success('Format updated successfully!');
       setEditingId(null);
-      fetchFormats();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error updating format:', error);
@@ -98,23 +64,11 @@ export const FormatManager: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this format?')) {
-      return;
-    }
-
+  const handleDelete = async (id: Id<'formats'>) => {
+    if (!confirm('Are you sure you want to delete this format?')) return;
     try {
-      const { error } = await supabase
-        .from('formats')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await removeFormat({ id });
       toast.success('Format deleted successfully!');
-      fetchFormats();
-      
-      // Trigger refresh in other components
       window.dispatchEvent(new CustomEvent('settingsChanged'));
     } catch (error) {
       console.error('Error deleting format:', error);
@@ -152,7 +106,7 @@ export const FormatManager: React.FC = () => {
                 id="name"
                 value={newFormat.name}
                 onChange={(e) => setNewFormat({ ...newFormat, name: e.target.value })}
-                placeholder="e.g., video"
+                placeholder="e.g., image"
               />
             </div>
             <div>
@@ -169,9 +123,9 @@ export const FormatManager: React.FC = () => {
                 <Save className="h-3 w-3 mr-1" />
                 Save
               </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => {
                   setIsCreating(false);
                   setNewFormat({ name: '', color: '#3B82F6' });
@@ -191,7 +145,7 @@ export const FormatManager: React.FC = () => {
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div 
+                  <div
                     className="w-3 h-3 rounded-full border"
                     style={{ backgroundColor: format.color }}
                   />
@@ -200,16 +154,12 @@ export const FormatManager: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <Button
                     size="sm"
-                    variant={format.is_active ? "default" : "outline"}
+                    variant={format.is_active ? 'default' : 'outline'}
                     onClick={() => toggleActive(format)}
                   >
                     {format.is_active ? 'Active' : 'Inactive'}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDelete(format.id)}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => handleDelete(format.id)}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>

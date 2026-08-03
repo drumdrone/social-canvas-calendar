@@ -21,16 +21,16 @@ Resend's test mode only allows sending emails to your own verified email address
 3. Enter your domain (e.g., yourdomain.com)
 4. Add the DNS records provided by Resend to your domain
 5. Wait for verification (usually takes a few minutes)
-6. Update the edge function:
+6. Set the sender address as a secret (no code change needed — the edge
+   function reads `RESEND_FROM` from the environment):
 
 ```bash
-# Edit: supabase/functions/send-mention-email/index.ts
-# Change line 82 from:
-from: "Social Media Manager <onboarding@resend.dev>",
-
-# To:
-from: "Social Media Manager <notifications@yourdomain.com>",
+supabase secrets set RESEND_FROM="Social Canvas Calendar <notifications@yourdomain.com>"
 ```
+
+If `RESEND_FROM` is not set, the function falls back to Resend's shared
+test sender `onboarding@resend.dev` (test mode — only delivers to your own
+verified address).
 
 ### Option 2: Use Test Mode (Current Setup)
 
@@ -45,7 +45,7 @@ For testing purposes, you can:
 To verify the email function is working:
 
 ```bash
-curl "https://gaqhdjhhkzqbkqknrndx.supabase.co/functions/v1/send-mention-email" \
+curl "https://ejcjdhtgdjyuucknefvp.supabase.co/functions/v1/send-mention-email" \
   -H "Authorization: Bearer YOUR_ANON_KEY" \
   -H "Content-Type: application/json" \
   -d '{

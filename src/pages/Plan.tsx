@@ -1,37 +1,34 @@
 import React, { useState } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RecurringActionsGrid } from '@/components/plan/RecurringActionsGrid';
 import { PostSlidingSidebar } from '@/components/calendar/PostSlidingSidebar';
-import { supabase } from '@/integrations/supabase/client';
+import { convexToSocialPost } from '@/integrations/convex/adapter';
 import { SocialPost } from '@/components/SocialCalendar';
 
 const Plan = () => {
   const [showSidebar, setShowSidebar] = useState(false);
-  const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const handlePostClick = async (postId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('social_media_posts')
-        .select('*')
-        .eq('id', postId)
-        .single();
+  // RecurringActionCard passes legacyId ?? _id as the post id; look it up in
+  // the already-reactive posts list the same way SocialCalendar does.
+  const postsQ = useQuery(api.posts.list);
+  const editingPost = React.useMemo<SocialPost | null>(() => {
+    if (!editingPostId || !postsQ) return null;
+    const doc = postsQ.find((p: any) => (p.legacyId ?? p._id) === editingPostId);
+    return doc ? (convexToSocialPost(doc) as unknown as SocialPost) : null;
+  }, [editingPostId, postsQ]);
 
-      if (error) throw error;
-
-      if (data) {
-        setEditingPost(data as SocialPost);
-        setShowSidebar(true);
-      }
-    } catch (error) {
-      console.error('Error loading post:', error);
-    }
+  const handlePostClick = (postId: string) => {
+    setEditingPostId(postId);
+    setShowSidebar(true);
   };
 
   const handleCloseSidebar = () => {
     setShowSidebar(false);
-    setEditingPost(null);
+    setEditingPostId(null);
   };
 
   const handleSidebarSave = () => {
