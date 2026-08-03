@@ -121,6 +121,15 @@ export default defineSchema({
     ...timestamps,
   }).index("by_legacyId", ["legacyId"]),
 
+  // Standalone image library (Media Gallery), replacing the Supabase
+  // `media-gallery` storage bucket. Distinct from posts' own attached images.
+  // No custom index needed — listed newest-first via the built-in _creationTime.
+  mediaGalleryItems: defineTable({
+    storageId: v.id("_storage"),
+    name: v.string(),
+    ...timestamps,
+  }),
+
   // --- Comment / mention / notification system (table-based, "System A") ---
   user_profiles: defineTable({
     email: v.string(),
