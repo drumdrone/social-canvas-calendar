@@ -1,7 +1,7 @@
 # Convex migrace — Progress tracker
 
-> **Poslední aktualizace:** 2026-07-30
-> **Sledovaná větev:** `claude/emailing-komentar-audit-u7chhw` (32 commitů před `main`)
+> **Poslední aktualizace:** 2026-08-03 — **kódová část migrace je HOTOVÁ.** Zbývá jen §4 (Honza spustí datovou migraci) a cutover (merge + Netlify env).
+> **Sledovaná větev:** `claude/emailing-komentar-audit-u7chhw`
 > **Doprovodný plán:** [`CONVEX_MIGRATION_PLAN.md`](./CONVEX_MIGRATION_PLAN.md) (původní scaffold plán z 2026-07-29)
 
 Tento soubor drží **aktuální stav** migrace ze Supabase na Convex. Cílem je, aby každý nový chat/session mohl začít odsud a věděl, co je hotové, co běží duplicitně a co ještě zbývá — bez opakovaného auditu kódu.
@@ -62,11 +62,11 @@ Pokud čteš tenhle soubor na `main`, tak nic z níže popsaného ještě není 
 
 ---
 
-## 2. 🚧 SMÍŠENÝ STAV (v souboru je Convex i Supabase)
+## 2. ✅ SMÍŠENÝ STAV — DOŘÍZNUTO
 
-Tyto soubory už z většiny běží na Convexu, ale zbývá v nich ještě volání na Supabase, které je potřeba doříznout:
+Všechny soubory, které měly rozjeté oba stacky zároveň, jsou dotažené na čistý Convex:
 
-| Soubor | Zbývá vyřešit | Poznámka |
+| Soubor | Zbývalo vyřešit | Poznámka |
 |---|---|---|
 | ~~`SimpleAuthGate.tsx`~~ | ~~6 volání~~ | ✅ **Doříznuto** (commit `e7a2b3e`) — celá stínová Supabase session pryč, zůstal jen Convex `verifyPassword`. |
 | ~~`SocialCalendar.tsx`~~ | ~~1~~ | ✅ **Doříznuto** (commit `97b04a1`) — bylo to `select scheduled_date` pro edit-via-URL flow, nahrazeno lookupem v už načteném `postsQ`. |
@@ -75,34 +75,38 @@ Tyto soubory už z většiny běží na Convexu, ale zbývá v nich ještě vol�
 
 ---
 
-## 3. ⬜ ZBÝVÁ MIGROVAT (soubor jede jen na Supabase)
+## 3. ✅ VŠECHNO PŘEPSÁNO / SMAZÁNO / ODSTRANĚNO
 
-Podle rozhodnutí z §5 se určí, které z těchto se **přepíšou na Convex** a které se **smažou úplně**.
-
-### 3.1 Core (musí zůstat a být přepsáno)
+### 3.1 Core — přepsáno na Convex
 | Soubor | Supabase usages | Co dělá |
 |---|---:|---|
-| **`src/integrations/supabase/client.ts`** | client | Umře úplně poslední, až nikdo nebude importovat. |
+| ~~`src/integrations/supabase/client.ts`~~ | client | ✅ **Smazáno** (commit `2ab6acb`, součást F1) — nikdo ho už neimportoval. |
 | ~~`src/contexts/AuthContext.tsx`~~ | ~~11~~ | ✅ **Přepsáno** (commit `c011104`) — tenký wrapper okolo `simple_auth_verified` localStorage flagu, exportuje jen `logout()`. `src/pages/Login.tsx` smazán (byl mrtvý kód, `/login` route přesměrovává na `/`). |
 | ~~`src/pages/Plan.tsx`~~ | ~~2~~ | ✅ **Přepsáno** (commit `28b0312`) — post lookup přes už načtený `api.posts.list`. |
 | ~~`src/components/plan/RecurringActionsGrid.tsx`~~ | ~~6~~ | ✅ **Přepsáno** (commit `84aff48`) — CRUD přes `api.recurringActions.*`. |
 | ~~`src/components/dashboard/MoodBoard.tsx`~~ | ~~6~~ | ✅ **Přepsáno** (commit `0fe9c25`) — CRUD přes `api.misc.*MoodItem`. |
 
-### 3.2 Features k rozhodnutí (viz §5) — rozhodnuto ✅
+### 3.2 Features k rozhodnutí (viz §5) — rozhodnuto a hotovo ✅
 | Soubor | Supabase usages | Co dělá | Rozhodnutí | Stav |
 |---|---:|---|---|---|
 | ~~`SendPostPdfDialog.tsx`~~ | ~~3~~ | Volal edge funkci `send-post-pdf` s Facebook-style náhledem | smazat | ✅ **Smazáno** (commit `e7e7808`) — spolu s `PostPdfPreview.tsx` (orphan po smazání) a tlačítkem/state v `PostSlidingSidebar.tsx`. |
-| ~~`MediaGallery.tsx`~~ | ~~5~~ | Galerie z bucketu `media-gallery` | zachovat, přepsat na Convex | ✅ **Přepsáno** (commit `77454e1`) — nová tabulka `mediaGalleryItems` + `convex/mediaGallery.ts`. Pozn: komponenta zatím nemá konzumenta v appce (byla odpojená už předtím). |
+| ~~`MediaGallery.tsx`~~ | ~~5~~ | Galerie z bucketu `media-gallery` | zachovat, přepsat na Convex | ✅ **Přepsáno** (commit `77454e1`) — nová tabulka `mediaGalleryItems` + `convex/mediaGallery.ts`. Pozn: komponenta zatím nemá konzumenta v appce (byla odpojená už předtím) — funkční, ale nikam nezapojená. |
 | ~~`PostVersionHistory.tsx`~~ | ~~4~~ | Historie verzí postu | smazat | ✅ **Smazáno** (commit `1e878ba`) — modal + tlačítko + state z `PostSlidingSidebar.tsx`. |
 | ~~`PostDataManager.tsx`~~ | ~~4~~ | JSON import/export | zachovat, přepsat na Convex | ✅ **Přepsáno** (commit `fbd11ca`) — export čte `api.posts.list`, import volá `api.posts.create` (chápe legacy i nové field names). |
-| ~~`BackupManager.tsx`~~ | ~~15~~ | Zálohy do bucketu `backups` | smazat, nahradit měsíčním cronem | ✅ **Smazáno** (commit `3d4c61f`) — Backup tab v `SettingsSidebar.tsx` pryč. Náhrada (D3) ještě čeká. |
+| ~~`BackupManager.tsx`~~ | ~~15~~ | Zálohy do bucketu `backups` | smazat, nahradit měsíčním cronem | ✅ **Smazáno** (commit `3d4c61f`) — Backup tab v `SettingsSidebar.tsx` pryč. Náhrada hotová v D3 (§6). |
 
-### 3.3 Supabase edge funkce, které pořád běží na serveru
+### 3.3 Supabase edge funkce
 | Funkce | Stav |
 |---|---|
-| `send-mention-email` | **Už se z UI nevolá.** Smazat ze `supabase/functions/` a undeploynout (součást F1). |
-| `send-post-pdf` | ✅ **Smazáno** (commit `e7e7808`) — `supabase/functions/send-post-pdf/` už neexistuje. |
-| `create-test-user` | Pravděpodobně nepoužité — ověřit a smazat (součást F1). |
+| `send-mention-email` | ✅ **Smazáno** (commit `2ab6acb`) — z UI se už dřív přestala volat, zdrojový soubor pryč. |
+| `send-post-pdf` | ✅ **Smazáno** (commit `e7e7808`). |
+| `create-test-user` | ✅ **Zdrojový soubor smazán** (commit `2ab6acb`). Pokud byla funkce ještě nasazená na Supabase projektu samotném, undeploy je manuální krok mimo repo (Supabase dashboard/CLI) — jinak neškodí, appka na ni nesahá. |
+
+### 3.4 Finální úklid repa (F1, commit `2ab6acb`)
+- Smazáno: `src/integrations/supabase/`, celý `supabase/` adresář (migrace, `config.toml`, edge funkce).
+- Smazáno: root SQL/JS skripty z původní Postgres migrace (`import-*.sql`, `setup-database.sql`, `migrate-data.js`, atd.) + stará data (`database-export.json`, `migration-backup.json`).
+- `package.json`: odstraněno `@supabase/supabase-js`, a `html2canvas` + `jspdf` (byly použité jen v už smazaném Send Post PDF feature). `npm install` proběhl, `package-lock.json` aktualizovaný.
+- **`npm run build` na téhle větvi pořád padá** — ale jen na chybějícím `convex/_generated/*`, což vygeneruje až `npx convex dev` (viz §4). `tsc --noEmit` mimo tenhle jeden known-gap nehlásí nic.
 
 ---
 
@@ -169,21 +173,17 @@ Odpovědi na tyto otázky pak přesuň do §6.
 
 ## 7. 🎯 Co dělat příště (checklist)
 
-Až budou rozhodnutí z §5:
+**Kódová část (§1–3) je hotová.** Zbývá jen tohle — a všechno vyžaduje Honzu, ne další kód:
 
-- [ ] Doříznout `SimpleAuthGate.tsx` — odstranit Supabase auth.
-- [ ] Doříznout `SocialCalendar.tsx` (řádek 81).
-- [ ] Doříznout `PostSlidingSidebar.tsx` (řádek 138) — smazat realtime kanál.
-- [ ] Přepsat `RecurringActionCard.tsx` a `RecurringActionsGrid.tsx` na Convex.
-- [ ] Přepsat `MoodBoard.tsx` na Convex.
-- [ ] Přepsat/smazat `Plan.tsx`, `AuthContext.tsx`.
-- [ ] Vyřídit features ze §3.2 podle rozhodnutí.
-- [ ] Smazat `supabase/functions/send-mention-email/` (už nepoužité).
-- [ ] Ověřit + smazat `supabase/functions/create-test-user/`.
-- [ ] Spustit datovou migraci (§4).
-- [ ] Smazat `@supabase/supabase-js` z `package.json`.
-- [ ] Smazat `src/integrations/supabase/`.
-- [ ] Smazat `supabase/` adresář.
-- [ ] Smazat SQL soubory z rootu (`import-*.sql`, `setup-database.sql`, atd.) — jsou to artefakty ze Supabase setupu.
+- [x] Doříznout `SimpleAuthGate.tsx`, `SocialCalendar.tsx`, `PostSlidingSidebar.tsx`.
+- [x] Přepsat `RecurringActionCard.tsx`, `RecurringActionsGrid.tsx`, `MoodBoard.tsx`, `Plan.tsx`, `AuthContext.tsx`.
+- [x] Vyřídit features ze §3.2 podle rozhodnutí (smazat PDF/History/Backup, přepsat Gallery/DataManager).
+- [x] Přidat měsíční backup cron (D3).
+- [x] Smazat `supabase/`, SQL/JS skripty, `@supabase/supabase-js`, `html2canvas`, `jspdf`.
+- [ ] **Honza:** `npx convex dev` — založit/připojit se k Convex deploymentu (vygeneruje `convex/_generated/*`, bez čehož `npm run build` nejede).
+- [ ] **Honza:** nastavit env vars v Convex Dashboardu — `APP_PASSWORD`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `BREVO_API_KEY`, `MAIL_FROM`, `APP_URL`, `BACKUP_EMAIL` (volitelné, jinak default).
+- [ ] **Honza:** spustit datovou migraci — `npx convex run migrate:runMigration '{ "wipe": true }'`.
+- [ ] **Honza + ověření:** `npm run build` musí projít, appka lokálně proti reálnému Convexu musí fungovat (kalendář, komentáře, upload, mood board, plan, media gallery, zálohy).
 - [ ] Merge feature branch do `main`.
-- [ ] Přepnout Netlify env na Convex deployment.
+- [ ] Přepnout Netlify env (`VITE_CONVEX_URL`) na produkční Convex deployment.
+- [ ] Supabase projekt nechat read-only jako pojistku, dokud se vše neověří v produkci.
