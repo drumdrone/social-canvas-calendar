@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw, Trash2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { RecurringActionCard, RecurringAction } from './RecurringActionCard';
 import { AddActionDialog } from './AddActionDialog';
 import { toast } from 'sonner';
@@ -22,34 +24,33 @@ interface RecurringActionsGridProps {
 }
 
 export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPostClick }) => {
-  const [actions, setActions] = useState<RecurringAction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingActionType, setPendingActionType] = useState<'monthly' | 'weekly' | 'quarterly' | null>(null);
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
 
-  const loadActions = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('recurring_actions')
-        .select('*')
-        .order('order_index', { ascending: true });
+  const actionsQ = useQuery(api.recurringActions.list);
+  const isLoading = actionsQ === undefined;
+  const actions = useMemo<RecurringAction[]>(
+    () =>
+      (actionsQ ?? []).map((a: any) => ({
+        id: a._id,
+        user_id: '',
+        action_type: a.actionType,
+        title: a.title ?? '',
+        description: a.description ?? '',
+        frequency: a.frequency ?? '1x',
+        data: a.data ?? {},
+        color: a.color ?? '',
+        order_index: a.orderIndex ?? 0,
+        created_at: a.createdAt ? new Date(a.createdAt).toISOString() : '',
+        updated_at: a.updatedAt ? new Date(a.updatedAt).toISOString() : '',
+      })),
+    [actionsQ],
+  );
 
-      if (error) throw error;
-
-      setActions(data || []);
-    } catch (error) {
-      console.error('Error loading actions:', error);
-      toast.error('Chyba při načítání akcí');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadActions();
-  }, [loadActions]);
+  const createAction = useMutation(api.recurringActions.create);
+  const updateActionMutation = useMutation(api.recurringActions.update);
+  const removeAction = useMutation(api.recurringActions.remove);
 
   const showAddDialog = (actionType: 'monthly' | 'weekly' | 'quarterly') => {
     setPendingActionType(actionType);
@@ -60,21 +61,14 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
     if (!pendingActionType) return;
 
     try {
-      const { data, error } = await supabase
-        .from('recurring_actions')
-        .insert([{
-          action_type: pendingActionType,
-          title,
-          frequency,
-          description: '',
-          data: {},
-          order_index: 0,
-        }])
-        .select();
-
-      if (error) throw error;
-
-      setActions([...actions, ...(data || [])]);
+      await createAction({
+        actionType: pendingActionType,
+        title,
+        frequency,
+        description: '',
+        data: {},
+        orderIndex: 0,
+      });
       toast.success('Akce vytvořena');
     } catch (error) {
       console.error('Error creating action:', error);
@@ -84,14 +78,15 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
 
   const updateAction = async (id: string, updates: Partial<RecurringAction>) => {
     try {
-      const { error } = await supabase
-        .from('recurring_actions')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id);
+      const patch: Record<string, unknown> = {};
+      if (updates.title !== undefined) patch.title = updates.title;
+      if (updates.frequency !== undefined) patch.frequency = updates.frequency;
+      if (updates.description !== undefined) patch.description = updates.description;
+      if (updates.color !== undefined) patch.color = updates.color;
+      if (updates.action_type !== undefined) patch.actionType = updates.action_type;
+      if (updates.order_index !== undefined) patch.orderIndex = updates.order_index;
 
-      if (error) throw error;
-
-      setActions(actions.map(a => a.id === id ? { ...a, ...updates } : a));
+      await updateActionMutation({ id: id as Id<'recurringActions'>, patch });
       toast.success('Akce aktualizována');
     } catch (error) {
       console.error('Error updating action:', error);
@@ -101,14 +96,7 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
 
   const deleteAction = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('recurring_actions')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setActions(actions.filter(a => a.id !== id));
+      await removeAction({ id: id as Id<'recurringActions'> });
       toast.success('Akce smazána');
     } catch (error) {
       console.error('Error deleting action:', error);
@@ -118,15 +106,9 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
 
   const deleteAllActions = async () => {
     try {
-      const actionIds = actions.map(a => a.id);
-      const { error } = await supabase
-        .from('recurring_actions')
-        .delete()
-        .in('id', actionIds);
-
-      if (error) throw error;
-
-      setActions([]);
+      await Promise.all(
+        actions.map((a) => removeAction({ id: a.id as Id<'recurringActions'> })),
+      );
       toast.success('Všechny akce byly smazány');
       setShowDeleteAllDialog(false);
     } catch (error) {
@@ -229,7 +211,7 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
                     action={action}
                     onUpdate={(updates) => updateAction(action.id, updates)}
                     onDelete={() => deleteAction(action.id)}
-                    onRefresh={loadActions}
+                    onRefresh={() => {}}
                     onPostClick={onPostClick}
                   />
                 ))}
@@ -263,7 +245,7 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
                     action={action}
                     onUpdate={(updates) => updateAction(action.id, updates)}
                     onDelete={() => deleteAction(action.id)}
-                    onRefresh={loadActions}
+                    onRefresh={() => {}}
                     onPostClick={onPostClick}
                   />
                 ))}
@@ -297,7 +279,7 @@ export const RecurringActionsGrid: React.FC<RecurringActionsGridProps> = ({ onPo
                     action={action}
                     onUpdate={(updates) => updateAction(action.id, updates)}
                     onDelete={() => deleteAction(action.id)}
-                    onRefresh={loadActions}
+                    onRefresh={() => {}}
                     onPostClick={onPostClick}
                   />
                 ))}

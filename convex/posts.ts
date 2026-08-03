@@ -75,6 +75,22 @@ export const get = query({
 
 // Look up a post by its original Supabase UUID (kept in `legacyId` during the
 // migration). UI code holds these UUIDs from before the switch.
+// Posts driving a recurring action's progress bar in the Plan view.
+export const listByRecurringAction = query({
+  args: { recurringActionId: v.id("recurringActions") },
+  handler: async (ctx, { recurringActionId }) => {
+    const posts = await ctx.db
+      .query("social_media_posts")
+      .withIndex("by_recurringAction", (q) =>
+        q.eq("recurringActionId", recurringActionId),
+      )
+      .collect();
+    return posts
+      .filter((p) => p.scheduledDate)
+      .sort((a, b) => (a.scheduledDate ?? "").localeCompare(b.scheduledDate ?? ""));
+  },
+});
+
 export const getByLegacyId = query({
   args: { legacyId: v.string() },
   handler: async (ctx, { legacyId }) => {

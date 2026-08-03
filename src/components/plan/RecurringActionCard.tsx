@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Edit2, Check, X, Circle, Calendar, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, addMonths, addWeeks } from 'date-fns';
@@ -89,7 +89,6 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [periodStatuses, setPeriodStatuses] = useState<PeriodStatus[]>([]);
   const [editData, setEditData] = useState({
     title: action.title,
@@ -106,39 +105,28 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     [statusesQ],
   );
 
-  useEffect(() => {
-    loadPosts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [action.id]);
+  // Reactive read of posts linked to this action — replaces the old
+  // Supabase fetch + postgres_changes subscription. useQuery re-runs on its
+  // own whenever a linked post changes, so no manual channel is needed.
+  const postsQ = useQuery(api.posts.listByRecurringAction, {
+    recurringActionId: action.id as Id<'recurringActions'>,
+  });
+  const posts = useMemo<Post[]>(
+    () =>
+      (postsQ ?? []).map((p: any) => ({
+        id: p.legacyId ?? p._id,
+        title: p.title ?? '',
+        scheduled_date: p.scheduledDate,
+        status: p.status ?? '',
+      })),
+    [postsQ],
+  );
 
   useEffect(() => {
     if (statusConfigs.length > 0) {
       setPeriodStatuses(calculatePeriodStatuses(posts));
     }
   }, [statusConfigs, posts]);
-
-  useEffect(() => {
-    const subscription = supabase
-      .channel(`recurring_action_${action.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'social_media_posts',
-          filter: `recurring_action_id=eq.${action.id}`,
-        },
-        (payload) => {
-          console.log('Post changed for action:', action.id, payload);
-          loadPosts();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [action.id]);
 
   const getRequiredCount = (frequency: string): number => {
     if (!frequency) return 1;
@@ -276,22 +264,6 @@ export const RecurringActionCard: React.FC<RecurringActionCardProps> = ({
     }
 
     return statuses;
-  };
-
-  const loadPosts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('social_media_posts')
-        .select('id, title, scheduled_date, status')
-        .eq('recurring_action_id', action.id)
-        .not('scheduled_date', 'is', null)
-        .order('scheduled_date', { ascending: true });
-
-      if (error) throw error;
-      setPosts(data || []);
-    } catch (error) {
-      console.error('Error loading posts:', error);
-    }
   };
 
   const handleSave = () => {
