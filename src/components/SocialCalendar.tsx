@@ -11,7 +11,6 @@ import { PlanningPanel } from './calendar/PlanningPanel';
 import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
 import { Settings, Plus, FileText } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { convexToSocialPost } from '@/integrations/convex/adapter';
@@ -69,32 +68,23 @@ export const SocialCalendar: React.FC = () => {
     return doc ? (convexToSocialPost(doc) as unknown as SocialPost) : null;
   }, [sidebarPostId, postsQ]);
 
-  // Handle edit parameter from URL (e.g., from Quick Calendar)
+  // Handle edit parameter from URL (e.g., from Quick Calendar). The sidebar
+  // reads live post data from the Convex query via sidebarPostId, so we only
+  // need the scheduled_date here for the initial calendar view — looked up
+  // from the already-reactive `postsQ` rather than a separate fetch.
   useEffect(() => {
     const editPostId = searchParams.get('edit');
-    if (editPostId) {
-      // Open the sidebar for the given post; the sidebar reads live post data
-      // from the Convex query via sidebarPostId, so we don't need to fetch
-      // anything here anymore. We still touch Supabase only to look up the
-      // scheduled_date for the initial view (Convex would need a second query).
-      const fetchAndEditPost = async () => {
-        const { data, error } = await supabase
-          .from('social_media_posts')
-          .select('scheduled_date')
-          .eq('id', editPostId)
-          .single();
-
-        if (data && !error) {
-          setSidebarPostId(editPostId);
-          setSelectedDate(new Date(data.scheduled_date));
-          setShowSidebar(true);
-          // Clear the URL parameter
-          setSearchParams({});
-        }
-      };
-      fetchAndEditPost();
+    if (editPostId && postsQ) {
+      const doc = postsQ.find((p: any) => (p.legacyId ?? p._id) === editPostId);
+      if (doc) {
+        setSidebarPostId(editPostId);
+        setSelectedDate(new Date(doc.scheduledDate));
+        setShowSidebar(true);
+        // Clear the URL parameter
+        setSearchParams({});
+      }
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, postsQ]);
 
   // Reactive Convex reads of taxonomy — default the filter selection to
   // "everything active" so nothing is hidden on first render. Since useQuery
