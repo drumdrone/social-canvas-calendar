@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, History, Plus, MessageSquare, Edit3, Check } from 'lucide-react';
+import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, Plus, MessageSquare, Edit3, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +23,6 @@ import type { Id } from '../../../convex/_generated/dataModel';
 // Supabase-backed components — BackupManager — until they migrate.)
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { PostVersionHistory } from './PostVersionHistory';
 import { MultiImageUpload } from './MultiImageUpload';
 import { CommentEditor } from '../comments/CommentEditor';
 import { CommentList } from '../comments/CommentList';
@@ -74,7 +73,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [author, setAuthor] = useState<string>('');
   const [recurringActionId, setRecurringActionId] = useState<string>('none');
   const [recurringActions, setRecurringActions] = useState<Array<{id: string, title: string, action_type: string}>>([]);
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [activeTab, setActiveTab] = useState('content');
   const [commentRefresh, setCommentRefresh] = useState(0);
   const { toast } = useToast();
@@ -350,17 +348,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {post && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowVersionHistory(true)}
-                  title="View version history"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <History className="h-4 w-4" />
-                </Button>
-              )}
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="h-5 w-5" />
               </Button>
@@ -737,17 +724,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Version History Modal */}
-      <PostVersionHistory
-        postId={post?.id || null}
-        isOpen={showVersionHistory}
-        onClose={() => setShowVersionHistory(false)}
-        onRestore={() => {
-          onSave();
-          onClose();
-        }}
-      />
 
     </>
   );
