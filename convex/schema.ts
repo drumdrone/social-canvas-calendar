@@ -130,6 +130,15 @@ export default defineSchema({
     ...timestamps,
   }),
 
+  // Monthly full-data export snapshots (see convex/crons.ts + backups.ts).
+  // Convex already keeps its own daily database snapshots — this table is
+  // the record of the extra off-platform-ish JSON export we email out.
+  backups: defineTable({
+    storageId: v.id("_storage"),
+    createdAt: v.number(),
+    sizeBytes: v.number(),
+  }),
+
   // --- Comment / mention / notification system (table-based, "System A") ---
   user_profiles: defineTable({
     email: v.string(),
