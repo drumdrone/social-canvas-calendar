@@ -1,7 +1,7 @@
 # Convex migrace — Progress tracker
 
-> **Poslední aktualizace:** 2026-08-03 — **kódová část migrace je HOTOVÁ.** Zbývá jen §4 (Honza spustí datovou migraci) a cutover (merge + Netlify env).
-> **Sledovaná větev:** `claude/emailing-komentar-audit-u7chhw`
+> **Poslední aktualizace:** 2026-08-04 — **MIGRACE DOKONČENA A V PRODUKCI.** Appka běží na `https://socka27.netlify.app/` proti produkčnímu Convex deploymentu (`fine-tiger-542`) s migrovanými daty. Supabase se dál nepoužívá.
+> **`main`** obsahuje vše (PR #26, #27, #28 mergnuté).
 > **Doprovodný plán:** [`CONVEX_MIGRATION_PLAN.md`](./CONVEX_MIGRATION_PLAN.md) (původní scaffold plán z 2026-07-29)
 
 Tento soubor drží **aktuální stav** migrace ze Supabase na Convex. Cílem je, aby každý nový chat/session mohl začít odsud a věděl, co je hotové, co běží duplicitně a co ještě zbývá — bez opakovaného auditu kódu.
@@ -12,10 +12,12 @@ Tento soubor drží **aktuální stav** migrace ze Supabase na Convex. Cílem je
 
 ## 0. Kontext větví
 
-- `main` (SHA `3c368fa`) — pre-Convex. Pouze Supabase. Poslední commit „Fix post save failing with null user_id constraint error" z fáze před migrací.
-- `claude/emailing-komentar-audit-u7chhw` (SHA `b44b726`) — obsahuje **veškerou Convex práci**. 32 commitů před `main`.
-
-Pokud čteš tenhle soubor na `main`, tak nic z níže popsaného ještě není v produkci — je to zatím jen na feature branchi.
+- `main` — obsahuje **celou migraci**. Mergnuto přes tři PR:
+  - [#26](https://github.com/drumdrone/social-canvas-calendar/pull/26) „Migrate from Supabase to Convex" — veškerý kód (fáze A–F, viz §1–3).
+  - [#27](https://github.com/drumdrone/social-canvas-calendar/pull/27) „Fix Netlify build to generate convex/_generated" — build command na `npx convex deploy --cmd '...'` (nedostačující, viz §8).
+  - [#28](https://github.com/drumdrone/social-canvas-calendar/pull/28) „Split Netlify build into explicit convex deploy then build steps" — finální funkční build command.
+- Feature branch `claude/emailing-komentar-audit-u7chhw` je smergovaná a dá se smazat.
+- Zbytek téhle sekce (dřívější historie commitů před mergem) je ponechán níže jako záznam, ale už neplatí rozlišení „na feature branchi vs. na main" — všechno je na `main`.
 
 ---
 
@@ -110,18 +112,20 @@ Všechny soubory, které měly rozjeté oba stacky zároveň, jsou dotažené na
 
 ---
 
-## 4. 🗂️ Datová migrace (Fáze B z původního plánu)
+## 4. ✅ Datová migrace — HOTOVO (na dev i na produkci)
 
-**Není odškrtnuto.** Skript `convex/migrate.ts` existuje a je připravený, ale reálné spuštění `npx convex run migrate:runMigration` **vyžaduje uživatele** (potřebuje `SUPABASE_SERVICE_ROLE_KEY` v Convex env). Bez toho zůstává Convex prázdný a appka nemá s čím pracovat.
+`convex/migrate.ts` proběhlo úspěšně proti oběma Convex deploymentům, se shodnými počty:
 
-**Co je potřeba udělat (Honza):**
-1. `npx convex dev` — pokud ještě neexistuje deployment.
-2. V Convex Dashboard → Settings → Environment Variables nastavit:
-   - `APP_PASSWORD`
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `BREVO_API_KEY` + related (pro mention emaily)
-3. `npx convex run migrate:runMigration '{ "wipe": true }'`
+```
+authors: 1, categories: 0, formats: 0, images: 35, mood_board_items: 0,
+pillars: 4, plan_sections: 0, platforms: 0, post_statuses: 3,
+product_lines: 0, recurringActions: 5, social_media_posts: 50, user_profiles: 3
+```
+
+**Nulové tabulky (`platforms`, `categories`, `formats`, `product_lines`, `mood_board_items`, `plan_sections`) jsou v pořádku, ne bug** — ověřeno (viz konverzace 2026-08-03): vznikly ve stejné Supabase migraci jako `pillars`/`post_statuses`, ale bez seed dat, a nikdy se do nich přes Settings UI nic nepřidalo. Posty mají platformu/kategorii uloženou jako text přímo na sobě, takže to nijak nevadí — jen dropdowny pro tyhle taxonomie budou v Settings prázdné, dokud tam něco nepřidáš.
+
+- **Dev** (`jan-hrodek:socka-convex:dev`, URL `lovable-wren-425.eu-west-1.convex.cloud`) — migrace spuštěna přes `npx convex run migrate:runMigration '{"wipe":true}'` lokálně.
+- **Production** (`fine-tiger-542`, URL `fine-tiger-542.eu-west-1.convex.cloud`) — migrace spuštěna přes Dashboard → Functions → `migrate:runMigration` → Run function → `{"wipe": true}`.
 
 ---
 
@@ -171,19 +175,52 @@ Odpovědi na tyto otázky pak přesuň do §6.
 
 ---
 
-## 7. 🎯 Co dělat příště (checklist)
-
-**Kódová část (§1–3) je hotová.** Zbývá jen tohle — a všechno vyžaduje Honzu, ne další kód:
+## 7. 🎯 Checklist — VŠE HOTOVO ✅
 
 - [x] Doříznout `SimpleAuthGate.tsx`, `SocialCalendar.tsx`, `PostSlidingSidebar.tsx`.
 - [x] Přepsat `RecurringActionCard.tsx`, `RecurringActionsGrid.tsx`, `MoodBoard.tsx`, `Plan.tsx`, `AuthContext.tsx`.
 - [x] Vyřídit features ze §3.2 podle rozhodnutí (smazat PDF/History/Backup, přepsat Gallery/DataManager).
 - [x] Přidat měsíční backup cron (D3).
 - [x] Smazat `supabase/`, SQL/JS skripty, `@supabase/supabase-js`, `html2canvas`, `jspdf`.
-- [ ] **Honza:** `npx convex dev` — založit/připojit se k Convex deploymentu (vygeneruje `convex/_generated/*`, bez čehož `npm run build` nejede).
-- [ ] **Honza:** nastavit env vars v Convex Dashboardu — `APP_PASSWORD`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `BREVO_API_KEY`, `MAIL_FROM`, `APP_URL`, `BACKUP_EMAIL` (volitelné, jinak default).
-- [ ] **Honza:** spustit datovou migraci — `npx convex run migrate:runMigration '{ "wipe": true }'`.
-- [ ] **Honza + ověření:** `npm run build` musí projít, appka lokálně proti reálnému Convexu musí fungovat (kalendář, komentáře, upload, mood board, plan, media gallery, zálohy).
-- [ ] Merge feature branch do `main`.
-- [ ] Přepnout Netlify env (`VITE_CONVEX_URL`) na produkční Convex deployment.
-- [ ] Supabase projekt nechat read-only jako pojistku, dokud se vše neověří v produkci.
+- [x] `npx convex dev` — Convex projekt založen (`jan-hrodek:socka-convex`).
+- [x] Env vars nastaveny na **dev** i **production** Convex deploymentu.
+- [x] Datová migrace spuštěna proti **dev i production** (viz §4).
+- [x] `npm run build` prochází (po opravě `netlify.toml`, viz §8), appka ověřena naživo.
+- [x] Merge do `main` (PR #26, #27, #28).
+- [x] Netlify nastaven — produkční web `https://socka27.netlify.app/`, `VITE_CONVEX_URL` → production Convex.
+- [ ] **Volitelné, časem:** Supabase projekt nechat read-only jako pojistku, pak zrušit.
+- [ ] **Volitelné:** smazat mergnuté feature/fix branche (`claude/emailing-komentar-audit-u7chhw`, `fix/netlify-convex-deploy`, `fix/netlify-build-order`).
+
+---
+
+## 8. 🚀 Produkční cutover — detaily a nástrahy (2026-08-04)
+
+Tohle je záznam, co se reálně stalo při přechodu appky na Netlify, pro příště / pro ponaučení.
+
+### Rozhodnutí
+- **Zůstalo se na existujícím Convex projektu** (`jan-hrodek:socka-convex`), ne na novém — jen se založil jeho **Production** deployment vedle už existujícího **Development**.
+- Development (`lovable-wren-425...`) zůstává pro lokální vývoj/testy. Production (`fine-tiger-542...`) jede appka naživo.
+- **Convex dev a production jsou nezávislé databáze** — každý potřebuje vlastní sadu env vars a vlastní běh datové migrace. Tohle se snadno zapomene.
+
+### Nástrahy, na které jsme narazili (a jak byly vyřešené)
+
+1. **`npm run build` na Netlify padal na `Cannot find module 'convex/_generated/api'`.**
+   `convex/_generated/*` je derivovaný výstup, vzniká jen při `npx convex dev`/`deploy` s přihlášeným účtem — v čistém CI kontejneru neexistuje. **Fix:** `netlify.toml` build command změněn tak, aby nejdřív spustil Convex a teprve pak Vite.
+
+2. **`npx convex deploy --cmd 'npm run build'` nestačilo** — `vite build` uvnitř `--cmd` pořád nenašel `convex/_generated`, zjevně kvůli pořadí/timing uvnitř toho flagu (přesný důvod jsme neladili). **Fix (PR #28):** rozdělit na dva jasně sekvenční příkazy:
+   ```toml
+   command = "npx convex deploy && npm run build"
+   ```
+   `&&` garantuje, že `convex deploy` doběhne (a `_generated` je zapsané na disk) dřív, než se vůbec spustí Vite.
+
+3. **`CONVEX_DEPLOY_KEY`** (Netlify env var, používaný jen buildem) — vytvořen s **minimálním oprávněním**: jen `deployment:deploy`. Nic víc není pro `npx convex deploy` potřeba (žádný env read/write, žádné spouštění funkcí).
+
+4. **`VITE_CONVEX_URL` nesmí být označené jako "secret"** v Netlify — je to veřejná hodnota (zapeče se do JS bundlu, uvidí ji každý v DevTools). Označení jako secret by mohlo shodit build přes Netlify's secret-scanning (detekuje "leak" vlastní veřejné hodnoty v bundlu).
+
+5. **`VITE_CONVEX_URL` chybělo při prvním úspěšném buildu** → appka naběhla jako bílá stránka. Konzole: `No address provided to ConvexReactClient`. **Fix:** doplnit `VITE_CONVEX_URL` s produkční Convex URL do Netlify env vars + „Clear cache and deploy site" (samotné uložení proměnné build sám od sebe nespustí).
+
+6. **Heslo nefungovalo i po nastavení `VITE_CONVEX_URL`.** Convex Dashboard **Logs** (ne konzole prohlížeče, tam je jen generické „Server Error") ukázal skutečnou příčinu: `APP_PASSWORD is not configured on the Convex deployment` — proměnná se totiž nastavovala jen na **Development**, ne na **Production** (snadná záměna v deployment-switcheru nahoře v Dashboardu). **Fix:** zkopírovat všechny env vars i na Production.
+
+### Ponaučení pro příště
+- Convex server-side chyby (`throw new Error(...)`) se klientovi ukážou jen jako generické „Server Error" — **skutečný text je vždy v Convex Dashboard → Logs**, ne v konzoli prohlížeče.
+- Při jakékoli práci s Convex **dev vs. production** vždy dvakrát zkontrolovat přepínač nahoře v Dashboardu — je snadné omylem editovat/spouštět něco na špatném deploymentu.
