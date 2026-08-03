@@ -1,9 +1,11 @@
 [build]
-  # `convex deploy` pushes convex/ to the production deployment (using
-  # CONVEX_DEPLOY_KEY, set as a Netlify env var) and generates
-  # convex/_generated/* before handing off to the Vite build — without this,
-  # `vite build` fails immediately on the missing generated imports.
-  command = "npx convex deploy --cmd 'npm run build'"
+  # Two explicit, sequential steps rather than `convex deploy --cmd '...'` —
+  # that flag's exact ordering wasn't reliably generating convex/_generated
+  # before the wrapped command ran on Netlify. `convex deploy` (using
+  # CONVEX_DEPLOY_KEY, set as a Netlify env var) pushes convex/ to the
+  # production deployment and writes convex/_generated/* as part of that;
+  # only once that's done and confirmed on disk does `npm run build` run.
+  command = "npx convex deploy && npm run build"
   publish = "dist"
 
 [build.environment]
