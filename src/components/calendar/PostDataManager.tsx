@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Download, Upload, FileText, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -25,21 +26,19 @@ export const PostDataManager: React.FC<PostDataManagerProps> = ({ onImportComple
   } | null>(null);
   const { toast } = useToast();
 
-  const handleExport = async () => {
+  const postsQ = useQuery(api.posts.list);
+  const createPost = useMutation(api.posts.create);
+
+  const handleExport = () => {
     setExporting(true);
     try {
-      const { data: posts, error } = await supabase
-        .from('social_media_posts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const posts = postsQ ?? [];
 
       // Include metadata
       const exportData = {
         exportedAt: new Date().toISOString(),
-        totalPosts: posts?.length || 0,
-        posts: posts || [],
+        totalPosts: posts.length,
+        posts,
         version: '1.0',
       };
 
@@ -58,7 +57,7 @@ export const PostDataManager: React.FC<PostDataManagerProps> = ({ onImportComple
 
       toast({
         title: 'Export Complete',
-        description: `Exported ${posts?.length || 0} posts successfully`,
+        description: `Exported ${posts.length} posts successfully`,
       });
     } catch (error) {
       console.error('Export error:', error);
@@ -108,43 +107,32 @@ export const PostDataManager: React.FC<PostDataManagerProps> = ({ onImportComple
         errors: [] as string[],
       };
 
-      // Process posts in batches to avoid overwhelming the database
+      // Process posts in batches to avoid overwhelming Convex
       const batchSize = 10;
       for (let i = 0; i < posts.length; i += batchSize) {
         const batch = posts.slice(i, i + batchSize);
-        
-        for (const post of batch) {
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Not authenticated');
 
-            // Clean and validate post data
-            const cleanPost = {
-              user_id: user.id,
-              title: post.title || 'Imported Post',
-              content: post.content || null,
+        for (const post of batch) {
+          // Accept both the legacy Supabase export shape (snake_case) and
+          // the current Convex export shape (camelCase), since both may
+          // show up as "a JSON export of my posts" from a user.
+          const title = post.title || 'Imported Post';
+          try {
+            await createPost({
+              title,
+              content: post.content ?? null,
               platform: post.platform || 'facebook',
               category: post.category || 'Image',
-              pillar: post.pillar || null,
-              product_line: post.product_line || null,
+              pillar: post.pillar ?? null,
+              productLine: post.productLine ?? post.product_line ?? null,
               status: post.status || 'nezahájeno',
-              scheduled_date: post.scheduled_date || new Date().toISOString(),
-              image_url: post.image_url || null,
-            };
-
-            const { error } = await supabase
-              .from('social_media_posts')
-              .insert([cleanPost]);
-
-            if (error) {
-              stats.failed++;
-              stats.errors.push(`Post "${cleanPost.title}": ${error.message}`);
-            } else {
-              stats.successful++;
-            }
+              scheduledDate: post.scheduledDate || post.scheduled_date || new Date().toISOString(),
+              imageUrl: post.imageUrl ?? post.image_url ?? null,
+            });
+            stats.successful++;
           } catch (postError) {
             stats.failed++;
-            stats.errors.push(`Post processing error: ${postError}`);
+            stats.errors.push(`Post "${title}": ${postError}`);
           }
         }
       }
