@@ -1,4 +1,4 @@
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { MessageSquare, Reply } from 'lucide-react';
 import { useQuery } from 'convex/react';
@@ -15,6 +15,33 @@ interface CommentListProps {
   // Called with the comment author's name when the "Odpovědět" button is
   // clicked, so the parent can hand it to CommentEditor as a ready-made @mention.
   onReply?: (authorName: string) => void;
+}
+
+// Fixed palette so each person gets a stable, distinguishable avatar color
+// (hashed from their name) instead of every comment looking the same blue.
+const AVATAR_COLORS = [
+  '#E11D48', '#EA580C', '#D97706', '#65A30D',
+  '#059669', '#0891B2', '#2563EB', '#7C3AED', '#C026D3',
+];
+
+function avatarColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function initials(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Slack-style: just the clock time for comments from today, otherwise date + time.
+function formatCommentTime(ts: number): string {
+  const date = new Date(ts);
+  const isToday = date.toDateString() === new Date().toDateString();
+  return format(date, isToday ? 'HH:mm' : 'd. M. HH:mm', { locale: cs });
 }
 
 export function CommentList({ postId, onReply }: CommentListProps) {
@@ -51,52 +78,53 @@ export function CommentList({ postId, onReply }: CommentListProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {comments.map((comment) => (
-        <div key={comment._id} className="flex gap-3 pb-4 border-b last:border-0">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="text-sm font-medium text-blue-600">
-                {comment.author?.fullName?.charAt(0) || '?'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="font-medium text-sm">
-                {comment.author?.fullName || 'Unknown'}
-              </span>
-              <span className="text-xs text-gray-500">
-                {formatDistanceToNow(new Date(comment.createdAt ?? Date.now()), {
-                  addSuffix: true,
-                  locale: cs,
-                })}
-              </span>
-            </div>
-
-            <div
-              className="text-sm text-gray-700 whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{
-                __html: highlightMentions(comment.content),
-              }}
-            />
-
-            {onReply && comment.author?.fullName && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 mt-1 text-xs text-gray-500"
-                onClick={() => onReply(comment.author!.fullName)}
+    <div className="space-y-3">
+      {comments.map((comment) => {
+        const fullName = comment.author?.fullName || 'Unknown';
+        return (
+          <div key={comment._id} className="group flex gap-3 py-1">
+            <div className="flex-shrink-0">
+              <div
+                className="w-9 h-9 rounded-md flex items-center justify-center"
+                style={{ backgroundColor: avatarColor(fullName) }}
               >
-                <Reply className="h-3 w-3 mr-1" />
-                Odpovědět
-              </Button>
-            )}
+                <span className="text-xs font-semibold text-white">
+                  {initials(fullName)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2">
+                <span className="font-bold text-sm text-gray-900">{fullName}</span>
+                <span className="text-xs text-gray-500">
+                  {formatCommentTime(comment.createdAt ?? Date.now())}
+                </span>
+              </div>
+
+              <div
+                className="text-sm text-gray-800 whitespace-pre-wrap mt-0.5"
+                dangerouslySetInnerHTML={{
+                  __html: highlightMentions(comment.content),
+                }}
+              />
+
+              {onReply && comment.author?.fullName && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 mt-0.5 text-xs text-gray-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  onClick={() => onReply(comment.author!.fullName)}
+                >
+                  <Reply className="h-3 w-3 mr-1" />
+                  Odpovědět
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
