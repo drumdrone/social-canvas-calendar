@@ -133,12 +133,18 @@ export const addComment = action({
       });
       // Prior comments give the mentioned person context for the thread —
       // exclude the one we just inserted since it's rendered separately,
-      // highlighted, above the history.
-      const priorComments: any[] = (
-        await ctx.runQuery(internal.comments.getCommentsForEmail, {
+      // highlighted, above the history. Best-effort: if this lookup fails,
+      // still send the mention email without history rather than losing the
+      // notification entirely (the comment itself is already saved by now).
+      let priorComments: any[] = [];
+      try {
+        const rows: any[] = await ctx.runQuery(internal.comments.getCommentsForEmail, {
           postId: args.postId,
-        })
-      ).filter((c: any) => c._id !== commentId);
+        });
+        priorComments = rows.filter((c: any) => c._id !== commentId);
+      } catch (err) {
+        console.error("Failed to load comment history for email:", err);
+      }
       const mentionedUsers: any[] = await Promise.all(
         args.mentionedUserIds
           .filter((u) => u !== args.authorId)
