@@ -5,6 +5,7 @@ import { useQuery } from 'convex/react';
 import { Button } from '@/components/ui/button';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
+import { avatarColor, initials } from '@/lib/commentAvatar';
 
 interface CommentListProps {
   // The Convex Id of the post. If the caller only has the legacy Supabase
@@ -12,29 +13,10 @@ interface CommentListProps {
   // legacyPostId lookup.
   postId: string;
   refreshTrigger?: number;
-  // Called with the comment author's name when the "Odpovědět" button is
-  // clicked, so the parent can hand it to CommentEditor as a ready-made @mention.
-  onReply?: (authorName: string) => void;
-}
-
-// Fixed palette so each person gets a stable, distinguishable avatar color
-// (hashed from their name) instead of every comment looking the same blue.
-const AVATAR_COLORS = [
-  '#E11D48', '#EA580C', '#D97706', '#65A30D',
-  '#059669', '#0891B2', '#2563EB', '#7C3AED', '#C026D3',
-];
-
-function avatarColor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
-
-function initials(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  // Called with the replied-to comment's author + text when "Odpovědět" is
+  // clicked, so the parent can hand it to CommentEditor as a ready-made
+  // @mention plus a quoted preview.
+  onReply?: (target: { authorName: string; content: string }) => void;
 }
 
 // Slack-style: just the clock time for comments from today, otherwise date + time.
@@ -139,7 +121,7 @@ export function CommentList({ postId, onReply }: CommentListProps) {
                   variant="ghost"
                   size="sm"
                   className="h-6 px-2 mt-0.5 text-xs text-gray-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  onClick={() => onReply(comment.author!.fullName)}
+                  onClick={() => onReply({ authorName: fullName, content: comment.content })}
                 >
                   <Reply className="h-3 w-3 mr-1" />
                   Odpovědět

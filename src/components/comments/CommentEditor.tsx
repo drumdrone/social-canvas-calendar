@@ -2,12 +2,13 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { useAuth } from '@/contexts/AuthContext';
+import { avatarColor } from '@/lib/commentAvatar';
 
 // Convex-shaped user for the @mention dropdown.
 interface MentionUser {
@@ -23,11 +24,14 @@ interface CommentEditorProps {
   onCommentAdded?: () => void;
   // Bump this (e.g. with a new object each click) to prefill "@authorName "
   // and focus the textarea — the one-click "Odpovědět" flow from CommentList.
-  replyTrigger?: { authorName: string; nonce: number } | null;
+  replyTrigger?: { authorName: string; content: string; nonce: number } | null;
 }
 
 export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentEditorProps) {
   const [content, setContent] = useState('');
+  const [activeReply, setActiveReply] = useState<{ authorName: string; content: string } | null>(
+    null,
+  );
   const [showMentions, setShowMentions] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
@@ -62,11 +66,13 @@ export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentE
   const addComment = useAction(api.comments.addComment);
 
   // "Odpovědět" click from CommentList: prefill the mention (unless it's
-  // already there) and focus the textarea so the user can just start typing.
+  // already there), show a quoted preview of what's being replied to, and
+  // focus the textarea so the user can just start typing.
   useEffect(() => {
     if (!replyTrigger) return;
     const mention = `@${replyTrigger.authorName} `;
     setContent((prev) => (prev.startsWith(mention) ? prev : mention + prev));
+    setActiveReply({ authorName: replyTrigger.authorName, content: replyTrigger.content });
     textareaRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [replyTrigger]);
@@ -198,6 +204,7 @@ export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentE
             : 'Komentář přidán',
       });
       setContent('');
+      setActiveReply(null);
       onCommentAdded?.();
     } catch (error: any) {
       toast({
@@ -217,6 +224,29 @@ export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentE
   return (
     <div className="relative">
       <form onSubmit={handleSubmit} className="space-y-2">
+        {activeReply && (
+          <div
+            className="flex items-start gap-2 rounded-md bg-muted/50 py-2 pl-3 pr-2"
+            style={{ borderLeft: `3px solid ${avatarColor(activeReply.authorName)}` }}
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-foreground">
+                Odpovídáte {activeReply.authorName}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">{activeReply.content}</p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-5 w-5 p-0 shrink-0"
+              onClick={() => setActiveReply(null)}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+
         <Textarea
           ref={textareaRef}
           value={content}

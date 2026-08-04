@@ -71,7 +71,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [recurringActions, setRecurringActions] = useState<Array<{id: string, title: string, action_type: string}>>([]);
   const [activeTab, setActiveTab] = useState('content');
   const [commentRefresh, setCommentRefresh] = useState(0);
-  const [replyTrigger, setReplyTrigger] = useState<{ authorName: string; nonce: number } | null>(null);
+  const [replyTrigger, setReplyTrigger] = useState<{ authorName: string; content: string; nonce: number } | null>(null);
   const { toast } = useToast();
 
   // Taxonomy options are read reactively from Convex — a change in Settings
@@ -693,7 +693,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       <CommentList
                         postId={post.id}
                         refreshTrigger={commentRefresh}
-                        onReply={(authorName) => setReplyTrigger({ authorName, nonce: Date.now() })}
+                        onReply={({ authorName, content }) =>
+                          setReplyTrigger({ authorName, content, nonce: Date.now() })
+                        }
                       />
 
                       <CommentEditor
