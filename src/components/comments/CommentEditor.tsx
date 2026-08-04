@@ -9,6 +9,7 @@ import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { useAuth } from '@/contexts/AuthContext';
 import { avatarColor } from '@/lib/commentAvatar';
+import { isConvexId } from '@/lib/convexId';
 
 // Convex-shaped user for the @mention dropdown.
 interface MentionUser {
@@ -54,12 +55,12 @@ export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentE
 
   // Resolve the incoming postId to a Convex Id. If it looks like a legacy
   // UUID, look it up; otherwise trust it.
-  const isConvexId = /^k[a-z0-9]{10,}$/.test(postId);
+  const postIsConvexId = isConvexId(postId);
   const postByLegacy = useQuery(
-    isConvexId ? 'skip' : api.posts.getByLegacyId,
-    isConvexId ? 'skip' : { legacyId: postId },
+    postIsConvexId ? 'skip' : api.posts.getByLegacyId,
+    postIsConvexId ? 'skip' : { legacyId: postId },
   );
-  const resolvedPostId: Id<'social_media_posts'> | null = isConvexId
+  const resolvedPostId: Id<'social_media_posts'> | null = postIsConvexId
     ? (postId as Id<'social_media_posts'>)
     : (postByLegacy?._id ?? null);
 

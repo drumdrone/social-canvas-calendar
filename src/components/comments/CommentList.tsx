@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { avatarColor, initials } from '@/lib/commentAvatar';
+import { isConvexId } from '@/lib/convexId';
 
 interface CommentListProps {
   // The Convex Id of the post. If the caller only has the legacy Supabase
@@ -44,10 +45,10 @@ export function CommentList({ postId, onReply }: CommentListProps) {
   // Comments are reactive: adding one anywhere updates every open list.
   // If the id looks like a Convex Id (starts with the deployment prefix and
   // is short), use listForPost; otherwise treat it as the legacy UUID.
-  const isConvexId = /^k[a-z0-9]{10,}$/.test(postId);
+  const postIsConvexId = isConvexId(postId);
   const comments = useQuery(
-    isConvexId ? api.comments.listForPost : api.comments.listForPostByLegacyId,
-    isConvexId
+    postIsConvexId ? api.comments.listForPost : api.comments.listForPostByLegacyId,
+    postIsConvexId
       ? { postId: postId as Id<'social_media_posts'> }
       : { legacyPostId: postId },
   );

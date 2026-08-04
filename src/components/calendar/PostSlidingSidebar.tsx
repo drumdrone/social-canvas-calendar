@@ -18,6 +18,7 @@ import { socialPostToConvexPatch } from '@/integrations/convex/adapter';
 import { useUploadImage } from '@/integrations/convex/useUploadImage';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { useToast } from '@/hooks/use-toast';
+import { isConvexId } from '@/lib/convexId';
 import { cn } from '@/lib/utils';
 import { MultiImageUpload } from './MultiImageUpload';
 import { CommentEditor } from '../comments/CommentEditor';
@@ -54,8 +55,16 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   >([null, null, null]);
   const [uploading, setUploading] = useState(false);
   const createPost = useMutation(api.posts.create);
-  const updatePost = useMutation(api.posts.updateByLegacyId);
-  const removePost = useMutation(api.posts.removeByLegacyId);
+  // `post.id` is `legacyId ?? _id` (see adapter.ts) — posts migrated from
+  // Supabase still have a legacyId, but every post created directly in
+  // Convex since doesn't, so it must be looked up/written by its real _id
+  // instead. Saving/deleting always through the legacyId mutations broke
+  // every post created after the migration ("Post with legacyId ... not
+  // found", since a Convex id never matches anything in the legacyId index).
+  const updatePostByLegacyId = useMutation(api.posts.updateByLegacyId);
+  const updatePostById = useMutation(api.posts.update);
+  const removePostByLegacyId = useMutation(api.posts.removeByLegacyId);
+  const removePostById = useMutation(api.posts.remove);
   const uploadToConvex = useUploadImage();
   const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
   const [platformOptions, setPlatformOptions] = useState<string[]>([]);
@@ -257,7 +266,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       applyImageSlot(1, 'imageStorageId2');
       applyImageSlot(2, 'imageStorageId3');
       if (post) {
-        await updatePost({ legacyId: post.id, patch: patch as any });
+        if (isConvexId(post.id)) {
+          await updatePostById({ id: post.id as Id<'social_media_posts'>, patch: patch as any });
+        } else {
+          await updatePostByLegacyId({ legacyId: post.id, patch: patch as any });
+        }
       } else {
         await createPost(patch as any);
       }
@@ -286,7 +299,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     if (!post || !confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      await removePost({ legacyId: post.id });
+      if (isConvexId(post.id)) {
+        await removePostById({ id: post.id as Id<'social_media_posts'> });
+      } else {
+        await removePostByLegacyId({ legacyId: post.id });
+      }
 
       toast({
         title: 'Success',
