@@ -75,7 +75,9 @@ const ShareablePost = () => {
     );
   }
 
-  const Icon = platformIcons[post.platform];
+  // Platforms are a free-form taxonomy table, not limited to these four —
+  // fall back to a default icon/style instead of crashing on an unknown one.
+  const Icon = platformIcons[post.platform as keyof typeof platformIcons] || Facebook;
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -88,15 +90,15 @@ const ShareablePost = () => {
                 {post.title}
               </CardTitle>
               <div className="flex items-center gap-2">
-                <Badge 
-                  variant="outline" 
-                  className={platformColors[post.platform]}
+                <Badge
+                  variant="outline"
+                  className={platformColors[post.platform as keyof typeof platformColors] || 'border-gray-500 bg-gray-500/10 text-gray-500'}
                 >
                   {post.platform}
                 </Badge>
-                <Badge 
+                <Badge
                   variant="secondary"
-                  className={statusColors[post.status]}
+                  className={statusColors[post.status as keyof typeof statusColors] || 'bg-gray-200 text-gray-700'}
                 >
                   {post.status}
                 </Badge>
