@@ -5,6 +5,7 @@ import { useQuery } from 'convex/react';
 import { Button } from '@/components/ui/button';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
+import { avatarColor, initials } from '@/lib/commentAvatar';
 
 interface CommentListProps {
   // The Convex Id of the post. If the caller only has the legacy Supabase
@@ -12,29 +13,10 @@ interface CommentListProps {
   // legacyPostId lookup.
   postId: string;
   refreshTrigger?: number;
-  // Called with the comment author's name when the "Odpovědět" button is
-  // clicked, so the parent can hand it to CommentEditor as a ready-made @mention.
-  onReply?: (authorName: string) => void;
-}
-
-// Fixed palette so each person gets a stable, distinguishable avatar color
-// (hashed from their name) instead of every comment looking the same blue.
-const AVATAR_COLORS = [
-  '#E11D48', '#EA580C', '#D97706', '#65A30D',
-  '#059669', '#0891B2', '#2563EB', '#7C3AED', '#C026D3',
-];
-
-function avatarColor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
-
-function initials(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  // Called with the replied-to comment's author + text when "Odpovědět" is
+  // clicked, so the parent can hand it to CommentEditor as a ready-made
+  // @mention plus a quoted preview.
+  onReply?: (target: { authorName: string; content: string }) => void;
 }
 
 // Slack-style: just the clock time for comments from today, otherwise date + time.
@@ -42,6 +24,19 @@ function formatCommentTime(ts: number): string {
   const date = new Date(ts);
   const isToday = date.toDateString() === new Date().toDateString();
   return format(date, isToday ? 'HH:mm' : 'd. M. HH:mm', { locale: cs });
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export function CommentList({ postId, onReply }: CommentListProps) {
@@ -55,13 +50,24 @@ export function CommentList({ postId, onReply }: CommentListProps) {
       ? { postId: postId as Id<'social_media_posts'> }
       : { legacyPostId: postId },
   );
+  // Real user names bound the @mention match — without this, "@Jan Hrodek
+  // dobře" greedily highlighted the entire rest of the sentence, since
+  // there's nothing else to tell the regex where the name ends.
+  const rawUsers = useQuery(api.userProfiles.list);
+  const mentionNames = (rawUsers ?? [])
+    .map((u: any) => u.fullName as string)
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
   const loading = comments === undefined;
 
   function highlightMentions(text: string) {
-    return text.replace(
-      /@(\w+(?:\s+\w+)*)/g,
-      '<span class="text-blue-600 font-normal">@$1</span>',
+    const escaped = escapeHtml(text);
+    if (mentionNames.length === 0) return escaped;
+    const pattern = new RegExp(
+      `@(${mentionNames.map((n) => escapeRegExp(escapeHtml(n))).join('|')})\\b`,
+      'g',
     );
+    return escaped.replace(pattern, '<span class="text-blue-600">@$1</span>');
   }
 
   if (loading) {
@@ -115,7 +121,7 @@ export function CommentList({ postId, onReply }: CommentListProps) {
                   variant="ghost"
                   size="sm"
                   className="h-6 px-2 mt-0.5 text-xs text-gray-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  onClick={() => onReply(comment.author!.fullName)}
+                  onClick={() => onReply({ authorName: fullName, content: comment.content })}
                 >
                   <Reply className="h-3 w-3 mr-1" />
                   Odpovědět
