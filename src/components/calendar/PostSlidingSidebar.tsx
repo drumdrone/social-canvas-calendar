@@ -18,6 +18,7 @@ import { socialPostToConvexPatch } from '@/integrations/convex/adapter';
 import { useUploadImage } from '@/integrations/convex/useUploadImage';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { useToast } from '@/hooks/use-toast';
+import { isConvexId } from '@/lib/convexId';
 import { cn } from '@/lib/utils';
 import { MultiImageUpload } from './MultiImageUpload';
 import { CommentEditor } from '../comments/CommentEditor';
@@ -54,8 +55,16 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   >([null, null, null]);
   const [uploading, setUploading] = useState(false);
   const createPost = useMutation(api.posts.create);
-  const updatePost = useMutation(api.posts.updateByLegacyId);
-  const removePost = useMutation(api.posts.removeByLegacyId);
+  // `post.id` is `legacyId ?? _id` (see adapter.ts) — posts migrated from
+  // Supabase still have a legacyId, but every post created directly in
+  // Convex since doesn't, so it must be looked up/written by its real _id
+  // instead. Saving/deleting always through the legacyId mutations broke
+  // every post created after the migration ("Post with legacyId ... not
+  // found", since a Convex id never matches anything in the legacyId index).
+  const updatePostByLegacyId = useMutation(api.posts.updateByLegacyId);
+  const updatePostById = useMutation(api.posts.update);
+  const removePostByLegacyId = useMutation(api.posts.removeByLegacyId);
+  const removePostById = useMutation(api.posts.remove);
   const uploadToConvex = useUploadImage();
   const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
   const [platformOptions, setPlatformOptions] = useState<string[]>([]);
@@ -123,9 +132,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platformsQ, statusesQ, pillarsQ, productLinesQ, categoriesQ, authorsQ, isOpen, post]);
 
-  // recurring_action_id on posts still stores the legacy Supabase UUID during
-  // the migration window (see adapter.ts), so we key each option by
-  // legacyId ?? _id to keep matching existing posts' selections.
+  // recurring_action_id on posts is a real Convex Id<"recurringActions">
+  // (remapped during migration, unlike the name-string taxonomies), so each
+  // option is keyed by its own _id — see adapter.ts.
   const recurringActionsQ = useQuery(api.recurringActions.list);
   useEffect(() => {
     if (!recurringActionsQ) return;
@@ -133,7 +142,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       [...recurringActionsQ]
         .sort((a: any, b: any) => (a.title ?? '').localeCompare(b.title ?? ''))
         .map((a: any) => ({
-          id: a.legacyId ?? a._id,
+          id: a._id,
           title: a.title ?? '',
           action_type: a.actionType,
         })),
@@ -238,6 +247,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
         author: author || null,
+        recurring_action_id: recurringActionId && recurringActionId !== 'none' ? recurringActionId : null,
       });
       // Storage ids: three cases per slot —
       //   image cleared (postImages[i] === null): send null so the stored id
@@ -255,11 +265,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       applyImageSlot(0, 'imageStorageId');
       applyImageSlot(1, 'imageStorageId2');
       applyImageSlot(2, 'imageStorageId3');
-      // recurring_action_id still uses the Supabase UUID during migration —
-      // once recurring actions get their own legacyId lookup we'll thread it
-      // through. Skip it for now rather than sending an incompatible value.
       if (post) {
-        await updatePost({ legacyId: post.id, patch: patch as any });
+        if (isConvexId(post.id)) {
+          await updatePostById({ id: post.id as Id<'social_media_posts'>, patch: patch as any });
+        } else {
+          await updatePostByLegacyId({ legacyId: post.id, patch: patch as any });
+        }
       } else {
         await createPost(patch as any);
       }
@@ -288,7 +299,11 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     if (!post || !confirm('Are you sure you want to delete this post?')) return;
 
     try {
-      await removePost({ legacyId: post.id });
+      if (isConvexId(post.id)) {
+        await removePostById({ id: post.id as Id<'social_media_posts'> });
+      } else {
+        await removePostByLegacyId({ legacyId: post.id });
+      }
 
       toast({
         title: 'Success',
