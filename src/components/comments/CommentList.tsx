@@ -78,11 +78,11 @@ export function CommentList({ postId, onReply }: CommentListProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="divide-y divide-gray-100">
       {comments.map((comment) => {
         const fullName = comment.author?.fullName || 'Unknown';
         return (
-          <div key={comment._id} className="group flex gap-3 py-1">
+          <div key={comment._id} className="group flex gap-3 py-3 first:pt-0">
             <div className="flex-shrink-0">
               <div
                 className="w-9 h-9 rounded-md flex items-center justify-center"
