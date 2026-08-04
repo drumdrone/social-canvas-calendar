@@ -60,7 +60,7 @@ export function CommentList({ postId, onReply }: CommentListProps) {
   function highlightMentions(text: string) {
     return text.replace(
       /@(\w+(?:\s+\w+)*)/g,
-      '<span class="text-blue-600 font-medium">@$1</span>',
+      '<span class="text-blue-600 font-normal">@$1</span>',
     );
   }
 
