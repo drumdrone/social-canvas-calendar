@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Convex-shaped user for the @mention dropdown.
 interface MentionUser {
@@ -30,6 +31,7 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
+  const { currentUserId } = useAuth();
 
   // Reactive user list for @mention autocomplete.
   const rawUsers = useQuery(api.userProfiles.list);
@@ -139,11 +141,11 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
       });
       return;
     }
-    // Placeholder for the "current user" author (SimpleAuthGate has no user
-    // concept yet). Falls back to the first user_profiles row like the old
-    // Supabase code did — swap once real auth is wired up.
-    const firstUser = users[0];
-    if (!firstUser) {
+    // The user identified by the password entered at SimpleAuthGate. Falls
+    // back to the first user_profiles row if that lookup somehow comes up
+    // empty (e.g. a user without a password set yet).
+    const author = users.find((u) => u._id === currentUserId) ?? users[0];
+    if (!author) {
       toast({
         title: 'Chyba',
         description: 'Nejsou žádní uživatelé',
@@ -171,7 +173,7 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
     try {
       await addComment({
         postId: resolvedPostId,
-        authorId: firstUser._id,
+        authorId: author._id,
         content,
         mentionedUserIds,
       });

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Mail } from 'lucide-react';
+import { Plus, Trash2, Mail, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -32,7 +32,10 @@ export function UserManagement() {
   const updateUser = useMutation(api.userProfiles.update);
   const removeUser = useMutation(api.userProfiles.remove);
 
-  const [newUser, setNewUser] = useState({ email: '', full_name: '' });
+  const [newUser, setNewUser] = useState({ email: '', full_name: '', password: '' });
+  // Draft password per user row — only committed on "Uložit heslo", keyed by
+  // user id so typing in one row's input can't leak into another's.
+  const [passwordDrafts, setPasswordDrafts] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   async function handleAddUser(e: React.FormEvent) {
@@ -50,9 +53,30 @@ export function UserManagement() {
         email: newUser.email,
         fullName: newUser.full_name,
         notificationEnabled: true,
+        password: newUser.password || undefined,
       });
       toast({ title: 'Úspěch', description: 'Uživatel byl přidán' });
-      setNewUser({ email: '', full_name: '' });
+      setNewUser({ email: '', full_name: '', password: '' });
+    } catch (error: any) {
+      toast({ title: 'Chyba', description: error?.message, variant: 'destructive' });
+    }
+  }
+
+  async function handleSetPassword(user: UiUser) {
+    const password = passwordDrafts[user.id]?.trim();
+    if (!password) return;
+    try {
+      await updateUser({
+        id: user.id,
+        patch: {
+          email: user.email,
+          fullName: user.full_name,
+          notificationEnabled: user.notification_enabled,
+          password,
+        },
+      });
+      setPasswordDrafts((prev) => ({ ...prev, [user.id]: '' }));
+      toast({ title: 'Úspěch', description: `Heslo pro ${user.full_name} bylo nastaveno` });
     } catch (error: any) {
       toast({ title: 'Chyba', description: error?.message, variant: 'destructive' });
     }
@@ -123,6 +147,17 @@ export function UserManagement() {
             />
           </div>
 
+          <div>
+            <Label htmlFor="password">Heslo (pro přihlášení)</Label>
+            <Input
+              id="password"
+              type="text"
+              value={newUser.password}
+              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+              placeholder="např. honza123"
+            />
+          </div>
+
           <Button type="submit" className="w-full">
             <Plus className="h-4 w-4 mr-2" />
             Přidat uživatele
@@ -135,11 +170,32 @@ export function UserManagement() {
           {users.map((user) => (
             <div
               key={user.id}
-              className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+              className="flex items-center justify-between gap-4 p-4 border rounded-lg hover:bg-gray-50"
             >
               <div className="flex-1">
                 <div className="font-medium">{user.full_name}</div>
                 <div className="text-sm text-gray-500">{user.email}</div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Input
+                  type="text"
+                  value={passwordDrafts[user.id] ?? ''}
+                  onChange={(e) =>
+                    setPasswordDrafts((prev) => ({ ...prev, [user.id]: e.target.value }))
+                  }
+                  placeholder="Nové heslo"
+                  className="h-9 w-32"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSetPassword(user)}
+                  disabled={!passwordDrafts[user.id]?.trim()}
+                  title="Nastavit heslo"
+                >
+                  <KeyRound className="h-4 w-4" />
+                </Button>
               </div>
 
               <div className="flex items-center gap-2">

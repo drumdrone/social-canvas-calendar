@@ -1,8 +1,12 @@
 import React, { createContext, useContext } from 'react';
-
-const SIMPLE_AUTH_KEY = 'simple_auth_verified';
+import type { Id } from '../../convex/_generated/dataModel';
+import { getStoredUserId, clearLoggedInUser } from '@/lib/authStorage';
 
 interface AuthContextType {
+  // The user_profiles row identified by the password entered at
+  // SimpleAuthGate, or null if somehow unset. There's no session/JWT here —
+  // it's just the id SimpleAuthGate wrote to localStorage on login.
+  currentUserId: Id<'user_profiles'> | null;
   logout: () => void;
 }
 
@@ -16,17 +20,19 @@ export const useAuth = () => {
   return context;
 };
 
-// Thin wrapper around SimpleAuthGate's own localStorage flag — the app has a
-// single shared-password gate, not per-user accounts, so the only thing this
-// context needs to expose is a way to clear that flag and show the gate again.
+// Thin wrapper around SimpleAuthGate's own localStorage — the app still has a
+// single password *gate*, but each password now belongs to one user_profiles
+// row, so this context also exposes which user that was.
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const currentUserId = getStoredUserId() as Id<'user_profiles'> | null;
+
   const logout = () => {
-    localStorage.removeItem(SIMPLE_AUTH_KEY);
+    clearLoggedInUser();
     window.location.href = '/';
   };
 
   return (
-    <AuthContext.Provider value={{ logout }}>
+    <AuthContext.Provider value={{ currentUserId, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,22 +1,18 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
-// Simple shared-password gate, porting the existing SimpleAuthGate behaviour.
-// The password is stored as a Convex environment variable (Dashboard →
-// Settings → Environment Variables), NOT in code:
-//   APP_PASSWORD=your-shared-password
-//
-// The client calls this action and, on success, stores a flag in localStorage
-// (same UX as today). This is intentionally lightweight — swap for Convex Auth
-// later if per-user accounts are needed.
+// Per-user password gate: each user_profiles row carries its own password.
+// Entering it both unlocks the app (replacing the old shared APP_PASSWORD)
+// and identifies who's commenting — no separate login step needed.
+// Intentionally lightweight (plaintext comparison, same trust level as the
+// old shared password) — swap for Convex Auth later if real accounts are needed.
 
 export const verifyPassword = action({
   args: { password: v.string() },
-  handler: async (_ctx, { password }) => {
-    const expected = process.env.APP_PASSWORD;
-    if (!expected) {
-      throw new Error("APP_PASSWORD is not configured on the Convex deployment");
-    }
-    return { ok: password === expected };
+  handler: async (ctx, { password }) => {
+    const user = await ctx.runQuery(internal.userProfiles.findByPassword, { password });
+    if (!user) return { ok: false as const };
+    return { ok: true as const, userId: user._id, fullName: user.fullName };
   },
 });
