@@ -123,9 +123,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platformsQ, statusesQ, pillarsQ, productLinesQ, categoriesQ, authorsQ, isOpen, post]);
 
-  // recurring_action_id on posts still stores the legacy Supabase UUID during
-  // the migration window (see adapter.ts), so we key each option by
-  // legacyId ?? _id to keep matching existing posts' selections.
+  // recurring_action_id on posts is a real Convex Id<"recurringActions">
+  // (remapped during migration, unlike the name-string taxonomies), so each
+  // option is keyed by its own _id — see adapter.ts.
   const recurringActionsQ = useQuery(api.recurringActions.list);
   useEffect(() => {
     if (!recurringActionsQ) return;
@@ -133,7 +133,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       [...recurringActionsQ]
         .sort((a: any, b: any) => (a.title ?? '').localeCompare(b.title ?? ''))
         .map((a: any) => ({
-          id: a.legacyId ?? a._id,
+          id: a._id,
           title: a.title ?? '',
           action_type: a.actionType,
         })),
@@ -238,6 +238,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
         author: author || null,
+        recurring_action_id: recurringActionId && recurringActionId !== 'none' ? recurringActionId : null,
       });
       // Storage ids: three cases per slot —
       //   image cleared (postImages[i] === null): send null so the stored id
@@ -255,9 +256,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       applyImageSlot(0, 'imageStorageId');
       applyImageSlot(1, 'imageStorageId2');
       applyImageSlot(2, 'imageStorageId3');
-      // recurring_action_id still uses the Supabase UUID during migration —
-      // once recurring actions get their own legacyId lookup we'll thread it
-      // through. Skip it for now rather than sending an incompatible value.
       if (post) {
         await updatePost({ legacyId: post.id, patch: patch as any });
       } else {
