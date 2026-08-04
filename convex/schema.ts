@@ -145,6 +145,10 @@ export default defineSchema({
     fullName: v.string(),
     avatarUrl: v.optional(v.union(v.string(), v.null())),
     notificationEnabled: v.optional(v.boolean()),
+    // Per-user login password. Doubles as the app's access gate: entering it
+    // both unlocks SimpleAuthGate and identifies "who you are" for comments.
+    // Compared in plaintext, same trust level as the old shared APP_PASSWORD.
+    password: v.optional(v.string()),
     ...timestamps,
   })
     .index("by_email", ["email"])

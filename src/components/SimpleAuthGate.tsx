@@ -5,18 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-
-const SIMPLE_AUTH_KEY = 'simple_auth_verified';
+import { isVerified as readIsVerified, setLoggedInUser } from '@/lib/authStorage';
 
 const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isVerified, setIsVerified] = useState<boolean>(() => {
-    return localStorage.getItem(SIMPLE_AUTH_KEY) === 'true';
-  });
+  const [isVerified, setIsVerified] = useState<boolean>(readIsVerified);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // Password is now verified server-side by the Convex `auth:verifyPassword`
-  // action against APP_PASSWORD. Nothing sensitive stays in the client bundle.
+  // Each user's password is verified server-side by the Convex
+  // `auth:verifyPassword` action against their own user_profiles row — it
+  // both unlocks the app and identifies who's logged in for comments.
   const verifyPassword = useAction(api.auth.verifyPassword);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,9 +22,9 @@ const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
     setError('');
     setSubmitting(true);
     try {
-      const { ok } = await verifyPassword({ password });
-      if (ok) {
-        localStorage.setItem(SIMPLE_AUTH_KEY, 'true');
+      const result = await verifyPassword({ password });
+      if (result.ok) {
+        setLoggedInUser(result.userId);
         setIsVerified(true);
       } else {
         setError('Nesprávné heslo');

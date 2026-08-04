@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 // user_profiles CRUD, backing UserManagement (Settings) and the @mention
@@ -10,13 +10,18 @@ const fields = {
   fullName: v.string(),
   avatarUrl: v.optional(v.union(v.string(), v.null())),
   notificationEnabled: v.optional(v.boolean()),
+  password: v.optional(v.string()),
 };
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
     const rows = await ctx.db.query("user_profiles").collect();
-    return rows.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    // Strip password before it reaches the client — this query backs the
+    // @mention list, which every comment editor loads.
+    return rows
+      .map(({ password: _password, ...rest }) => rest)
+      .sort((a, b) => a.fullName.localeCompare(b.fullName));
   },
 });
 
@@ -44,5 +49,16 @@ export const remove = mutation({
   args: { id: v.id("user_profiles") },
   handler: async (ctx, { id }) => {
     await ctx.db.delete(id);
+  },
+});
+
+// Backs the login gate (convex/auth.ts). Internal-only so the password field
+// never has to travel through a client-facing query.
+export const findByPassword = internalQuery({
+  args: { password: v.string() },
+  handler: async (ctx, { password }) => {
+    if (!password) return null;
+    const rows = await ctx.db.query("user_profiles").collect();
+    return rows.find((row) => row.password && row.password === password) ?? null;
   },
 });
