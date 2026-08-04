@@ -1,8 +1,9 @@
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { MessageSquare, Reply } from 'lucide-react';
-import { useQuery } from 'convex/react';
+import { MessageSquare, Reply, Trash2 } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { avatarColor, initials } from '@/lib/commentAvatar';
@@ -59,6 +60,21 @@ export function CommentList({ postId, onReply }: CommentListProps) {
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
   const loading = comments === undefined;
+  const removeComment = useMutation(api.comments.remove);
+  const { toast } = useToast();
+
+  async function handleDelete(id: Id<'comments'>) {
+    if (!confirm('Opravdu smazat tento komentář?')) return;
+    try {
+      await removeComment({ id });
+    } catch (error: any) {
+      toast({
+        title: 'Chyba',
+        description: error?.message ?? 'Nepodařilo se smazat komentář',
+        variant: 'destructive',
+      });
+    }
+  }
 
   function highlightMentions(text: string) {
     const escaped = escapeHtml(text);
@@ -115,18 +131,30 @@ export function CommentList({ postId, onReply }: CommentListProps) {
                 }}
               />
 
-              {onReply && comment.author?.fullName && (
+              <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                {onReply && comment.author?.fullName && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 mt-0.5 text-xs text-gray-500"
+                    onClick={() => onReply({ authorName: fullName, content: comment.content })}
+                  >
+                    <Reply className="h-3 w-3 mr-1" />
+                    Odpovědět
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 px-2 mt-0.5 text-xs text-gray-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  onClick={() => onReply({ authorName: fullName, content: comment.content })}
+                  className="h-6 px-2 mt-0.5 text-xs text-red-500 hover:text-red-600"
+                  onClick={() => handleDelete(comment._id)}
                 >
-                  <Reply className="h-3 w-3 mr-1" />
-                  Odpovědět
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Smazat
                 </Button>
-              )}
+              </div>
             </div>
           </div>
         );

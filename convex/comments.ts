@@ -59,6 +59,28 @@ export const listForPostByLegacyId = query({
   },
 });
 
+// Delete a comment along with its mentions and notifications. No
+// author/permission check — anyone using the app can delete any comment,
+// matching the rest of the app (no per-user permissions anywhere else either).
+export const remove = mutation({
+  args: { id: v.id("comments") },
+  handler: async (ctx, { id }) => {
+    const mentions = await ctx.db
+      .query("comment_mentions")
+      .withIndex("by_comment", (q) => q.eq("commentId", id))
+      .collect();
+    await Promise.all(mentions.map((m) => ctx.db.delete(m._id)));
+
+    const notifications = await ctx.db
+      .query("notifications")
+      .filter((q) => q.eq(q.field("commentId"), id))
+      .collect();
+    await Promise.all(notifications.map((n) => ctx.db.delete(n._id)));
+
+    await ctx.db.delete(id);
+  },
+});
+
 // -------- Internal write path (called by the action below) -------------------
 
 export const insertCommentWithMentions = internalMutation({
