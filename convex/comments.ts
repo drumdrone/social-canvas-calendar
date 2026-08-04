@@ -131,6 +131,20 @@ export const addComment = action({
       const author: any = await ctx.runQuery(internal.comments.getUser, {
         userId: args.authorId,
       });
+      // Prior comments give the mentioned person context for the thread —
+      // exclude the one we just inserted since it's rendered separately,
+      // highlighted, above the history. Best-effort: if this lookup fails,
+      // still send the mention email without history rather than losing the
+      // notification entirely (the comment itself is already saved by now).
+      let priorComments: any[] = [];
+      try {
+        const rows: any[] = await ctx.runQuery(internal.comments.getCommentsForEmail, {
+          postId: args.postId,
+        });
+        priorComments = rows.filter((c: any) => c._id !== commentId);
+      } catch (err) {
+        console.error("Failed to load comment history for email:", err);
+      }
       const mentionedUsers: any[] = await Promise.all(
         args.mentionedUserIds
           .filter((u) => u !== args.authorId)
@@ -147,6 +161,11 @@ export const addComment = action({
               commentText: args.content,
               commenterName: author?.fullName ?? "Someone",
               postId: post?.legacyId ?? args.postId,
+              conversation: priorComments.map((c) => ({
+                authorName: c.author?.fullName ?? "Someone",
+                content: c.content,
+                createdAt: c.createdAt ?? 0,
+              })),
             });
             await ctx.runMutation(internal.comments.markEmailSent, {
               notificationId: notificationIds[mentionedUsers.indexOf(u)] as any,
@@ -172,6 +191,22 @@ export const getPostForEmail = internalQuery({
 export const getUser = internalQuery({
   args: { userId: v.id("user_profiles") },
   handler: (ctx, { userId }) => ctx.db.get(userId),
+});
+
+// Full comment thread for a post, oldest first, author inlined — used to
+// render the "whole conversation" section of the mention email.
+export const getCommentsForEmail = internalQuery({
+  args: { postId: v.id("social_media_posts") },
+  handler: async (ctx, { postId }) => {
+    const rows = await ctx.db
+      .query("comments")
+      .withIndex("by_post", (q) => q.eq("postId", postId))
+      .collect();
+    rows.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+    return Promise.all(
+      rows.map(async (c) => ({ ...c, author: await ctx.db.get(c.authorId) })),
+    );
+  },
 });
 
 export const markEmailSent = internalMutation({
@@ -207,6 +242,16 @@ function parseFromAddress(input: string): { name: string; email: string } {
   return { name: "Notifications", email: input.trim() };
 }
 
+function formatCommentDate(ts: number): string {
+  if (!ts) return "";
+  return new Date(ts).toLocaleString("cs-CZ", {
+    day: "numeric",
+    month: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 async function sendMentionEmail(payload: {
   mentionedAuthorEmail: string;
   mentionedAuthorName?: string;
@@ -214,6 +259,7 @@ async function sendMentionEmail(payload: {
   commentText: string;
   commenterName?: string;
   postId?: string;
+  conversation?: Array<{ authorName: string; content: string; createdAt: number }>;
 }) {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
@@ -234,6 +280,23 @@ async function sendMentionEmail(payload: {
   const postUrl = appUrl ? `${appUrl}/post/${encodeURIComponent(payload.postId || "")}` : "";
   const settingsUrl = appUrl ? `${appUrl}/settings` : "";
 
+  const conversationHtml =
+    payload.conversation && payload.conversation.length > 0
+      ? `
+    <p style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.03em;margin:30px 0 12px;">Celá konverzace</p>
+    <div style="border-top:1px solid #f3f4f6;">
+      ${payload.conversation
+        .map(
+          (c) => `
+      <div style="padding:12px 0;border-bottom:1px solid #f3f4f6;">
+        <p style="margin:0 0 4px;font-size:13px;color:#9ca3af;"><strong style="color:#374151;">${escapeHtml(c.authorName)}</strong> · ${formatCommentDate(c.createdAt)}</p>
+        <p style="margin:0;font-size:14px;color:#4b5563;white-space:pre-wrap;">${escapeHtml(c.content)}</p>
+      </div>`,
+        )
+        .join("")}
+    </div>`
+      : "";
+
   const html = `
 <!DOCTYPE html>
 <html lang="cs">
@@ -244,14 +307,19 @@ async function sendMentionEmail(payload: {
   </div>
   <div style="background:#fff;padding:30px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;">
     <p style="font-size:16px;margin-bottom:20px;">Ahoj <strong>${escapeHtml(recipient)}</strong>,</p>
-    <p style="font-size:16px;margin-bottom:25px;">
+    <p style="font-size:16px;margin-bottom:15px;">
       <strong>${escapeHtml(author)}</strong> vás zmínil/a v komentáři u příspěvku
       <strong>„${escapeHtml(title)}"</strong>:
     </p>
-    <div style="background:#f9fafb;border-left:4px solid #667eea;padding:20px;margin:25px 0;border-radius:4px;">
+    <div>
+      <span style="background:#667eea;color:#fff;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:999px;">Nový komentář</span>
+    </div>
+    <div style="background:#f9fafb;border-left:4px solid #667eea;padding:20px;margin:10px 0 25px;border-radius:4px;">
+      <p style="margin:0 0 6px;font-size:13px;color:#6b7280;"><strong>${escapeHtml(author)}</strong></p>
       <p style="margin:0;font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(payload.commentText)}</p>
     </div>
     ${postUrl ? `<div style="text-align:center;margin:30px 0;"><a href="${postUrl}" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:14px 32px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;font-size:16px;">Otevřít příspěvek</a></div>` : ""}
+    ${conversationHtml}
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:30px 0;">
     <p style="font-size:13px;color:#6b7280;margin:0;">
       Tento e-mail vám přišel, protože vás někdo zmínil v komentáři.

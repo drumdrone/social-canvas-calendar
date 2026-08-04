@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,9 +21,12 @@ interface CommentEditorProps {
   // social_media_posts.legacyId. Both cases resolve to a Convex Id below.
   postId: string;
   onCommentAdded?: () => void;
+  // Bump this (e.g. with a new object each click) to prefill "@authorName "
+  // and focus the textarea — the one-click "Odpovědět" flow from CommentList.
+  replyTrigger?: { authorName: string; nonce: number } | null;
 }
 
-export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
+export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentEditorProps) {
   const [content, setContent] = useState('');
   const [showMentions, setShowMentions] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
@@ -57,6 +60,16 @@ export function CommentEditor({ postId, onCommentAdded }: CommentEditorProps) {
     : (postByLegacy?._id ?? null);
 
   const addComment = useAction(api.comments.addComment);
+
+  // "Odpovědět" click from CommentList: prefill the mention (unless it's
+  // already there) and focus the textarea so the user can just start typing.
+  useEffect(() => {
+    if (!replyTrigger) return;
+    const mention = `@${replyTrigger.authorName} `;
+    setContent((prev) => (prev.startsWith(mention) ? prev : mention + prev));
+    textareaRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replyTrigger]);
 
   function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const text = e.target.value;

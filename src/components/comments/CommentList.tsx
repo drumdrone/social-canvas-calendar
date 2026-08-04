@@ -1,7 +1,8 @@
 import { formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Reply } from 'lucide-react';
 import { useQuery } from 'convex/react';
+import { Button } from '@/components/ui/button';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 
@@ -11,9 +12,12 @@ interface CommentListProps {
   // legacyPostId lookup.
   postId: string;
   refreshTrigger?: number;
+  // Called with the comment author's name when the "Odpovědět" button is
+  // clicked, so the parent can hand it to CommentEditor as a ready-made @mention.
+  onReply?: (authorName: string) => void;
 }
 
-export function CommentList({ postId }: CommentListProps) {
+export function CommentList({ postId, onReply }: CommentListProps) {
   // Comments are reactive: adding one anywhere updates every open list.
   // If the id looks like a Convex Id (starts with the deployment prefix and
   // is short), use listForPost; otherwise treat it as the legacy UUID.
@@ -77,6 +81,19 @@ export function CommentList({ postId }: CommentListProps) {
                 __html: highlightMentions(comment.content),
               }}
             />
+
+            {onReply && comment.author?.fullName && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 mt-1 text-xs text-gray-500"
+                onClick={() => onReply(comment.author!.fullName)}
+              >
+                <Reply className="h-3 w-3 mr-1" />
+                Odpovědět
+              </Button>
+            )}
           </div>
         </div>
       ))}
