@@ -299,7 +299,12 @@ async function sendMentionEmail(payload: {
   const recipient = payload.mentionedAuthorName?.trim() || "Team Member";
   const author = payload.commenterName?.trim() || "Someone";
   const title = payload.postTitle?.trim() || "a post";
-  const postUrl = appUrl ? `${appUrl}/post/${encodeURIComponent(payload.postId || "")}` : "";
+  // /calendar?edit=<id> opens the post straight in the editing sidebar (same
+  // deep link Quick Calendar uses) instead of the standalone read-only
+  // /post/:id page — accepts either the legacy UUID or a Convex id.
+  const postUrl = appUrl
+    ? `${appUrl}/calendar?edit=${encodeURIComponent(payload.postId || "")}`
+    : "";
   const settingsUrl = appUrl ? `${appUrl}/settings` : "";
 
   const conversationHtml =
@@ -340,7 +345,7 @@ async function sendMentionEmail(payload: {
       <p style="margin:0 0 6px;font-size:13px;color:#6b7280;"><strong>${escapeHtml(author)}</strong></p>
       <p style="margin:0;font-size:15px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(payload.commentText)}</p>
     </div>
-    ${postUrl ? `<div style="text-align:center;margin:30px 0;"><a href="${postUrl}" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:14px 32px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;font-size:16px;">Otevřít příspěvek</a></div>` : ""}
+    ${postUrl ? `<div style="text-align:center;margin:30px 0;"><a href="${postUrl}" style="background-color:#667eea;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#ffffff;padding:14px 32px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:600;font-size:16px;">Otevřít příspěvek</a></div>` : ""}
     ${conversationHtml}
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:30px 0;">
     <p style="font-size:13px;color:#6b7280;margin:0;">
