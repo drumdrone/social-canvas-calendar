@@ -5,7 +5,15 @@
   # CONVEX_DEPLOY_KEY, set as a Netlify env var) pushes convex/ to the
   # production deployment and writes convex/_generated/* as part of that;
   # only once that's done and confirmed on disk does `npm run build` run.
-  command = "npx convex deploy && npm run build"
+  #
+  # Only the production context runs the real `convex deploy` — our
+  # CONVEX_DEPLOY_KEY is a production key, and Convex's CLI refuses to use a
+  # production key from a non-production build context (Deploy Previews,
+  # branch deploys) as a safety check. Those contexts instead run
+  # `convex codegen`, which regenerates convex/_generated locally from
+  # convex/*.ts without deploying anything, so the build still typechecks
+  # against the (already-deployed) prod schema/functions.
+  command = "if [ \"$CONTEXT\" = \"production\" ]; then npx convex deploy && npm run build; else npx convex codegen && npm run build; fi"
   publish = "dist"
 
 [build.environment]
