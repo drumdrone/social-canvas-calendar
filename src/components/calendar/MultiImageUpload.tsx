@@ -87,11 +87,11 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
       <Label className="text-xs text-muted-foreground">Image {index + 1}</Label>
 
       {images[index] ? (
-        <div className="relative group">
+        <div className={`relative group ${heightClass} bg-muted/30 rounded-lg border overflow-hidden`}>
           <img
             src={images[index] || ''}
             alt={`Upload ${index + 1}`}
-            className={`w-full ${heightClass} object-cover rounded-lg border`}
+            className="w-full h-full object-contain"
           />
           <Button
             size="icon"
