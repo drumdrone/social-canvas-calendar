@@ -94,10 +94,7 @@ export const listByRecurringAction = query({
 export const getByLegacyId = query({
   args: { legacyId: v.string() },
   handler: async (ctx, { legacyId }) => {
-    const post = await ctx.db
-      .query("social_media_posts")
-      .withIndex("by_legacyId", (q) => q.eq("legacyId", legacyId))
-      .first();
+    const post = await findByLegacyIdOrConvexId(ctx, legacyId);
     return post ? resolveImageUrls(ctx, post) : null;
   },
 });
@@ -121,14 +118,25 @@ export const update = mutation({
   },
 });
 
-// Update by the original Supabase UUID (see getByLegacyId).
+// Posts created directly in Convex (not migrated from Supabase) have no
+// legacyId — the UI falls back to the Convex _id as their "id" in that case
+// (see convexToSocialPost), so lookups here need to accept either.
+async function findByLegacyIdOrConvexId(ctx: any, legacyId: string) {
+  const byLegacyId = await ctx.db
+    .query("social_media_posts")
+    .withIndex("by_legacyId", (q: any) => q.eq("legacyId", legacyId))
+    .first();
+  if (byLegacyId) return byLegacyId;
+  const normalizedId = ctx.db.normalizeId("social_media_posts", legacyId);
+  return normalizedId ? ctx.db.get(normalizedId) : null;
+}
+
+// Update by the original Supabase UUID (see getByLegacyId), or by Convex _id
+// for posts that never had one.
 export const updateByLegacyId = mutation({
   args: { legacyId: v.string(), patch: v.object(postFields) },
   handler: async (ctx, { legacyId, patch }) => {
-    const existing = await ctx.db
-      .query("social_media_posts")
-      .withIndex("by_legacyId", (q) => q.eq("legacyId", legacyId))
-      .first();
+    const existing = await findByLegacyIdOrConvexId(ctx, legacyId);
     if (!existing) throw new Error(`Post with legacyId ${legacyId} not found`);
     await ctx.db.patch(existing._id, { ...patch, updatedAt: Date.now() });
     return existing._id;
@@ -151,10 +159,7 @@ export const remove = mutation({
 export const removeByLegacyId = mutation({
   args: { legacyId: v.string() },
   handler: async (ctx, { legacyId }) => {
-    const existing = await ctx.db
-      .query("social_media_posts")
-      .withIndex("by_legacyId", (q) => q.eq("legacyId", legacyId))
-      .first();
+    const existing = await findByLegacyIdOrConvexId(ctx, legacyId);
     if (!existing) return;
     for (const key of ["imageStorageId", "imageStorageId2", "imageStorageId3"] as const) {
       const sid = (existing as any)[key];
