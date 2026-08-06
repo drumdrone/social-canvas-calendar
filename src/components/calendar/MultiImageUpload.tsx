@@ -80,64 +80,57 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
     fileInputRefs.current[index]?.click();
   };
 
-  // Slot 0 (the primary image) gets its own full-width row and a taller
-  // preview; the rest share a row below.
-  const renderSlot = (index: number, heightClass: string) => (
-    <div key={index} className="space-y-1">
-      <Label className="text-xs text-muted-foreground">Image {index + 1}</Label>
-
-      {images[index] ? (
-        <div className={`relative group ${heightClass} bg-muted/30 rounded-lg border overflow-hidden`}>
-          <img
-            src={images[index] || ''}
-            alt={`Upload ${index + 1}`}
-            className="w-full h-full object-contain"
-          />
-          <Button
-            size="icon"
-            variant="destructive"
-            onClick={(e) => handleRemoveImage(e, index)}
-            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <X className="w-3 h-3" />
-          </Button>
-        </div>
-      ) : (
-        <div
-          className={`${heightClass} border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors`}
-          onClick={() => handleUploadClick(index)}
-        >
-          {uploading === index ? (
-            <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
-          ) : (
-            <>
-              <Image className="w-6 h-6 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">
-                <Upload className="w-3 h-3 inline mr-1" />
-                Upload
-              </span>
-            </>
-          )}
-          <input
-            ref={el => fileInputRefs.current[index] = el}
-            type="file"
-            accept="image/*"
-            onChange={(e) => handleImageUpload(e, index)}
-            className="hidden"
-          />
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <div className="space-y-3">
-      {renderSlot(0, 'h-48')}
-      {maxImages > 1 && (
-        <div className="grid grid-cols-2 gap-3">
-          {Array.from({ length: maxImages - 1 }).map((_, i) => renderSlot(i + 1, 'h-28'))}
-        </div>
-      )}
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: maxImages }).map((_, index) => (
+          <div key={index} className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Image {index + 1}</Label>
+
+            {images[index] ? (
+              <div className="relative group">
+                <img
+                  src={images[index] || ''}
+                  alt={`Upload ${index + 1}`}
+                  className="w-full h-28 object-cover rounded-lg border"
+                />
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  onClick={(e) => handleRemoveImage(e, index)}
+                  className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                className="h-28 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
+                onClick={() => handleUploadClick(index)}
+              >
+                {uploading === index ? (
+                  <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+                ) : (
+                  <>
+                    <Image className="w-6 h-6 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      <Upload className="w-3 h-3 inline mr-1" />
+                      Upload
+                    </span>
+                  </>
+                )}
+                <input
+                  ref={el => fileInputRefs.current[index] = el}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e, index)}
+                  className="hidden"
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
