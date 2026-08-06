@@ -74,6 +74,16 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [replyTrigger, setReplyTrigger] = useState<{ authorName: string; content: string; nonce: number } | null>(null);
   const { toast } = useToast();
 
+  // Close on Escape, matching the backdrop click.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Taxonomy options are read reactively from Convex — a change in Settings
   // shows up here on the next tick with no manual "reload". Only active rows
   // are kept and names are sorted, matching the old .eq('is_active').order(name).
@@ -702,7 +712,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     <div className="p-4 space-y-2">
                       {title && <h3 className="font-semibold text-sm">{title}</h3>}
                       {content && (
-                        <p className="text-sm text-foreground leading-relaxed line-clamp-6 whitespace-pre-wrap">
+                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                           {content}
                         </p>
                       )}
