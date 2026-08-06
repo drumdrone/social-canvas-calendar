@@ -42,15 +42,10 @@ function escapeRegExp(s: string): string {
 
 export function CommentList({ postId, onReply }: CommentListProps) {
   // Comments are reactive: adding one anywhere updates every open list.
-  // If the id looks like a Convex Id (starts with the deployment prefix and
-  // is short), use listForPost; otherwise treat it as the legacy UUID.
-  const isConvexId = /^k[a-z0-9]{10,}$/.test(postId);
-  const comments = useQuery(
-    isConvexId ? api.comments.listForPost : api.comments.listForPostByLegacyId,
-    isConvexId
-      ? { postId: postId as Id<'social_media_posts'> }
-      : { legacyPostId: postId },
-  );
+  // listForPostByLegacyId resolves either a real Convex _id or the legacy
+  // Supabase UUID server-side, so there's no need to guess the id's shape
+  // here.
+  const comments = useQuery(api.comments.listForPostByLegacyId, { legacyPostId: postId });
   // Real user names bound the @mention match — without this, "@Jan Hrodek
   // dobře" greedily highlighted the entire rest of the sentence, since
   // there's nothing else to tell the regex where the name ends.

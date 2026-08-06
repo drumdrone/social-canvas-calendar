@@ -17,6 +17,28 @@ import { v } from "convex/values";
 // email for every fresh mention. Keeping it as one entry point means the
 // client doesn't have to orchestrate three round-trips.
 
+// Resolves a post either by its real Convex _id or by the legacy Supabase
+// UUID kept in `legacyId`. The UI used to guess which kind of string it had
+// with a client-side regex (`/^k[a-z0-9]{10,}$/`) — that's not a reliable
+// way to detect a Convex id (ids don't follow a fixed prefix), so posts
+// created after the Supabase migration (whose "id" is a raw Convex _id that
+// happens not to match the regex) were silently treated as legacy UUIDs,
+// found no matching `legacyId`, and came back empty — comments looked like
+// they'd vanished or never attached to the right post. Resolving
+// authoritatively here (normalizeId first, legacyId index as fallback)
+// removes the guesswork entirely.
+async function resolvePost(ctx: any, postIdOrLegacyId: string) {
+  const normalizedId = ctx.db.normalizeId("social_media_posts", postIdOrLegacyId);
+  if (normalizedId) {
+    const doc = await ctx.db.get(normalizedId);
+    if (doc) return doc;
+  }
+  return ctx.db
+    .query("social_media_posts")
+    .withIndex("by_legacyId", (q: any) => q.eq("legacyId", postIdOrLegacyId))
+    .first();
+}
+
 // -------- Reads --------------------------------------------------------------
 
 // Comments for a post, newest at the bottom. Each comment is returned with
@@ -38,15 +60,12 @@ export const listForPost = query({
   },
 });
 
-// Same lookup as listForPost, but by the original Supabase UUID kept in
-// social_media_posts.legacyId so URL-carried ids still work.
+// Same lookup as listForPost, but accepts either a real Convex _id or the
+// legacy Supabase UUID — see resolvePost above.
 export const listForPostByLegacyId = query({
   args: { legacyPostId: v.string() },
   handler: async (ctx, { legacyPostId }) => {
-    const post = await ctx.db
-      .query("social_media_posts")
-      .withIndex("by_legacyId", (q) => q.eq("legacyId", legacyPostId))
-      .first();
+    const post = await resolvePost(ctx, legacyPostId);
     if (!post) return [];
     const rows = await ctx.db
       .query("comments")
@@ -127,7 +146,9 @@ export const insertCommentWithMentions = internalMutation({
 
 export const addComment = action({
   args: {
-    postId: v.id("social_media_posts"),
+    // Either the real Convex _id or the legacy Supabase UUID — resolved
+    // server-side below (see resolvePost).
+    postId: v.string(),
     authorId: v.id("user_profiles"),
     content: v.string(),
     mentionedUserIds: v.array(v.id("user_profiles")),
@@ -135,21 +156,25 @@ export const addComment = action({
   // Explicit return type breaks the circular type dependency that Convex's
   // codegen creates when an action calls its own module's internal mutation.
   handler: async (ctx, args): Promise<{ commentId: string }> => {
+    const post: any = await ctx.runQuery(internal.comments.resolvePostQuery, {
+      postIdOrLegacyId: args.postId,
+    });
+    if (!post) throw new Error(`Post ${args.postId} not found`);
+
     // 1. Persist the comment + mentions + notifications.
-    const result = (await ctx.runMutation(
-      internal.comments.insertCommentWithMentions,
-      args,
-    )) as { commentId: string; notificationIds: string[] };
+    const result = (await ctx.runMutation(internal.comments.insertCommentWithMentions, {
+      postId: post._id,
+      authorId: args.authorId,
+      content: args.content,
+      mentionedUserIds: args.mentionedUserIds,
+    })) as { commentId: string; notificationIds: string[] };
     const { commentId, notificationIds } = result;
 
     // 2. Best-effort email each mentioned user via the existing Resend edge
     //    function. The edge function is stateless (accepts recipient + text),
-    //    so we look up post + author + recipients here and send the payload.
-    //    Sends run in parallel; a single failure doesn't tank the whole call.
+    //    so we look up author + recipients here and send the payload. Sends
+    //    run in parallel; a single failure doesn't tank the whole call.
     if (notificationIds.length > 0) {
-      const post: any = await ctx.runQuery(internal.comments.getPostForEmail, {
-        postId: args.postId,
-      });
       const author: any = await ctx.runQuery(internal.comments.getUser, {
         userId: args.authorId,
       });
@@ -161,19 +186,21 @@ export const addComment = action({
       let priorComments: any[] = [];
       try {
         const rows: any[] = await ctx.runQuery(internal.comments.getCommentsForEmail, {
-          postId: args.postId,
+          postId: post._id,
         });
         priorComments = rows.filter((c: any) => c._id !== commentId);
       } catch (err) {
         console.error("Failed to load comment history for email:", err);
       }
+      // Mirror insertCommentWithMentions' self-mention skip so this list
+      // lines up 1:1 with notificationIds by index (a user mentioned twice
+      // would otherwise collide under a lookup-by-value like indexOf).
+      const mentionedIds = args.mentionedUserIds.filter((u) => u !== args.authorId);
       const mentionedUsers: any[] = await Promise.all(
-        args.mentionedUserIds
-          .filter((u) => u !== args.authorId)
-          .map((u) => ctx.runQuery(internal.comments.getUser, { userId: u })),
+        mentionedIds.map((u) => ctx.runQuery(internal.comments.getUser, { userId: u })),
       );
       await Promise.all(
-        mentionedUsers.map(async (u) => {
+        mentionedUsers.map(async (u, i) => {
           if (!u?.email || u.notificationEnabled === false) return;
           try {
             await sendMentionEmail({
@@ -182,7 +209,7 @@ export const addComment = action({
               postTitle: post?.title ?? "a post",
               commentText: args.content,
               commenterName: author?.fullName ?? "Someone",
-              postId: post?.legacyId ?? args.postId,
+              postId: post?.legacyId ?? post._id,
               conversation: priorComments.map((c) => ({
                 authorName: c.author?.fullName ?? "Someone",
                 content: c.content,
@@ -190,7 +217,7 @@ export const addComment = action({
               })),
             });
             await ctx.runMutation(internal.comments.markEmailSent, {
-              notificationId: notificationIds[mentionedUsers.indexOf(u)] as any,
+              notificationId: notificationIds[i] as any,
             });
           } catch (err) {
             console.error("send-mention-email failed:", err);
@@ -205,9 +232,9 @@ export const addComment = action({
 
 // Small internal helpers used only by the action above.
 
-export const getPostForEmail = internalQuery({
-  args: { postId: v.id("social_media_posts") },
-  handler: (ctx, { postId }) => ctx.db.get(postId),
+export const resolvePostQuery = internalQuery({
+  args: { postIdOrLegacyId: v.string() },
+  handler: (ctx, { postIdOrLegacyId }) => resolvePost(ctx, postIdOrLegacyId),
 });
 
 export const getUser = internalQuery({

@@ -19,7 +19,7 @@ interface MentionUser {
 
 interface CommentEditorProps {
   // Convex Id of the post OR the legacy Supabase UUID kept in
-  // social_media_posts.legacyId. Both cases resolve to a Convex Id below.
+  // social_media_posts.legacyId — addComment resolves either server-side.
   postId: string;
   onCommentAdded?: () => void;
   // Bump this (e.g. with a new object each click) to prefill "@authorName "
@@ -51,17 +51,6 @@ export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentE
       })),
     [rawUsers],
   );
-
-  // Resolve the incoming postId to a Convex Id. If it looks like a legacy
-  // UUID, look it up; otherwise trust it.
-  const isConvexId = /^k[a-z0-9]{10,}$/.test(postId);
-  const postByLegacy = useQuery(
-    isConvexId ? 'skip' : api.posts.getByLegacyId,
-    isConvexId ? 'skip' : { legacyId: postId },
-  );
-  const resolvedPostId: Id<'social_media_posts'> | null = isConvexId
-    ? (postId as Id<'social_media_posts'>)
-    : (postByLegacy?._id ?? null);
 
   const addComment = useAction(api.comments.addComment);
 
@@ -152,14 +141,6 @@ export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentE
       });
       return;
     }
-    if (!resolvedPostId) {
-      toast({
-        title: 'Chyba',
-        description: 'Nepodařilo se najít cílový post',
-        variant: 'destructive',
-      });
-      return;
-    }
     // The user identified by the password entered at SimpleAuthGate. Falls
     // back to the first user_profiles row if that lookup somehow comes up
     // empty (e.g. a user without a password set yet).
@@ -191,7 +172,7 @@ export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentE
 
     try {
       await addComment({
-        postId: resolvedPostId,
+        postId,
         authorId: author._id,
         content,
         mentionedUserIds,
