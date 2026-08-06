@@ -19,7 +19,7 @@ Variables, or `npx convex env set NAME value`):
 | `APP_PASSWORD` | shared password for `auth.verifyPassword` |
 | `SUPABASE_URL` | source project for the one-off migration |
 | `SUPABASE_SERVICE_ROLE_KEY` | source read access for the migration |
-| `RESEND_API_KEY`, `RESEND_FROM`, `APP_URL` | mention emails (see RESEND_SETUP.md) |
+| `BREVO_API_KEY`, `MAIL_FROM`, `APP_URL` | mention emails, sent directly via the Brevo API (see `convex/comments.ts`) |
 
 ## Run the data migration
 
