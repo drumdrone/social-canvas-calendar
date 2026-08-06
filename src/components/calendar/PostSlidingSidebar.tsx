@@ -685,10 +685,21 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                   {/* Live preview of the post as it will appear on the social
                       platform — updates as the form on the left changes. */}
                   <div className="rounded-lg border bg-background overflow-hidden shadow-sm">
-                    <div className="p-4 space-y-2">
+                    <div className="px-4 pt-4">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Náhled příspěvku
                       </p>
+                    </div>
+                    {postImages[0] && (
+                      <div className="w-full aspect-square bg-muted/30">
+                        <img
+                          src={postImages[0]}
+                          alt={title || 'Náhled příspěvku'}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4 space-y-2">
                       {title && <h3 className="font-semibold text-sm">{title}</h3>}
                       {content && (
                         <p className="text-sm text-foreground leading-relaxed line-clamp-6 whitespace-pre-wrap">
@@ -696,15 +707,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                         </p>
                       )}
                     </div>
-                    {postImages[0] && (
-                      <div className="w-full h-80">
-                        <img
-                          src={postImages[0]}
-                          alt={title || 'Náhled příspěvku'}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
                   </div>
 
                   {post ? (
