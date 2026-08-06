@@ -171,19 +171,31 @@ export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentE
       .map((u) => u._id);
 
     try {
-      await addComment({
+      const result = await addComment({
         postId,
         authorId: author._id,
         content,
         mentionedUserIds,
       });
-      toast({
-        title: 'Úspěch',
-        description:
-          mentionedUserIds.length > 0
-            ? `Komentář přidán a ${mentionedUserIds.length} uživatelů bylo upozorněno`
-            : 'Komentář přidán',
-      });
+      const { attempted, sent, errors } = result.emailResults;
+      if (attempted > 0 && sent < attempted) {
+        // At least one mention email failed to send — surface the actual
+        // reason (e.g. a Brevo/env-var problem) instead of a generic
+        // "success" toast that would otherwise hide it.
+        toast({
+          title: sent > 0 ? 'Komentář přidán, e-mail se nepodařilo odeslat všem' : 'Komentář přidán, e-mail se nepodařilo odeslat',
+          description: errors[0] ?? 'Neznámá chyba při odesílání e-mailu',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Úspěch',
+          description:
+            mentionedUserIds.length > 0
+              ? `Komentář přidán a ${mentionedUserIds.length} uživatelů bylo upozorněno`
+              : 'Komentář přidán',
+        });
+      }
       setContent('');
       setActiveReply(null);
       onCommentAdded?.();

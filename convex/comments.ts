@@ -155,7 +155,17 @@ export const addComment = action({
   },
   // Explicit return type breaks the circular type dependency that Convex's
   // codegen creates when an action calls its own module's internal mutation.
-  handler: async (ctx, args): Promise<{ commentId: string }> => {
+  // emailResults is surfaced to the client so a mailing failure (bad
+  // BREVO_API_KEY, unverified sender domain, Brevo rejecting the request,
+  // etc.) shows up as a toast instead of only a line in the Convex function
+  // logs nobody's looking at.
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    commentId: string;
+    emailResults: { attempted: number; sent: number; errors: string[] };
+  }> => {
     const post: any = await ctx.runQuery(internal.comments.resolvePostQuery, {
       postIdOrLegacyId: args.postId,
     });
@@ -170,14 +180,21 @@ export const addComment = action({
     })) as { commentId: string; notificationIds: string[] };
     const { commentId, notificationIds } = result;
 
-    // 2. Best-effort email each mentioned user via the existing Resend edge
-    //    function. The edge function is stateless (accepts recipient + text),
-    //    so we look up author + recipients here and send the payload. Sends
-    //    run in parallel; a single failure doesn't tank the whole call.
+    const emailResults = { attempted: 0, sent: 0, errors: [] as string[] };
+
+    // 2. Best-effort email each mentioned user via Brevo. None of these
+    //    lookups are allowed to throw past this point — the comment is
+    //    already saved, so a failure here should degrade to "no email" for
+    //    the affected recipient(s), never take down the whole action (that
+    //    previously happened with an unguarded lookup — see git history —
+    //    and silently ate every notification for the comment).
     if (notificationIds.length > 0) {
-      const author: any = await ctx.runQuery(internal.comments.getUser, {
-        userId: args.authorId,
-      });
+      let author: any = null;
+      try {
+        author = await ctx.runQuery(internal.comments.getUser, { userId: args.authorId });
+      } catch (err) {
+        console.error("Failed to load comment author for email:", err);
+      }
       // Prior comments give the mentioned person context for the thread —
       // exclude the one we just inserted since it's rendered separately,
       // highlighted, above the history. Best-effort: if this lookup fails,
@@ -196,12 +213,21 @@ export const addComment = action({
       // lines up 1:1 with notificationIds by index (a user mentioned twice
       // would otherwise collide under a lookup-by-value like indexOf).
       const mentionedIds = args.mentionedUserIds.filter((u) => u !== args.authorId);
-      const mentionedUsers: any[] = await Promise.all(
-        mentionedIds.map((u) => ctx.runQuery(internal.comments.getUser, { userId: u })),
-      );
+      let mentionedUsers: any[] = [];
+      try {
+        mentionedUsers = await Promise.all(
+          mentionedIds.map((u) => ctx.runQuery(internal.comments.getUser, { userId: u })),
+        );
+      } catch (err) {
+        console.error("Failed to load mentioned users for email:", err);
+        emailResults.errors.push(
+          `Nepodařilo se načíst zmíněné uživatele: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
       await Promise.all(
         mentionedUsers.map(async (u, i) => {
           if (!u?.email || u.notificationEnabled === false) return;
+          emailResults.attempted++;
           try {
             await sendMentionEmail({
               mentionedAuthorEmail: u.email,
@@ -219,14 +245,17 @@ export const addComment = action({
             await ctx.runMutation(internal.comments.markEmailSent, {
               notificationId: notificationIds[i] as any,
             });
+            emailResults.sent++;
           } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
             console.error("send-mention-email failed:", err);
+            emailResults.errors.push(`${u.fullName ?? u.email}: ${msg}`);
           }
         }),
       );
     }
 
-    return { commentId };
+    return { commentId, emailResults };
   },
 });
 
@@ -272,7 +301,9 @@ export const markEmailSent = internalMutation({
 //   MAIL_FROM      = "Name <hello@domain>"   (required; must be on a
 //                                             Brevo-authenticated domain)
 //   APP_URL        = https://your.app        (optional; for "View comment" link)
-// If BREVO_API_KEY is missing the comment still saves — the email is just skipped.
+// The comment itself always saves even if mailing fails entirely (missing
+// env vars, Brevo rejecting the request, etc.) — addComment's caller sees
+// that failure via the returned emailResults, not a broken comment save.
 
 function escapeHtml(s: string): string {
   return String(s)
@@ -312,13 +343,15 @@ async function sendMentionEmail(payload: {
 }) {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
-    console.warn("BREVO_API_KEY not set — skipping email");
-    return;
+    // Throw (rather than silently returning) so the caller's per-recipient
+    // try/catch records this as a failed send instead of quietly marking
+    // the notification emailSent — a comment could otherwise look "done"
+    // while the person mentioned never got anything.
+    throw new Error("BREVO_API_KEY not set on the Convex deployment");
   }
   const fromStr = process.env.MAIL_FROM;
   if (!fromStr) {
-    console.warn("MAIL_FROM not set — skipping email");
-    return;
+    throw new Error("MAIL_FROM not set on the Convex deployment");
   }
   const from = parseFromAddress(fromStr);
   const appUrl = (process.env.APP_URL || "").replace(/\/$/, "");
