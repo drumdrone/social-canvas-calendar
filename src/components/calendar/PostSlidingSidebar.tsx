@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, Plus, MessageSquare, Edit3, Check } from 'lucide-react';
+import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, Plus, MessageSquare, Edit3, Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { SocialPost } from '../SocialCalendar';
 import { useMutation, useQuery } from 'convex/react';
@@ -379,6 +380,42 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
               
               <ScrollArea className="flex-1">
                 <div className="p-6 space-y-6 pb-20">
+                  {/* Collapsible live preview of the post as it'll appear on the
+                      social platform. Sits at the very top of the left column
+                      (comment-thread column on the right stays uncluttered) and
+                      is closed by default so it doesn't push the editor fields
+                      down until the user explicitly wants to see it. */}
+                  <Collapsible>
+                    <CollapsibleTrigger className="group w-full flex items-center justify-between rounded-md border bg-background px-3 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-accent/30 transition-colors">
+                      <span className="flex items-center gap-2">
+                        <Edit3 className="h-4 w-4" />
+                        Náhled příspěvku
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <div className="rounded-lg border bg-background overflow-hidden shadow-sm">
+                        {postImages[0] && (
+                          <div className="w-full aspect-square bg-muted/30">
+                            <img
+                              src={postImages[0]}
+                              alt={title || 'Náhled příspěvku'}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        )}
+                        <div className="p-4 space-y-2">
+                          {title && <h3 className="font-semibold text-sm">{title}</h3>}
+                          {content && (
+                            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                              {content}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+
                   {/* Multi Image Upload */}
                   <div className="space-y-2">
                     <Label>Images</Label>
@@ -692,33 +729,6 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
               
               <ScrollArea className="flex-1">
                 <div className="p-6 space-y-6">
-                  {/* Live preview of the post as it will appear on the social
-                      platform — updates as the form on the left changes. */}
-                  <div className="rounded-lg border bg-background overflow-hidden shadow-sm">
-                    <div className="px-4 pt-4">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Náhled příspěvku
-                      </p>
-                    </div>
-                    {postImages[0] && (
-                      <div className="w-full aspect-square bg-muted/30">
-                        <img
-                          src={postImages[0]}
-                          alt={title || 'Náhled příspěvku'}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    )}
-                    <div className="p-4 space-y-2">
-                      {title && <h3 className="font-semibold text-sm">{title}</h3>}
-                      {content && (
-                        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                          {content}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
                   {post ? (
                     <>
                       <p className="text-xs text-muted-foreground">
