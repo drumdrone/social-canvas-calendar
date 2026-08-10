@@ -177,22 +177,38 @@ export function CommentEditor({ postId, onCommentAdded, replyTrigger }: CommentE
         content,
         mentionedUserIds,
       });
-      const { attempted, sent, errors } = result.emailResults;
+      const { attempted, sent, errors, skipped } = result.emailResults;
+      // Distinguish three failure shapes so the toast tells the truth:
+      //   (a) attempted>0 && sent<attempted → Brevo/env-var failure, show first error
+      //   (b) mentionedUserIds>0 && attempted===0 → every mention was skipped
+      //       (no email in profile / notifications off / profile missing) —
+      //       previously rendered as "Úspěch, N uživatelů upozorněno", which
+      //       lied because nothing was actually sent
+      //   (c) otherwise → real success
       if (attempted > 0 && sent < attempted) {
-        // At least one mention email failed to send — surface the actual
-        // reason (e.g. a Brevo/env-var problem) instead of a generic
-        // "success" toast that would otherwise hide it.
         toast({
-          title: sent > 0 ? 'Komentář přidán, e-mail se nepodařilo odeslat všem' : 'Komentář přidán, e-mail se nepodařilo odeslat',
+          title:
+            sent > 0
+              ? 'Komentář přidán, e-mail se nepodařilo odeslat všem'
+              : 'Komentář přidán, e-mail se nepodařilo odeslat',
           description: errors[0] ?? 'Neznámá chyba při odesílání e-mailu',
+          variant: 'destructive',
+        });
+      } else if (mentionedUserIds.length > 0 && attempted === 0) {
+        toast({
+          title: 'Komentář přidán, ale žádný e-mail neodešel',
+          description:
+            skipped.length > 0
+              ? skipped.map((s) => `${s.name}: ${s.reason}`).join('; ')
+              : 'Žádný zmíněný uživatel nemá vyplněný e-mail nebo má vypnuté notifikace.',
           variant: 'destructive',
         });
       } else {
         toast({
           title: 'Úspěch',
           description:
-            mentionedUserIds.length > 0
-              ? `Komentář přidán a ${mentionedUserIds.length} uživatelů bylo upozorněno`
+            sent > 0
+              ? `Komentář přidán a ${sent} uživatelů bylo upozorněno e-mailem`
               : 'Komentář přidán',
         });
       }
