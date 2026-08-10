@@ -164,7 +164,18 @@ export const addComment = action({
     args,
   ): Promise<{
     commentId: string;
-    emailResults: { attempted: number; sent: number; errors: string[] };
+    emailResults: {
+      attempted: number;
+      sent: number;
+      errors: string[];
+      // A recipient is "skipped" when the mention resolved to a user but
+      // sendMentionEmail was never called for them (missing email address,
+      // notifications turned off, or the user_profiles lookup came back
+      // empty). Surfaced so the toast can explain why nothing was sent even
+      // though the mention was matched — previously that case rendered as a
+      // plain success.
+      skipped: Array<{ name: string; reason: string }>;
+    };
   }> => {
     const post: any = await ctx.runQuery(internal.comments.resolvePostQuery, {
       postIdOrLegacyId: args.postId,
@@ -180,7 +191,35 @@ export const addComment = action({
     })) as { commentId: string; notificationIds: string[] };
     const { commentId, notificationIds } = result;
 
-    const emailResults = { attempted: 0, sent: 0, errors: [] as string[] };
+    const emailResults = {
+      attempted: 0,
+      sent: 0,
+      errors: [] as string[],
+      skipped: [] as Array<{ name: string; reason: string }>,
+    };
+
+    // Self-mentions are dropped in insertCommentWithMentions before any
+    // notification row is created, so they never make it into the email loop
+    // below — surface them in skipped[] up front instead, otherwise the
+    // client would land in the "no skipped, no attempted" fallback and show
+    // a generic "no one has an email address" toast, which is a lie: the
+    // mention just happened to be yourself. If it's the ONLY mention, this
+    // is what the client will surface; if it's mixed with real mentions,
+    // it becomes one entry alongside them.
+    if (args.mentionedUserIds.some((u) => u === args.authorId)) {
+      let self: any = null;
+      try {
+        self = await ctx.runQuery(internal.comments.getUser, {
+          userId: args.authorId,
+        });
+      } catch {
+        // Non-fatal — worst case we render "vy" instead of the real name.
+      }
+      emailResults.skipped.push({
+        name: self?.fullName ?? "vy",
+        reason: "zmínka sebe sama — e-mail se autorovi komentáře neposílá",
+      });
+    }
 
     // 2. Best-effort email each mentioned user via Brevo. None of these
     //    lookups are allowed to throw past this point — the comment is
@@ -226,7 +265,27 @@ export const addComment = action({
       }
       await Promise.all(
         mentionedUsers.map(async (u, i) => {
-          if (!u?.email || u.notificationEnabled === false) return;
+          if (!u) {
+            emailResults.skipped.push({
+              name: "neznámý uživatel",
+              reason: "profil se nepodařilo načíst",
+            });
+            return;
+          }
+          if (!u.email) {
+            emailResults.skipped.push({
+              name: u.fullName ?? "uživatel bez jména",
+              reason: "chybí e-mail v profilu",
+            });
+            return;
+          }
+          if (u.notificationEnabled === false) {
+            emailResults.skipped.push({
+              name: u.fullName ?? u.email,
+              reason: "má vypnuté e-mailové notifikace",
+            });
+            return;
+          }
           emailResults.attempted++;
           try {
             await sendMentionEmail({
