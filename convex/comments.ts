@@ -198,6 +198,29 @@ export const addComment = action({
       skipped: [] as Array<{ name: string; reason: string }>,
     };
 
+    // Self-mentions are dropped in insertCommentWithMentions before any
+    // notification row is created, so they never make it into the email loop
+    // below — surface them in skipped[] up front instead, otherwise the
+    // client would land in the "no skipped, no attempted" fallback and show
+    // a generic "no one has an email address" toast, which is a lie: the
+    // mention just happened to be yourself. If it's the ONLY mention, this
+    // is what the client will surface; if it's mixed with real mentions,
+    // it becomes one entry alongside them.
+    if (args.mentionedUserIds.some((u) => u === args.authorId)) {
+      let self: any = null;
+      try {
+        self = await ctx.runQuery(internal.comments.getUser, {
+          userId: args.authorId,
+        });
+      } catch {
+        // Non-fatal — worst case we render "vy" instead of the real name.
+      }
+      emailResults.skipped.push({
+        name: self?.fullName ?? "vy",
+        reason: "zmínka sebe sama — e-mail se autorovi komentáře neposílá",
+      });
+    }
+
     // 2. Best-effort email each mentioned user via Brevo. None of these
     //    lookups are allowed to throw past this point — the comment is
     //    already saved, so a failure here should degrade to "no email" for
