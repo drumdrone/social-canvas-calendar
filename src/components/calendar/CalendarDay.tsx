@@ -89,6 +89,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
 
   return (
     <div
+      data-today={isToday ? 'true' : undefined}
       className={cn(
         "h-full border-r border-b border-calendar-grid cursor-pointer transition-colors hover:bg-calendar-hover relative overflow-hidden flex flex-col",
         !isCurrentMonth && "text-muted-foreground bg-muted/30",
