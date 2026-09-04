@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { format, isSameMonth, isToday, isWeekend } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarDay } from './CalendarDay';
@@ -36,6 +36,22 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     [raw],
   );
   const loading = raw === undefined;
+
+  // Scroll the row containing today to the top of the scroll container so the
+  // current week is always visible on load. Runs whenever the visible date
+  // range changes or the initial post query resolves (which is when the grid
+  // cells actually exist in the DOM).
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (loading || viewMode !== 'month') return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const todayEl = container.querySelector<HTMLElement>('[data-today="true"]');
+    if (!todayEl) return;
+    const containerRect = container.getBoundingClientRect();
+    const todayRect = todayEl.getBoundingClientRect();
+    container.scrollTop += todayRect.top - containerRect.top;
+  }, [dates, viewMode, loading]);
 
   const getFilteredPostsForDate = (date: Date) => {
     return posts.filter(post => {
@@ -90,7 +106,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       </div>
 
       {/* Calendar grid */}
-      <div className="flex-1 min-h-0 overflow-auto scroll-smooth" 
+      <div ref={scrollContainerRef}
+           className="flex-1 min-h-0 overflow-auto scroll-smooth"
            onWheel={(e) => {
              if (e.button === 1 || e.buttons === 4) { // Middle mouse button
                e.preventDefault();
