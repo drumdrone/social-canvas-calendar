@@ -8,6 +8,7 @@ import { FacebookPostPreview } from './calendar/FacebookPostPreview';
 import { PostSlidingSidebar } from './calendar/PostSlidingSidebar';
 import { PostDataManager } from './calendar/PostDataManager';
 import { PlanningPanel } from './calendar/PlanningPanel';
+import { PlanStatusStrip } from './calendar/PlanStatusStrip';
 import { SettingsSidebar } from './settings/SettingsSidebar';
 import { Button } from './ui/button';
 import { Settings, Plus, FileText } from 'lucide-react';
@@ -39,6 +40,7 @@ export interface SocialPost {
   pillar?: string;
   product_line?: string;
   author?: string;
+  recurring_action_id?: string | null;
 }
 
 export const SocialCalendar: React.FC = () => {
@@ -200,6 +202,10 @@ export const SocialCalendar: React.FC = () => {
               Planning
             </Button>
             <PostDataManager onImportComplete={handleSidebarSave} />
+            {/* Plan overview for the displayed month — traffic-light dots */}
+            <div className="sm:ml-4">
+              <PlanStatusStrip currentDate={currentDate} />
+            </div>
           </div>
           
           <Button

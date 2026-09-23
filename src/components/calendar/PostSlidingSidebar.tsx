@@ -135,9 +135,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platformsQ, statusesQ, pillarsQ, productLinesQ, categoriesQ, authorsQ, isOpen, post]);
 
-  // recurring_action_id on posts still stores the legacy Supabase UUID during
-  // the migration window (see adapter.ts), so we key each option by
-  // legacyId ?? _id to keep matching existing posts' selections.
+  // Posts reference recurring actions by Convex _id (remapped during the
+  // migration), so options are keyed by _id too.
   const recurringActionsQ = useQuery(api.recurringActions.list);
   useEffect(() => {
     if (!recurringActionsQ) return;
@@ -145,7 +144,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       [...recurringActionsQ]
         .sort((a: any, b: any) => (a.title ?? '').localeCompare(b.title ?? ''))
         .map((a: any) => ({
-          id: a.legacyId ?? a._id,
+          id: a._id,
           title: a.title ?? '',
           action_type: a.actionType,
         })),
@@ -267,9 +266,10 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       applyImageSlot(0, 'imageStorageId');
       applyImageSlot(1, 'imageStorageId2');
       applyImageSlot(2, 'imageStorageId3');
-      // recurring_action_id still uses the Supabase UUID during migration —
-      // once recurring actions get their own legacyId lookup we'll thread it
-      // through. Skip it for now rather than sending an incompatible value.
+      // Link to the Plan's recurring action (Convex Id) so the post counts
+      // towards the plan overview.
+      patch.recurringActionId =
+        recurringActionId && recurringActionId !== 'none' ? recurringActionId : null;
       if (post) {
         await updatePost({ legacyId: post.id, patch: patch as any });
       } else {
