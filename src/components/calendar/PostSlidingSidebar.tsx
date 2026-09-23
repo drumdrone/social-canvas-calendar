@@ -606,32 +606,36 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     <Label className={`text-sm font-medium ${recurringActionId === 'none' ? 'text-amber-600' : ''}`}>
                       Pravidelná akce {recurringActionId === 'none' && <span className="text-amber-600">⚠</span>}
                     </Label>
-                    <Select value={recurringActionId} onValueChange={setRecurringActionId}>
-                      <SelectTrigger className={recurringActionId === 'none' ? 'border-amber-500/50 bg-amber-50/5' : ''}>
-                        <SelectValue placeholder="Vyberte akci" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border border-border shadow-lg z-[60]">
-                        <SelectItem value="none">Žádná</SelectItem>
-                        <SelectItem value="_" disabled className="text-xs font-semibold opacity-50">📅 Měsíční</SelectItem>
-                        {recurringActions.filter(a => a.action_type === 'monthly').map((a) => (
-                          <SelectItem key={a.id} value={a.id} className="pl-6">
-                            {a.title}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__" disabled className="text-xs font-semibold opacity-50">📱 Týdenní</SelectItem>
-                        {recurringActions.filter(a => a.action_type === 'weekly').map((a) => (
-                          <SelectItem key={a.id} value={a.id} className="pl-6">
-                            {a.title}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="___" disabled className="text-xs font-semibold opacity-50">🎁 Čtvrtletní</SelectItem>
-                        {recurringActions.filter(a => a.action_type === 'quarterly').map((a) => (
-                          <SelectItem key={a.id} value={a.id} className="pl-6">
-                            {a.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      {([
+                        ['monthly', '📅 Měsíční'],
+                        ['weekly', '📱 Týdenní'],
+                        ['quarterly', '🎁 Čtvrtletní'],
+                      ] as const).map(([type, label]) => {
+                        const group = recurringActions.filter(a => a.action_type === type);
+                        if (group.length === 0) return null;
+                        return (
+                          <div key={type} className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+                            {group.map((a) => (
+                              <Button
+                                key={a.id}
+                                type="button"
+                                size="sm"
+                                variant={recurringActionId === a.id ? 'default' : 'outline'}
+                                className="h-7 px-2.5 text-xs"
+                                // Click again to unselect (back to "Žádná").
+                                onClick={() =>
+                                  setRecurringActionId(recurringActionId === a.id ? 'none' : a.id)
+                                }
+                              >
+                                {a.title}
+                              </Button>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
                     {recurringActionId === 'none' && (
                       <p className="text-xs text-amber-600">
                         Pro sledování v plánování vyberte akci, ke které tento příspěvek patří
