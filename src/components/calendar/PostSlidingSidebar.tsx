@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -337,7 +338,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       
       {/* Sliding Sidebar */}
       <div className={cn(
-        "fixed top-0 right-0 h-screen w-2/3 min-w-[800px] max-w-[1200px] bg-background border-l border-border shadow-2xl z-50 transition-transform duration-300 ease-out",
+        "fixed top-0 right-0 h-screen w-2/3 min-w-[min(800px,100vw)] max-w-[1200px] bg-background border-l border-border shadow-2xl z-50 transition-transform duration-300 ease-out",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}>
         <div className="flex flex-col h-full">
@@ -368,9 +369,15 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
           </div>
 
           {/* Two Column Layout */}
-          <div className="flex-1 overflow-hidden flex">
+          {/* Resizable columns — drag the divider to change the split.
+              autoSaveId persists the chosen widths in localStorage. */}
+          <ResizablePanelGroup
+            direction="horizontal"
+            autoSaveId="post-sidebar-columns"
+            className="flex-1 min-h-0 overflow-hidden"
+          >
             {/* Left Column - Content */}
-            <div className="flex-1 bg-muted/20 border-r border-border flex flex-col">
+            <ResizablePanel defaultSize={50} minSize={25} className="min-w-0 bg-muted/20 flex flex-col">
               <div className="px-4 py-3 border-b border-border bg-muted/40">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
                   <CalendarIcon className="h-4 w-4" />
@@ -378,7 +385,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                 </h3>
               </div>
               
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0 [&_[data-radix-scroll-area-viewport]>div]:!block">
                 <div className="p-6 space-y-6 pb-20">
                   {/* Collapsible live preview of the post as it'll appear on the
                       social platform. Sits at the very top of the left column
@@ -716,10 +723,12 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                   </div>
                 </div>
               </ScrollArea>
-            </div>
+            </ResizablePanel>
+
+            <ResizableHandle withHandle />
 
             {/* Right Column - Comments */}
-            <div className="flex-1 bg-accent/10 flex flex-col">
+            <ResizablePanel defaultSize={50} minSize={25} className="min-w-0 bg-accent/10 flex flex-col">
               <div className="px-4 py-3 border-b border-border bg-accent/20">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
@@ -727,7 +736,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                 </h3>
               </div>
               
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0 [&_[data-radix-scroll-area-viewport]>div]:!block">
                 <div className="p-6 space-y-6">
                   {post ? (
                     <>
@@ -758,8 +767,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                   )}
                 </div>
               </ScrollArea>
-            </div>
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
 
           {/* Footer Actions */}
           <div className="border-t border-border p-6">
