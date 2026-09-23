@@ -71,6 +71,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [author, setAuthor] = useState<string>('');
   const [recurringActionId, setRecurringActionId] = useState<string>('none');
   const [recurringActions, setRecurringActions] = useState<Array<{id: string, title: string, action_type: string}>>([]);
+  const [campaignProductId, setCampaignProductId] = useState<string>('none');
+  const campaignsQ = useQuery(api.campaigns.list);
+  const campaignProductsQ = useQuery(api.campaigns.listProducts);
   const [activeTab, setActiveTab] = useState('content');
   const [commentRefresh, setCommentRefresh] = useState(0);
   const [replyTrigger, setReplyTrigger] = useState<{ authorName: string; content: string; nonce: number } | null>(null);
@@ -174,6 +177,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setProductLine((post as any).product_line || 'none');
       setAuthor(post.author || '');
       setRecurringActionId((post as any).recurring_action_id || 'none');
+      setCampaignProductId((post as any).campaign_product_id || 'none');
 
       // Set existing images
       const images: (string | null)[] = [
@@ -195,6 +199,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       setProductLine('none');
       setAuthor('');
       setRecurringActionId('none');
+      setCampaignProductId('none');
       setScheduledDate(selectedDate);
       setTime('12:00');
       setPostImages([null, null, null]);
@@ -270,6 +275,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       // towards the plan overview.
       patch.recurringActionId =
         recurringActionId && recurringActionId !== 'none' ? recurringActionId : null;
+      // Campaign product — counts towards the campaign's traffic light.
+      patch.campaignProductId =
+        campaignProductId && campaignProductId !== 'none' ? campaignProductId : null;
       if (post) {
         await updatePost({ legacyId: post.id, patch: patch as any });
       } else {
@@ -600,6 +608,44 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Campaign product — only products entered in a campaign */}
+                  {(campaignProductsQ ?? []).length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Výrobek z kampaně</Label>
+                      <div className="space-y-2">
+                        {(campaignsQ ?? []).map((c: any) => {
+                          const products = (campaignProductsQ ?? []).filter(
+                            (p: any) => p.campaignId === c._id,
+                          );
+                          if (products.length === 0) return null;
+                          return (
+                            <div key={c._id} className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-xs text-muted-foreground w-24 shrink-0 truncate" title={c.name}>
+                                {c.name}
+                              </span>
+                              {products.map((p: any) => (
+                                <Button
+                                  key={p._id}
+                                  type="button"
+                                  size="sm"
+                                  variant={campaignProductId === p._id ? 'default' : 'outline'}
+                                  className="h-7 px-2.5 text-xs"
+                                  title={`${p.code} – ${p.name}`}
+                                  // Click again to unselect.
+                                  onClick={() =>
+                                    setCampaignProductId(campaignProductId === p._id ? 'none' : p._id)
+                                  }
+                                >
+                                  {p.name}
+                                </Button>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Recurring Action */}
                   <div className="space-y-2">

@@ -26,6 +26,7 @@ const postFields = {
   imageStorageId2: v.optional(v.union(v.id("_storage"), v.null())),
   imageStorageId3: v.optional(v.union(v.id("_storage"), v.null())),
   recurringActionId: v.optional(v.union(v.id("recurringActions"), v.null())),
+  campaignProductId: v.optional(v.union(v.id("campaignProducts"), v.null())),
 };
 
 // If a storage id is set, resolve it to a served URL; otherwise keep the

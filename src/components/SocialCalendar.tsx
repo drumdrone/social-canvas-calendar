@@ -41,6 +41,7 @@ export interface SocialPost {
   product_line?: string;
   author?: string;
   recurring_action_id?: string | null;
+  campaign_product_id?: string | null;
 }
 
 export const SocialCalendar: React.FC = () => {
