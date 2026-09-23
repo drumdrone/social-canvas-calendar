@@ -8,6 +8,19 @@ import { toast } from 'sonner';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
+// Pick black or white text depending on the background's luminance so
+// light status colours stay readable.
+const readableTextColor = (hex: string) => {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return '#ffffff';
+  let h = m[1];
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#111827' : '#ffffff';
+};
+
 interface CalendarDayProps {
   date: Date;
   posts: SocialPost[];
@@ -41,6 +54,21 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
     }
     return map;
   }, [authorsQ]);
+
+  // Status colours come from the taxonomy (Settings → statuses), so the
+  // title/text block of each post always carries its status colour.
+  const statusesQ = useQuery(api.taxonomy.listStatuses);
+  const statusColors = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of statusesQ ?? []) {
+      if ((s as any).color) map[(s as any).name] = (s as any).color;
+    }
+    return map;
+  }, [statusesQ]);
+  const statusStyle = (post: SocialPost): React.CSSProperties => {
+    const bg = statusColors[post.status] ?? '#6B7280';
+    return { backgroundColor: bg, color: readableTextColor(bg) };
+  };
   
   const platformIcons = {
     facebook: Facebook,
@@ -124,7 +152,10 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
               />
               
               {/* Title overlay on image - always visible */}
-              <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm text-white p-2">
+              <div
+                className="absolute bottom-0 left-0 right-0 p-2"
+                style={statusStyle(firstImagePost)}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-semibold truncate">
@@ -140,7 +171,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={(e) => handleCopyLink(e, firstImagePost)}
-                    className="h-5 w-5 p-0 hover:bg-white/20 text-white hover:text-white ml-1 flex-shrink-0"
+                    className="h-5 w-5 p-0 hover:bg-white/20 text-inherit hover:text-inherit ml-1 flex-shrink-0"
                   >
                     <Share2 className="h-3 w-3" />
                   </Button>
@@ -209,7 +240,8 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
               </div>
               {posts.length > 0 && (
                 <div 
-                  className="cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
+                  className="cursor-pointer hover:opacity-90 rounded p-1 transition-opacity"
+                  style={statusStyle(posts[0])}
                   onClick={(e) => handlePostClick(e, posts[0])}
                   title={(posts[0] as any).comments || ''}
                 >
@@ -219,7 +251,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                         {posts[0].title}
                       </div>
                       {posts[0].content && (
-                        <div className="text-xs text-muted-foreground truncate">
+                        <div className="text-xs opacity-80 truncate">
                           {posts[0].content}
                         </div>
                       )}
@@ -257,7 +289,8 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                {posts.slice(1, 3).map((post, index) => (
                 <div 
                   key={index}
-                  className="cursor-pointer hover:bg-muted/20 rounded p-1 -m-1 transition-colors"
+                  className="cursor-pointer hover:opacity-90 rounded p-1 transition-opacity"
+                  style={statusStyle(post)}
                   onClick={(e) => handlePostClick(e, post)}
                   title={(post as any).comments || ''}
                 >
@@ -267,7 +300,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                         {post.title}
                       </div>
                       {post.content && (
-                        <div className="text-xs text-muted-foreground truncate">
+                        <div className="text-xs opacity-80 truncate">
                           {post.content}
                         </div>
                       )}
