@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, LayoutDashboard, FileText, Grid3X3, Settings } from 'lucide-react';
+import { Calendar, LayoutDashboard, FileText, Grid3X3, Settings, Megaphone } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -20,6 +20,11 @@ const navigation = [
     name: 'Plan',
     href: '/plan',
     icon: FileText,
+  },
+  {
+    name: 'Kampaně',
+    href: '/campaigns',
+    icon: Megaphone,
   },
   {
     name: 'Calendar',

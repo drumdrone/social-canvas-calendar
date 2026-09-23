@@ -53,6 +53,8 @@ export default defineSchema({
     imageStorageId2: v.optional(v.union(v.id("_storage"), v.null())),
     imageStorageId3: v.optional(v.union(v.id("_storage"), v.null())),
     recurringActionId: v.optional(v.union(v.id("recurringActions"), v.null())),
+    // Product from a campaign this post promotes (see campaigns.ts).
+    campaignProductId: v.optional(v.union(v.id("campaignProducts"), v.null())),
     userId: v.optional(v.union(v.string(), v.null())),
     ...timestamps,
   })
@@ -60,6 +62,7 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_platform", ["platform"])
     .index("by_recurringAction", ["recurringActionId"])
+    .index("by_campaignProduct", ["campaignProductId"])
     .index("by_legacyId", ["legacyId"]),
 
   authors: defineTable({
@@ -103,6 +106,27 @@ export default defineSchema({
     userId: v.optional(v.union(v.string(), v.null())),
     ...timestamps,
   }).index("by_legacyId", ["legacyId"]),
+
+  // Product campaigns: a campaign lists e-shop products, each with a target
+  // number of posts. Posts link to a product via campaignProductId.
+  campaigns: defineTable({
+    name: v.string(),
+    startDate: v.optional(v.union(v.string(), v.null())), // yyyy-MM-dd
+    endDate: v.optional(v.union(v.string(), v.null())),
+    isActive: v.optional(v.boolean()),
+    ...timestamps,
+  }),
+
+  campaignProducts: defineTable({
+    campaignId: v.id("campaigns"),
+    code: v.string(),
+    name: v.string(),
+    url: v.optional(v.union(v.string(), v.null())),
+    imageUrl: v.optional(v.union(v.string(), v.null())),
+    targetPosts: v.number(),
+    orderIndex: v.optional(v.number()),
+    ...timestamps,
+  }).index("by_campaign", ["campaignId"]),
 
   mood_board_items: defineTable({
     format: v.optional(v.union(v.string(), v.null())),

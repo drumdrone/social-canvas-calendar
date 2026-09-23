@@ -56,6 +56,7 @@ export function convexToSocialPost(doc: any): SocialPost {
     product_line: doc.productLine ?? undefined,
     author: doc.author ?? undefined,
     recurring_action_id: doc.recurringActionId ?? null,
+    campaign_product_id: doc.campaignProductId ?? null,
   };
 }
 

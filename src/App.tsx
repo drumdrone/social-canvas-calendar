@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Matrix from "./pages/Matrix";
 import Plan from "./pages/Plan";
+import Campaigns from "./pages/Campaigns";
 import ShareablePost from "./pages/ShareablePost";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -49,6 +50,7 @@ const App = () => (
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/matrix" element={<Matrix />} />
                   <Route path="/plan" element={<Plan />} />
+                  <Route path="/campaigns" element={<Campaigns />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/post/:id" element={<ShareablePost />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

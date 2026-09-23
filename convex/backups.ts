@@ -17,6 +17,8 @@ const TABLES = [
   "formats",
   "product_lines",
   "recurringActions",
+  "campaigns",
+  "campaignProducts",
   "mood_board_items",
   "plan_sections",
   "user_profiles",
