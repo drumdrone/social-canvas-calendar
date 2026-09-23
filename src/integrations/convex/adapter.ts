@@ -55,6 +55,7 @@ export function convexToSocialPost(doc: any): SocialPost {
     pillar: doc.pillar ?? undefined,
     product_line: doc.productLine ?? undefined,
     author: doc.author ?? undefined,
+    recurring_action_id: doc.recurringActionId ?? null,
   };
 }
 
@@ -104,9 +105,7 @@ export function socialPostToConvexPatch(input: SocialPostWrite): Record<string, 
   else if (input.image_url !== undefined) patch.imageUrl = input.image_url;
   set('imageUrl2', input.image_url_2);
   set('imageUrl3', input.image_url_3);
-  // recurringActionId in Convex is an Id<"recurringActions"> — the UI still
-  // sends the legacy Supabase UUID string here during the migration. Leave it
-  // unmapped for now; wire up a lookup once recurring actions get their own
-  // legacyId query.
+  // recurringActionId (Id<"recurringActions">) is set directly by
+  // PostSlidingSidebar on the patch.
   return patch;
 }
