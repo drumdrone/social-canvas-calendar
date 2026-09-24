@@ -44,6 +44,7 @@ export function convexToSocialPost(doc: any): SocialPost {
     image_url_1: doc.imageUrl ?? undefined,
     image_url_2: doc.imageUrl2 ?? undefined,
     image_url_3: doc.imageUrl3 ?? undefined,
+    image_url_4: doc.imageUrl4 ?? undefined,
     scheduled_date: doc.scheduledDate ?? '',
     status: doc.status ?? '',
     category: doc.category ?? '',
@@ -78,6 +79,7 @@ export interface SocialPostWrite {
   image_url_1?: string | null;
   image_url_2?: string | null;
   image_url_3?: string | null;
+  image_url_4?: string | null;
   recurring_action_id?: string | null;
 }
 
@@ -106,6 +108,7 @@ export function socialPostToConvexPatch(input: SocialPostWrite): Record<string, 
   else if (input.image_url !== undefined) patch.imageUrl = input.image_url;
   set('imageUrl2', input.image_url_2);
   set('imageUrl3', input.image_url_3);
+  set('imageUrl4', input.image_url_4);
   // recurringActionId (Id<"recurringActions">) is set directly by
   // PostSlidingSidebar on the patch.
   return patch;

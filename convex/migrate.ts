@@ -152,10 +152,11 @@ export const runMigration = internalAction({
       }
     }
     for (const row of posts) {
-      const [sid1, sid2, sid3] = await Promise.all([
+      const [sid1, sid2, sid3, sid4] = await Promise.all([
         pullImage(row.image_url ?? row.image_url_1),
         pullImage(row.image_url_2),
         pullImage(row.image_url_3),
+        pullImage(row.image_url_4),
       ]);
       const recRef = row.recurring_action_id
         ? maps["recurring_actions"]?.[row.recurring_action_id]
@@ -174,9 +175,11 @@ export const runMigration = internalAction({
         imageUrl: sid1 ? undefined : (row.image_url ?? row.image_url_1 ?? null),
         imageUrl2: sid2 ? undefined : (row.image_url_2 ?? null),
         imageUrl3: sid3 ? undefined : (row.image_url_3 ?? null),
+        imageUrl4: sid4 ? undefined : (row.image_url_4 ?? null),
         imageStorageId: sid1,
         imageStorageId2: sid2,
         imageStorageId3: sid3,
+        imageStorageId4: sid4,
         recurringActionId: recRef ?? undefined,
         userId: row.user_id,
         legacyId: row.id,

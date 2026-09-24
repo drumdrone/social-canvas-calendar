@@ -35,7 +35,8 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
   const postImages = [
     post.image_url_1 || post.image_url,
     post.image_url_2,
-    post.image_url_3
+    post.image_url_3,
+    post.image_url_4
   ].filter(Boolean) as string[];
 
   const { currentImage, setIsHovering, hasMultipleImages } = useImageHover(postImages);

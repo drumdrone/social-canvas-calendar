@@ -46,7 +46,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('');
   const [time, setTime] = useState('12:00');
-  const [postImages, setPostImages] = useState<(string | null)[]>([null, null, null]);
+  const [postImages, setPostImages] = useState<(string | null)[]>([null, null, null, null]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const previewImages = postImages.filter(Boolean) as string[];
   const activePreviewIndex = Math.min(previewIndex, Math.max(previewImages.length - 1, 0));
@@ -56,7 +56,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   // whatever id already lives on the document — see `postData` in handleSave.
   const [postImageStorageIds, setPostImageStorageIds] = useState<
     (Id<'_storage'> | null)[]
-  >([null, null, null]);
+  >([null, null, null, null]);
   const [uploading, setUploading] = useState(false);
   const createPost = useMutation(api.posts.create);
   const updatePost = useMutation(api.posts.updateByLegacyId);
@@ -186,7 +186,8 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       const images: (string | null)[] = [
         post.image_url_1 || post.image_url || null,
         post.image_url_2 || null,
-        post.image_url_3 || null
+        post.image_url_3 || null,
+        (post as any).image_url_4 || null
       ];
       setPostImages(images);
       setPreviewIndex(0);
@@ -254,6 +255,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         image_url_1: postImages[0] ?? null,
         image_url_2: postImages[1] ?? null,
         image_url_3: postImages[2] ?? null,
+        image_url_4: postImages[3] ?? null,
         scheduled_date: scheduledDateTime.toISOString(),
         pillar: pillar && pillar !== 'none' ? pillar : null,
         product_line: productLine && productLine !== 'none' ? productLine : null,
@@ -267,7 +269,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       //   unchanged: skip the field so ctx.db.patch keeps the existing id.
       const applyImageSlot = (
         idx: number,
-        idKey: 'imageStorageId' | 'imageStorageId2' | 'imageStorageId3',
+        idKey: 'imageStorageId' | 'imageStorageId2' | 'imageStorageId3' | 'imageStorageId4',
       ) => {
         if (postImages[idx] === null) patch[idKey] = null;
         else if (postImageStorageIds[idx] !== null) patch[idKey] = postImageStorageIds[idx];
@@ -275,6 +277,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
       applyImageSlot(0, 'imageStorageId');
       applyImageSlot(1, 'imageStorageId2');
       applyImageSlot(2, 'imageStorageId3');
+      applyImageSlot(3, 'imageStorageId4');
       // Link to the Plan's recurring action (Convex Id) so the post counts
       // towards the plan overview.
       patch.recurringActionId =
@@ -479,7 +482,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                       onImagesChange={setPostImages}
                       imageIds={postImageStorageIds}
                       onImageIdsChange={setPostImageStorageIds}
-                      maxImages={3}
+                      maxImages={4}
                     />
                   </div>
 
