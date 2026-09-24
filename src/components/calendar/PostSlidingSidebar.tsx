@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, Plus, MessageSquare, Edit3, Check, ChevronDown } from 'lucide-react';
+import { X, Save, Upload, Calendar as CalendarIcon, Clock, Trash2, Plus, MessageSquare, Edit3, Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,6 +47,9 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
   const [category, setCategory] = useState('');
   const [time, setTime] = useState('12:00');
   const [postImages, setPostImages] = useState<(string | null)[]>([null, null, null]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const previewImages = postImages.filter(Boolean) as string[];
+  const activePreviewIndex = Math.min(previewIndex, Math.max(previewImages.length - 1, 0));
   // Storage ids for images uploaded to Convex during this editing session.
   // Kept in sync with `postImages` so the saved post gets the stable id, not
   // just the (Convex-signed) URL. Existing images loaded from the post keep
@@ -186,6 +189,7 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
         post.image_url_3 || null
       ];
       setPostImages(images);
+      setPreviewIndex(0);
       
       const postDate = new Date(post.scheduled_date);
       setScheduledDate(postDate);
@@ -410,13 +414,49 @@ export const PostSlidingSidebar: React.FC<PostSlidingSidebarProps> = ({
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-2">
                       <div className="rounded-lg border bg-background overflow-hidden shadow-sm">
-                        {postImages[0] && (
-                          <div className="w-full aspect-square bg-muted/30">
+                        {previewImages.length > 0 && (
+                          <div className="relative w-full aspect-square bg-muted/30">
                             <img
-                              src={postImages[0]}
+                              src={previewImages[activePreviewIndex]}
                               alt={title || 'Náhled příspěvku'}
                               className="w-full h-full object-contain"
                             />
+                            {previewImages.length > 1 && (
+                              <>
+                                <button
+                                  type="button"
+                                  aria-label="Předchozí obrázek"
+                                  onClick={() =>
+                                    setPreviewIndex((activePreviewIndex - 1 + previewImages.length) % previewImages.length)
+                                  }
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground shadow hover:bg-background transition-colors"
+                                >
+                                  <ChevronLeft className="h-5 w-5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label="Další obrázek"
+                                  onClick={() => setPreviewIndex((activePreviewIndex + 1) % previewImages.length)}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground shadow hover:bg-background transition-colors"
+                                >
+                                  <ChevronRight className="h-5 w-5" />
+                                </button>
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                                  {previewImages.map((_, i) => (
+                                    <button
+                                      key={i}
+                                      type="button"
+                                      aria-label={`Obrázek ${i + 1}`}
+                                      onClick={() => setPreviewIndex(i)}
+                                      className={cn(
+                                        'h-2 w-2 rounded-full transition-colors',
+                                        i === activePreviewIndex ? 'bg-primary' : 'bg-background/80'
+                                      )}
+                                    />
+                                  ))}
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                         <div className="p-4 space-y-2">
