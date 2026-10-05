@@ -1,9 +1,13 @@
 // Shared localStorage keys for the login gate. One password now unlocks the
 // app AND identifies the user (see SimpleAuthGate + AuthContext), so both
 // values are written together on login and cleared together on logout.
+// Keys are namespaced per company (see tenantStorageKey) because all companies
+// share the socka.site origin.
 
-const VERIFIED_KEY = 'simple_auth_verified';
-const CURRENT_USER_ID_KEY = 'current_user_id';
+import { tenantStorageKey } from '@/config/tenants';
+
+const VERIFIED_KEY = tenantStorageKey('simple_auth_verified');
+const CURRENT_USER_ID_KEY = tenantStorageKey('current_user_id');
 
 export function getStoredUserId(): string | null {
   return localStorage.getItem(CURRENT_USER_ID_KEY);

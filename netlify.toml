@@ -13,13 +13,59 @@
   # `convex codegen`, which regenerates convex/_generated locally from
   # convex/*.ts without deploying anything, so the build still typechecks
   # against the (already-deployed) prod schema/functions.
-  command = "if [ \"$CONTEXT\" = \"production\" ]; then npx convex deploy && npm run build; else npx convex codegen && npm run build; fi"
+  #
+  # Each company (src/config/tenants.ts) has its own Convex project, so the
+  # production build deploys convex/ to all of them — see
+  # scripts/convex-deploy-all.sh.
+  command = "if [ \"$CONTEXT\" = \"production\" ]; then bash scripts/convex-deploy-all.sh && npm run build; else npx convex codegen && npm run build; fi"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
 
-# SPA routing - redirect all routes to index.html
+# Before the split into companies the app lived at the root; old links
+# (shared posts, bookmarks, e-mail links) belonged to Apotheke.
+[[redirects]]
+  from = "/post/*"
+  to = "/apotheke/post/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/calendar"
+  to = "/apotheke/calendar"
+  status = 301
+
+[[redirects]]
+  from = "/dashboard"
+  to = "/apotheke/dashboard"
+  status = 301
+
+[[redirects]]
+  from = "/matrix"
+  to = "/apotheke/matrix"
+  status = 301
+
+[[redirects]]
+  from = "/plan"
+  to = "/apotheke/plan"
+  status = 301
+
+[[redirects]]
+  from = "/campaigns"
+  to = "/apotheke/campaigns"
+  status = 301
+
+[[redirects]]
+  from = "/settings"
+  to = "/apotheke/settings"
+  status = 301
+
+[[redirects]]
+  from = "/login"
+  to = "/apotheke/login"
+  status = 301
+
+# SPA routing - socka.site/<company>/... all served by index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"

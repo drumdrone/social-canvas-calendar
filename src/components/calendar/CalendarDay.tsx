@@ -5,6 +5,7 @@ import { SocialPost } from '../SocialCalendar';
 import { Facebook, Instagram, Twitter, Linkedin, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { tenantBasePath } from '@/config/tenants';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 
@@ -110,7 +111,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
 
   const handleCopyLink = (e: React.MouseEvent, post: SocialPost) => {
     e.stopPropagation();
-    const shareableUrl = `${window.location.origin}/post/${post.id}`;
+    const shareableUrl = `${window.location.origin}${tenantBasePath}/post/${post.id}`;
     navigator.clipboard.writeText(shareableUrl);
     toast.success('Share link copied to clipboard!');
   };
