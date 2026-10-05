@@ -23,8 +23,7 @@ const TENANTS: Tenant[] = [
   {
     slug: 'anna',
     name: 'Anna',
-    // TODO: fill in once the Convex project for Anna is created.
-    convexUrl: '',
+    convexUrl: 'https://dashing-dotterel-28.eu-west-1.convex.cloud',
   },
 ];
 
