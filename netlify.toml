@@ -13,13 +13,19 @@
   # `convex codegen`, which regenerates convex/_generated locally from
   # convex/*.ts without deploying anything, so the build still typechecks
   # against the (already-deployed) prod schema/functions.
-  command = "if [ \"$CONTEXT\" = \"production\" ]; then npx convex deploy && npm run build; else npx convex codegen && npm run build; fi"
+  #
+  # Each company (src/config/tenants.ts) has its own Convex project, so the
+  # production build deploys convex/ to all of them — see
+  # scripts/convex-deploy-all.sh.
+  command = "if [ \"$CONTEXT\" = \"production\" ]; then bash scripts/convex-deploy-all.sh && npm run build; else npx convex codegen && npm run build; fi"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
 
-# SPA routing - redirect all routes to index.html
+# SPA routing — Apotheke stays at the root and Anna lives under /anna/...;
+# every route is served by index.html and the app routes client-side.
+# No legacy redirects needed: Apotheke's old URLs are unchanged.
 [[redirects]]
   from = "/*"
   to = "/index.html"

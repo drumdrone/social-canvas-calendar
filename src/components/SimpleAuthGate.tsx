@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { isVerified as readIsVerified, setLoggedInUser } from '@/lib/authStorage';
+import { currentTenant } from '@/config/tenants';
 
 const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isVerified, setIsVerified] = useState<boolean>(readIsVerified);
@@ -45,7 +46,7 @@ const SimpleAuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) =
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Přístup do aplikace</CardTitle>
+          <CardTitle>{currentTenant?.name ?? 'Přístup do aplikace'}</CardTitle>
           <CardDescription>
             Zadejte heslo pro přístup do Social Canvas Calendar
           </CardDescription>

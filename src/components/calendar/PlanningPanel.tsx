@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Plus, X, Save, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { tenantStorageKey } from '@/config/tenants';
 
 interface PlanNote {
   id: string;
@@ -42,7 +43,7 @@ export const PlanningPanel: React.FC<PlanningPanelProps> = ({
 
   // Load notes from localStorage on component mount
   useEffect(() => {
-    const savedNotes = localStorage.getItem('planning-notes');
+    const savedNotes = localStorage.getItem(tenantStorageKey('planning-notes'));
     if (savedNotes) {
       try {
         setNotes(JSON.parse(savedNotes));
@@ -54,7 +55,7 @@ export const PlanningPanel: React.FC<PlanningPanelProps> = ({
 
   // Save notes to localStorage whenever notes change
   useEffect(() => {
-    localStorage.setItem('planning-notes', JSON.stringify(notes));
+    localStorage.setItem(tenantStorageKey('planning-notes'), JSON.stringify(notes));
   }, [notes]);
 
   const getNotesForDate = () => {

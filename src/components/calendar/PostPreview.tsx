@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { toast } from 'sonner';
+import { tenantBasePath } from '@/config/tenants';
 import { useImageHover } from '@/hooks/useImageHover';
 
 interface PostPreviewProps {
@@ -57,7 +58,7 @@ export const PostPreview: React.FC<PostPreviewProps> = ({ post, onClick, compact
   
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const shareableUrl = `${window.location.origin}/post/${post.id}`;
+    const shareableUrl = `${window.location.origin}${tenantBasePath}/post/${post.id}`;
     navigator.clipboard.writeText(shareableUrl);
     toast.success('Share link copied to clipboard!');
   };

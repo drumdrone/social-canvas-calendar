@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { RightCalendarSidebar } from "./components/layout/RightCalendarSidebar";
 import SimpleAuthGate from "./components/SimpleAuthGate";
 import { useEffect } from "react";
+import { tenantBasePath } from "./config/tenants";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Matrix from "./pages/Matrix";
@@ -38,7 +39,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <SimpleAuthGate>
-        <BrowserRouter basename="/">
+        <BrowserRouter basename={tenantBasePath}>
           <AuthProvider>
             <RedirectHandler />
             <div className="flex h-screen overflow-hidden">

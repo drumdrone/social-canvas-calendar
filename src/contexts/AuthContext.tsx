@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import type { Id } from '../../convex/_generated/dataModel';
 import { getStoredUserId, clearLoggedInUser } from '@/lib/authStorage';
+import { tenantBasePath } from '@/config/tenants';
 
 interface AuthContextType {
   // The user_profiles row identified by the password entered at
@@ -28,7 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     clearLoggedInUser();
-    window.location.href = '/';
+    window.location.href = `${tenantBasePath}/`;
   };
 
   return (
