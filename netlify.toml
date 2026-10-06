@@ -23,49 +23,9 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# Before the split into companies the app lived at the root; old links
-# (shared posts, bookmarks, e-mail links) belonged to Apotheke.
-[[redirects]]
-  from = "/post/*"
-  to = "/apotheke/post/:splat"
-  status = 301
-
-[[redirects]]
-  from = "/calendar"
-  to = "/apotheke/calendar"
-  status = 301
-
-[[redirects]]
-  from = "/dashboard"
-  to = "/apotheke/dashboard"
-  status = 301
-
-[[redirects]]
-  from = "/matrix"
-  to = "/apotheke/matrix"
-  status = 301
-
-[[redirects]]
-  from = "/plan"
-  to = "/apotheke/plan"
-  status = 301
-
-[[redirects]]
-  from = "/campaigns"
-  to = "/apotheke/campaigns"
-  status = 301
-
-[[redirects]]
-  from = "/settings"
-  to = "/apotheke/settings"
-  status = 301
-
-[[redirects]]
-  from = "/login"
-  to = "/apotheke/login"
-  status = 301
-
-# SPA routing - socka.site/<company>/... all served by index.html
+# SPA routing — Apotheke stays at the root and Anna lives under /anna/...;
+# every route is served by index.html and the app routes client-side.
+# No legacy redirects needed: Apotheke's old URLs are unchanged.
 [[redirects]]
   from = "/*"
   to = "/index.html"

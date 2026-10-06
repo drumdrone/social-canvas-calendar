@@ -7,10 +7,8 @@ import './index.css'
 
 const root = createRoot(document.getElementById("root")!);
 
-if (!currentTenant) {
-  // socka.site/ (or an unknown company) — intentionally empty.
-  root.render(<div className="min-h-screen bg-background" />);
-} else if (!convex) {
+if (!convex) {
+  // Company has no Convex deployment configured yet (src/config/tenants.ts).
   root.render(
     <div className="min-h-screen flex items-center justify-center bg-background p-4 text-muted-foreground">
       Firma {currentTenant.name} zatím nemá nastavenou databázi.
