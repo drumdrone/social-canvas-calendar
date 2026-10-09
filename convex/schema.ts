@@ -47,11 +47,13 @@ export default defineSchema({
     // Storage ids allow null so the UI can clear an image via a patch that
     // sets it back to null (parity with imageUrl).
     imageStorageId: v.optional(v.union(v.id("_storage"), v.null())),
-    // Multi-image support (up to 3 images per post).
+    // Multi-image support (up to 4 images per post).
     imageUrl2: v.optional(v.union(v.string(), v.null())),
     imageUrl3: v.optional(v.union(v.string(), v.null())),
+    imageUrl4: v.optional(v.union(v.string(), v.null())),
     imageStorageId2: v.optional(v.union(v.id("_storage"), v.null())),
     imageStorageId3: v.optional(v.union(v.id("_storage"), v.null())),
+    imageStorageId4: v.optional(v.union(v.id("_storage"), v.null())),
     recurringActionId: v.optional(v.union(v.id("recurringActions"), v.null())),
     // Product from a campaign this post promotes (see campaigns.ts).
     campaignProductId: v.optional(v.union(v.id("campaignProducts"), v.null())),
