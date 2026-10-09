@@ -21,7 +21,7 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
   onImagesChange,
   onImageIdsChange,
   imageIds,
-  maxImages = 3
+  maxImages = 4
 }) => {
   const [uploading, setUploading] = useState<number | null>(null);
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -43,7 +43,7 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
       onImagesChange(newImages);
 
       if (onImageIdsChange) {
-        const currentIds = imageIds ?? [null, null, null];
+        const currentIds = imageIds ?? Array<Id<'_storage'> | null>(maxImages).fill(null);
         const newIds = [...currentIds];
         newIds[slotIndex] = storageId;
         onImageIdsChange(newIds);
@@ -67,7 +67,7 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
     onImagesChange(newImages);
 
     if (onImageIdsChange) {
-      const currentIds = imageIds ?? [null, null, null];
+      const currentIds = imageIds ?? Array<Id<'_storage'> | null>(maxImages).fill(null);
       const newIds = [...currentIds];
       newIds[slotIndex] = null;
       onImageIdsChange(newIds);
@@ -82,7 +82,7 @@ export const MultiImageUpload: React.FC<MultiImageUploadProps> = ({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {Array.from({ length: maxImages }).map((_, index) => (
           <div key={index} className="space-y-1">
             <Label className="text-xs text-muted-foreground">Image {index + 1}</Label>

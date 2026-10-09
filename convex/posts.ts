@@ -22,9 +22,11 @@ const postFields = {
   imageUrl: v.optional(v.union(v.string(), v.null())),
   imageUrl2: v.optional(v.union(v.string(), v.null())),
   imageUrl3: v.optional(v.union(v.string(), v.null())),
+  imageUrl4: v.optional(v.union(v.string(), v.null())),
   imageStorageId: v.optional(v.union(v.id("_storage"), v.null())),
   imageStorageId2: v.optional(v.union(v.id("_storage"), v.null())),
   imageStorageId3: v.optional(v.union(v.id("_storage"), v.null())),
+  imageStorageId4: v.optional(v.union(v.id("_storage"), v.null())),
   recurringActionId: v.optional(v.union(v.id("recurringActions"), v.null())),
   campaignProductId: v.optional(v.union(v.id("campaignProducts"), v.null())),
 };
@@ -32,16 +34,18 @@ const postFields = {
 // If a storage id is set, resolve it to a served URL; otherwise keep the
 // existing (legacy Supabase) URL string.
 async function resolveImageUrls(ctx: any, post: any) {
-  const [url1, url2, url3] = await Promise.all([
+  const [url1, url2, url3, url4] = await Promise.all([
     post.imageStorageId ? ctx.storage.getUrl(post.imageStorageId) : null,
     post.imageStorageId2 ? ctx.storage.getUrl(post.imageStorageId2) : null,
     post.imageStorageId3 ? ctx.storage.getUrl(post.imageStorageId3) : null,
+    post.imageStorageId4 ? ctx.storage.getUrl(post.imageStorageId4) : null,
   ]);
   return {
     ...post,
     imageUrl: url1 ?? post.imageUrl ?? null,
     imageUrl2: url2 ?? post.imageUrl2 ?? null,
     imageUrl3: url3 ?? post.imageUrl3 ?? null,
+    imageUrl4: url4 ?? post.imageUrl4 ?? null,
   };
 }
 
@@ -149,7 +153,7 @@ export const remove = mutation({
   handler: async (ctx, { id }) => {
     const post = await ctx.db.get(id);
     // Clean up any images we own in Convex storage.
-    for (const key of ["imageStorageId", "imageStorageId2", "imageStorageId3"] as const) {
+    for (const key of ["imageStorageId", "imageStorageId2", "imageStorageId3", "imageStorageId4"] as const) {
       const sid = (post as any)?.[key];
       if (sid) await ctx.storage.delete(sid as Id<"_storage">);
     }
@@ -162,7 +166,7 @@ export const removeByLegacyId = mutation({
   handler: async (ctx, { legacyId }) => {
     const existing = await findByLegacyIdOrConvexId(ctx, legacyId);
     if (!existing) return;
-    for (const key of ["imageStorageId", "imageStorageId2", "imageStorageId3"] as const) {
+    for (const key of ["imageStorageId", "imageStorageId2", "imageStorageId3", "imageStorageId4"] as const) {
       const sid = (existing as any)[key];
       if (sid) await ctx.storage.delete(sid as Id<"_storage">);
     }
